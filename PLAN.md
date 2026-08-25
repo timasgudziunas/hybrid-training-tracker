@@ -6,12 +6,24 @@ Phased build plan. Work top to bottom. Each phase should end in a working, manua
 
 Confirm the tech stack with the owner before writing any code, then scaffold the app and its deploy pipeline.
 
-- [ ] Confirm stack with owner (proposed default: Next.js + Tailwind v4 + Vercel; storage: Supabase vs local-first SQLite/IndexedDB with export).
+- [ ] Confirm stack with owner. Storage is decided: Supabase, confirmed 2026-08-25 (see `CLAUDE.md` Tech stack). Still to confirm: web framework (proposed default Next.js + Tailwind v4 + Vercel).
+- [ ] Create the Supabase project (database + private storage bucket for progress photos).
 - [ ] Scaffold the application skeleton.
 - [ ] Add `.gitignore` covering node_modules, env files, build output, and data files.
 - [ ] Set up the deploy pipeline (Vercel).
 
 **Done when:** a hello-world version of the app deploys successfully.
+
+## Phase 0.5: Daily body check-in (weight + photo)
+
+Owner-requested 2026-08-25. Independent of the program/workout engine, so it ships immediately after Phase 0. Behavior spec: `PRODUCT_SPEC.md` section 10, "Daily body check-in".
+
+- [ ] Supabase schema for body check-ins (date, bodyweight in lbs, photo reference) plus a private storage bucket for photos.
+- [ ] New-day detection: on the first open of a new calendar day, prompt for current weight (lbs) and an optional photo from the camera roll. At most once per day, dismissible in one tap, never blocks reaching today's workout.
+- [ ] Late entry: a skipped check-in can be filled in later that day from the body tracking area.
+- [ ] History view: browsable timeline of dated weights and photos, plus a weight trend chart (this becomes the data source for Phase 7's bodyweight trend).
+
+**Done when:** opening the deployed app on a new day prompts once, a weight + photo entry saves to Supabase from the phone, and past entries with photos are browsable on both phone and desktop.
 
 ## Phase 1: Program data model + canonical seed data
 

@@ -38,14 +38,10 @@ Code layout will be added here once the stack is chosen (Phase 0 of `PLAN.md`).
 
 ## Tech stack
 
-The repo is empty of code. Stack is an open decision, not yet made.
+The repo is empty of code.
 
-Proposed default, per the owner's standing conventions, to confirm before scaffolding:
-
-- Next.js + Tailwind v4, deployed on Vercel.
-- Storage: either Supabase, or a local-first approach (SQLite/IndexedDB) with export support. Not yet decided.
-
-This is an open decision. Confirm with the owner before scaffolding anything.
+- **Storage: Supabase (decided by the owner 2026-08-25).** Chosen over local-first specifically because daily progress photos are large binaries that must sync between phone (logging) and desktop (review) and survive browser data clearing. Photos go in a private Supabase Storage bucket.
+- Web framework: Next.js + Tailwind v4, deployed on Vercel, remains the proposed default per the owner's standing conventions. Reconfirm at Phase 0 before scaffolding.
 
 ## Non-negotiables
 
@@ -87,7 +83,7 @@ Suggested, not final schema. Do not over-normalize prematurely if a simpler stru
 | ExercisePerformance | workoutSessionId, exerciseId, sets, notes, substitution |
 | SetPerformance | setNumber, weight, reps, rir, duration, distance, time, completed |
 | AthleticBenchmark | benchmarkType, date, value, unit, notes |
-| BodyMetric | date, bodyweight, optional measurements |
+| BodyMetric | date, bodyweight (lbs), optional photo (private Supabase Storage reference), optional measurements |
 | ReadinessEntry | date, sleepHours, energy, soreness, groinStatus, readiness, notes |
 | UltimateSession | date, type, duration, intensity, notes |
 

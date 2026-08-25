@@ -173,6 +173,16 @@ Interpretation: muscle/weight is increasing while athletic performance is improv
 
 Do not reduce this to a single scientifically dubious "athletic score." Show the underlying metrics.
 
+### Daily body check-in (weight + photo)
+
+On the first open of a new calendar day, the app prompts for a quick body check-in: current bodyweight in lbs, plus an optional progress photo picked from the camera roll (or taken directly). Rules:
+
+- The prompt appears at most once per day and is dismissible in one tap. It must never block or delay getting to today's workout; if skipped, the entry can still be filled in later that day from the body tracking area.
+- Weight entry uses a numeric keyboard and should take a couple of seconds. The photo is optional every day; skipping the photo must not feel like a failure.
+- Entries are browsable as a history: a timeline of dated photos and weights so the athlete can look back over weeks and months, and a weight trend chart that feeds the athleticism-vs-bodyweight analysis above.
+- Photos are private personal data: stored in a private Supabase Storage bucket, never public, and included in the export/backup story like all other training history.
+- No body-composition estimates, no AI analysis of photos, no judgment copy. The check-in records data; interpretation stays with the athlete.
+
 ## 11. Calisthenics Tracking
 
 Calisthenics progressions should be modeled differently from normal weight training.

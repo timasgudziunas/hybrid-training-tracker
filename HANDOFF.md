@@ -1,24 +1,54 @@
-# HANDOFF.md
+# HANDOFF.md — Session Handoff (updated 2026-08-25 ~21:45 UTC, supersedes all 2026-08-25 morning and earlier versions)
 
-## Current state (as of 2026-08-25)
+> To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, domain model, non-negotiables), then `PLAN.md` (build order). `PRODUCT_SPEC.md` and `TRAINING_SYSTEM.md` are the product and program sources of truth; consult them per feature, don't read them wholesale.
 
-Docs-only repo. No code yet. The three ChatGPT-generated docs (implementation brief, product spec, training system) and a broken README have been imported and restructured into the owner's standard documentation system.
+## Current state (as of 2026-08-25 ~21:45 UTC)
 
-## Just completed
+Docs-only repo. Zero code, zero scaffold, nothing deployed. All five docs (CLAUDE.md, PLAN.md, PRODUCT_SPEC.md, TRAINING_SYSTEM.md, README.md) are in their standard restructured form on `main`.
 
-- Wrote `CLAUDE.md`: governing doc, philosophy, doc map, repo structure, tech stack (open decision), non-negotiables, domain model, UX principles, edge cases, code conventions, secrets, dev workflow, definition of success.
-- Wrote `PLAN.md`: 11 phases (0 through 10) derived from the brief's phases and initial implementation order, each with checkboxes and a "Done when" line.
-- Reformatted `PRODUCT_SPEC.md` in place: fixed heading hierarchy (one H1), merged one-sentence-per-paragraph style into normal prose, converted enumerable lists to tables (benchmarks, readiness inputs, navigation). All 16 product non-negotiables and every requirement preserved.
-- Reformatted `TRAINING_SYSTEM.md` in place: one H1, every day's session converted to a table of exercise/sets x reps/notes, all philosophy sections (RIR, double progression, rest periods, abs, athleticism rules, speed/power philosophy, relative strength, benchmarking, adductor/groin management, program adjustment, future HYROX phase) preserved in full.
-- Replaced the broken UTF-16 `README.md` with a short plain pointer readme.
-- Added `.gitignore`.
-- Deleted `CLAUDE (1).md` (raw ChatGPT originals preserved in git history at commit e4985c4).
-- Committed the restructure. Repo now follows the standard docs-before-code layout.
+## Just completed (this session)
 
-## Next step (priority order)
+- Owner requested a new feature: on first open of a new day, prompt for current bodyweight (lbs) + optional progress photo from camera roll, with browsable history. Owner chose to **spec it only, no code yet**.
+- Specced it as `PRODUCT_SPEC.md` section 10 subsection "Daily body check-in (weight + photo)" and as new **Phase 0.5** in `PLAN.md`.
+- **Storage decision settled: Supabase** (owner confirmed 2026-08-25, driven by photos needing phone-to-desktop sync). Recorded in `CLAUDE.md` Tech stack. Treat this as the standing result; do not re-litigate storage from scratch.
+- Updated `BodyMetric` in the CLAUDE.md domain model to carry an optional private-bucket photo reference.
 
-1. Phase 0 of `PLAN.md`: confirm the tech stack with the owner (proposed default: Next.js + Tailwind v4 + Vercel), then scaffold the app skeleton and deploy pipeline.
+## In progress / where it stopped
+
+Nothing mid-flight. Session ended cleanly at the doc-update commit; next session starts Phase 0.
+
+## Next steps (priority order)
+
+1. **Phase 0** (`PLAN.md`): reconfirm web framework with owner (Next.js + Tailwind v4 + Vercel is the default; storage is already settled), create the Supabase project + private photo bucket, scaffold, deploy hello-world.
+2. **Phase 0.5**: build the daily body check-in (weight + photo + history). Owner-requested; ships before the workout engine phases.
+3. Phases 1-3 per `PLAN.md`.
 
 ## Open decisions / blockers
 
-- **Stack and storage choice**: Next.js + Tailwind v4 + Vercel is proposed but not confirmed. Storage is undecided between Supabase and a local-first approach (SQLite/IndexedDB with export). Needs explicit owner confirmation before Phase 0 scaffolding begins.
+- **Web framework not yet explicitly confirmed** (only storage was). One-line confirmation from owner at Phase 0 start.
+- **Supabase project doesn't exist yet.** Creating it needs the owner's Supabase account (same flow as personal-library/Blurbs). Keys go in `.env` (gitignored) with a committed `.env.example`.
+
+## Where everything lives
+
+| Path | What it is |
+|---|---|
+| `CLAUDE.md` | Governing doc: rules, stack decision, domain model, non-negotiables |
+| `PLAN.md` | Phased build plan (Phase 0 → 10, plus new Phase 0.5 check-in) |
+| `PRODUCT_SPEC.md` | Product behavior source of truth (check-in spec in section 10) |
+| `TRAINING_SYSTEM.md` | Training program source of truth; never casually alter |
+| `HANDOFF.md` | This file |
+
+## Operational landmines
+
+1. Never hardcode a workout into a page component; UI renders from the one canonical seed program (CLAUDE.md non-negotiable 16).
+2. Sunday always renders REST DAY (non-negotiable 20).
+3. Progress photos are private personal data: private Supabase bucket only, never a public URL, never committed.
+4. No `ANTHROPIC_API_KEY` in any env for personal automations (root CLAUDE.md standing rule).
+
+## Quick health check
+
+```powershell
+git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" log --oneline -3
+git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" status --short
+```
+Healthy ≈ latest commit mentions the daily check-in spec, working tree clean. There is no running code or deployment to check yet.
