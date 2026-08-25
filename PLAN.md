@@ -6,11 +6,11 @@ Phased build plan. Work top to bottom. Each phase should end in a working, manua
 
 Confirm the tech stack with the owner before writing any code, then scaffold the app and its deploy pipeline.
 
-- [ ] Confirm stack with owner. Storage is decided: Supabase, confirmed 2026-08-25 (see `CLAUDE.md` Tech stack). Still to confirm: web framework (proposed default Next.js + Tailwind v4 + Vercel).
-- [ ] Create the Supabase project (database + private storage bucket for progress photos).
-- [ ] Scaffold the application skeleton.
-- [ ] Add `.gitignore` covering node_modules, env files, build output, and data files.
-- [ ] Set up the deploy pipeline (Vercel).
+- [x] Confirm stack with owner. Storage is decided: Supabase, confirmed 2026-08-25 (see `CLAUDE.md` Tech stack). Web framework confirmed 2026-08-25: Next.js + Tailwind v4 + Vercel.
+- [x] Create the Supabase project (database + private storage bucket for progress photos). Project `woawbkhcoegvwrsfgbix` created by owner; private `progress-photos` bucket created and verified `public: false`. Keys in local `.env` (gitignored); not yet added to Vercel env (do at Phase 0.5).
+- [x] Scaffold the application skeleton. Next.js 16.3.3, TypeScript, App Router, Tailwind v4 CSS-first; local `npm run build` green.
+- [x] Add `.gitignore` covering node_modules, env files, build output, and data files.
+- [x] Set up the deploy pipeline (Vercel). Project linked to GitHub repo, auto-deploys on push to main.
 
 **Done when:** a hello-world version of the app deploys successfully.
 
