@@ -4,6 +4,7 @@ import QuickLogForm from "./quick-log-form";
 import BenchmarkGroupSection from "./benchmark-group-section";
 import CalisthenicsSection from "./calisthenics-section";
 import AthleticismVsBodyweight from "./athleticism-vs-bodyweight";
+import SiteHeader from "@/app/site-header";
 
 // Data changes on every log; no reason to cache a stale dashboard (same
 // posture as app/body/page.tsx).
@@ -15,9 +16,7 @@ export const dynamic = "force-dynamic";
  * trend, bodyweight sits alongside them without ever collapsing into one
  * "athleticism score" (CLAUDE.md non-negotiable 18).
  *
- * Note: this page is intentionally not wired into app/site-header.tsx yet —
- * that happens in a later integration pass (R8) alongside the rest of the
- * app's navigation.
+ * Wired into app/site-header.tsx's nav as of the R8 integration pass.
  */
 export default async function ProgressPage() {
   const [benchmarkResult, bodyweightResult] = await Promise.all([fetchBenchmarkEntries(), fetchBodyweightSeries()]);
@@ -38,6 +37,8 @@ export default async function ProgressPage() {
   return (
     <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+        <SiteHeader active="progress" />
+
         <header className="flex flex-col gap-1.5">
           <p className="font-display text-xs font-semibold uppercase tracking-[0.22em] text-ink-tertiary">Progress</p>
           <h1 className="font-display text-3xl font-bold text-ink-primary sm:text-4xl">Athletic Benchmarks</h1>

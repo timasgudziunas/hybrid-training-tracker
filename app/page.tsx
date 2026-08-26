@@ -1,6 +1,7 @@
 import DailyCheckinPrompt from "./daily-checkin-prompt";
 import TodayWorkout from "./today/today-workout";
 import SiteHeader from "./site-header";
+import ReadinessCheckinStrip from "./readiness-checkin-strip";
 
 export default function Home() {
   return (
@@ -9,6 +10,7 @@ export default function Home() {
         <SiteHeader active="today" />
         <DailyCheckinPrompt />
         <TodayWorkout />
+        <ReadinessCheckinStrip />
       </div>
     </div>
   );

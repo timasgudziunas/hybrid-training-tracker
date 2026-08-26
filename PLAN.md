@@ -69,13 +69,13 @@ Owner vision recorded 2026-08-25 (see `PRODUCT_SPEC.md` §6 "Linear execution fl
 Owner decisions: (1) the seeded TRAINING_SYSTEM.md program is deleted from the app; a built-in sample workout demonstrates every card type instead, and the Today screen shows a waiting-for-program state; (2) programs enter the app through an in-app paste feature with a defined text format; (3) everything else in the app gets built now (the feature content of old Phases 4-10, restructured below); (4) full visual rework: elevated dark performance design, premium feel, pleasant daily use. Specific exercises/rep ranges arrive later in an owner-provided document.
 
 - [x] **R1. Program pivot:** paste screen with defined text format (`PROGRAM_FORMAT.md`), deterministic parser with preview + clear errors, programs stored in `training_programs` (active + history), Today and active workout read the active program, sample program showcasing every card type (always starts its showcase day), seeded day files deleted, catalog retained as guidance knowledge base matched by normalized name, sessions snapshot their template at start so re-pastes never corrupt in-flight sessions.
-- [ ] **R2. Design system + restyle:** elevated dark performance design system (tokens, typography, surfaces, motion), applied across Today, active workout cards, body, unlock, paste screen.
-- [ ] **R3. Progression engine:** transparent deterministic double progression with visible reasons (old Phase 4 checklist).
-- [ ] **R4. History:** calendar, day drill-down, adherence percent (old Phase 6 checklist); sample-workout sessions excluded from adherence.
-- [ ] **R5. Benchmarks + progress dashboards:** old Phase 7 checklist on `athletic_benchmarks`.
-- [ ] **R6. Exercise library:** old Phase 8 checklist from the catalog knowledge base.
-- [ ] **R7. Readiness:** old Phase 9 checklist on `readiness_entries`.
-- [ ] **R8. Reviews + integration polish:** old Phase 10 checklist, app-wide navigation, final QA pass.
+- [x] **R2. Design system + restyle:** elevated dark performance system (tokens in `globals.css`, Big Shoulders display numerals + IBM Plex Sans, surface/line/ink/accent palette, refined motion), applied across every screen.
+- [x] **R3. Progression engine:** deterministic double progression (`lib/progression/`, 34-assertion pre-registered test suite) surfaced on workout cards with a Why disclosure and explicit Use chips, never auto-applied.
+- [x] **R4. History:** month calendar with day states, drill-down rendered from session snapshots, 28-day adherence percent; sample sessions excluded.
+- [x] **R5. Benchmarks + progress dashboards:** 9 benchmark definitions as config, quick-log, SVG trends, planche level track, athleticism vs bodyweight with causation caveat, no composite score.
+- [x] **R6. Exercise library:** index + per-exercise pages merging the 58-entry catalog with active-program exercises.
+- [x] **R7. Readiness:** few-seconds check-in (sleep, energy, soreness, groin 0-5, readiness) with restrained groin messaging per non-negotiable 19.
+- [x] **R8. Reviews + integration polish:** weekly/monthly reviews (conservative, windows labeled, honest empty states), app-wide nav (3 primary + More on mobile, all inline desktop), home readiness strip, integrated build + full-route headless drive green.
 
 **Done when:** every screen exists, looks and feels premium, and the only missing ingredient is the owner's real program paste.
 

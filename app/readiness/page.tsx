@@ -1,6 +1,7 @@
 import { getRecentReadinessEntries } from "./actions";
 import ReadinessCheckin from "./readiness-checkin";
 import ReadinessHistory from "./readiness-history";
+import SiteHeader from "@/app/site-header";
 
 // Live Supabase data, read fresh on every request (same posture as
 // app/body/page.tsx).
@@ -8,10 +9,8 @@ export const dynamic = "force-dynamic";
 
 const HISTORY_DAYS = 14;
 
-// Standalone route for now: this page intentionally does not render
-// SiteHeader or add itself to app/site-header.tsx's nav union. Surfacing
-// readiness on the home page and in navigation happens in a later
-// integration pass, per this feature's build instructions.
+// Wired into app/site-header.tsx's nav and surfaced on the home page as a
+// quiet check-in prompt, as of the R8 integration pass.
 export default async function ReadinessPage() {
   const recent = await getRecentReadinessEntries(HISTORY_DAYS);
   const entries = recent.ok ? recent.data : [];
@@ -20,6 +19,8 @@ export default async function ReadinessPage() {
   return (
     <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+        <SiteHeader active="readiness" />
+
         <header className="flex flex-col gap-1">
           <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">Check in</p>
           <h1 className="font-display text-3xl font-bold text-ink-primary">Readiness</h1>

@@ -2,6 +2,7 @@ import { fetchActiveProgram } from "@/app/program/actions";
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
 import { fetchBodyCheckinDates, fetchSessionSummaries } from "./actions";
 import HistoryCalendarClient from "./history-calendar-client";
+import SiteHeader from "@/app/site-header";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ export default async function HistoryPage() {
   return (
     <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <SiteHeader active="history" />
+
         <div className="flex flex-col gap-1.5">
           <p className="font-display text-xs font-semibold uppercase tracking-[0.22em] text-ink-tertiary">History</p>
           <h1 className="font-display text-3xl font-bold text-ink-primary sm:text-4xl">Training calendar</h1>
