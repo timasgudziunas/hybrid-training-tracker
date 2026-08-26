@@ -49,12 +49,18 @@ Turn the full weekly program in `TRAINING_SYSTEM.md` into structured seed data. 
 
 ## Phase 3: Active workout
 
-- [ ] Start workout: persist start time, create a workout session, load prescriptions and previous performance for each exercise.
-- [ ] Fast inline set logging: weight, reps, RIR per set.
-- [ ] Add/remove a set.
-- [ ] Skip or substitute an exercise.
-- [ ] Continuous autosave so the session survives a browser refresh or accidental close.
-- [ ] Completion summary: duration, exercises completed, sets completed, exercises progressed, with optional session difficulty and note.
+Owner vision recorded 2026-08-25 (see `PRODUCT_SPEC.md` §6 "Linear execution flow"): slide-like linear card flow, visible session timer, weight defaults to last week's, 1-of-2 choice cards for program-defined alternatives, fun completion stats.
+
+- [ ] Supabase schema for workout sessions *(code shipped in `supabase/schema.sql`; blocked on owner pasting it into the Supabase SQL editor — app runs on localStorage-only until then)*.
+- [x] Start workout: persist start time, create a workout session, load prescriptions and previous performance for each exercise. Visible running session timer.
+- [x] Linear card flow: focused current-exercise card (last week's sets, prescribed range, today's weight defaulting to last week's), reps in, next set ready on tap, smooth slide-like transitions; overview jump list one tap away.
+- [x] Choice cards where the program defines "or" alternatives: pick 1 of 2 in the moment.
+- [x] "Help me feel it" on each exercise card: inline-expand activation guidance (intended feeling, cues, common mistakes) from the exercise catalog; content authored for 47 resistance/hold exercises (sprints/jumps/warm-ups intentionally excluded).
+- [x] Fast inline set logging: weight, reps, RIR per set.
+- [x] Add/remove a set.
+- [x] Skip an exercise. *(Substitution beyond program-defined "or" pairs deliberately not built — the program defines what counts as a valid alternative; revisit in Phase 5's modification flow.)*
+- [x] Continuous autosave so the session survives a browser refresh or accidental close. Dual-write: synchronous localStorage mirror + debounced Supabase upsert; verified by mid-session reload in a headless browser 2026-08-25.
+- [x] Completion summary: duration, exercises completed, sets completed, with optional session difficulty and note, plus fun stats (total tonnage, sprint distance, hold time).
 
 **Done when:** the athlete can run and log a real session start to finish on a phone with near-zero friction, and a refresh mid-workout never loses data. The app is genuinely usable at this point, not just at the end of the plan.
 

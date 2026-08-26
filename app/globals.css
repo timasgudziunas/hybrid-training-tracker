@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+/* Active workout linear flow: a smooth, fast slide/fade between sets,
+   exercises, and sections (PRODUCT_SPEC §6 "Linear execution flow"). Applied
+   via a key-based remount, never a page navigation. */
+@keyframes workout-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.workout-slide-in {
+  animation: workout-slide-in 240ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workout-slide-in {
+    animation: none;
+  }
+}

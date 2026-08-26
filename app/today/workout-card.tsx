@@ -1,5 +1,6 @@
 import type { TrainingDayTemplate } from "@/lib/program/program-types";
 import WorkoutSectionCard from "./workout-section-card";
+import StartWorkoutButton from "./start-workout-button";
 
 export default function WorkoutCard({ template }: { template: TrainingDayTemplate }) {
   const orderedSections = [...template.sections].sort((a, b) => a.order - b.order);
@@ -23,6 +24,8 @@ export default function WorkoutCard({ template }: { template: TrainingDayTemplat
           </div>
         ) : null}
       </div>
+
+      <StartWorkoutButton />
 
       <div className="flex flex-col">
         {orderedSections.map((section) => (

@@ -108,6 +108,19 @@ At completion, record: duration, exercises completed, total sets, modifications,
 
 The application should automatically save continuously. A browser refresh or accidental close should never destroy an active workout.
 
+### Linear execution flow (owner vision, 2026-08-25)
+
+The active workout is primarily a linear, one-thing-at-a-time experience, like moving through slides:
+
+- A visible session timer runs from Start Workout; final duration is logged at completion.
+- The app presents the current exercise as a focused card: exercise name, last week's performance (weight x reps per set), the prescribed rep range, and today's working weight, which defaults to last week's weight unless the athlete changes it.
+- The athlete enters reps for a set, taps next, and the next set's rep field is immediately ready. After the last set, the flow advances to the next exercise.
+- Transitions between sets, exercises, and sections are smooth and seamless (slide-like), never jarring page loads.
+- Linear is the default, not a cage: the athlete can still jump to any exercise in the session easily (e.g. an overview list one tap away).
+- Where the program defines an "either/or" pair for the same muscle (e.g. Face Pull or Reverse Cable Fly), present both as cards and let the athlete pick one in the moment. Choices come only from program-defined alternatives in the seed data; the app never invents substitutes.
+- Each exercise card has a "Help me feel it" control (owner request 2026-08-25): tapping it reveals muscle-activation guidance — where the exercise should be felt, execution cues, and common mistakes — sourced from the exercise catalog's instructional fields. Inline expand, never a blocking modal; hidden when an exercise has no guidance content.
+- Completion ends with the summary plus a few fun, session-unique stats: total weight lifted (tonnage), total sprint distance, total hold time, and similar. Keep it restrained (data, not badges).
+
 ## 7. Previous Performance
 
 Previous performance should be highly visible. For every strength exercise, show "LAST TIME" with weight x reps for each set, for example:
