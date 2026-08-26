@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { hasActiveLocalSession } from "@/lib/workout-session/local-session-store";
+import { getLocalDateString } from "@/lib/date/local-date-string";
+import { hasResumableLocalProgramSession } from "@/lib/workout-session/local-session-store";
 
 function subscribeToNothing(): () => void {
   return () => {};
@@ -15,8 +16,12 @@ function getServerSnapshot(): null {
   return null;
 }
 
+function getClientSnapshot(): boolean {
+  return hasResumableLocalProgramSession(getLocalDateString(new Date()));
+}
+
 export default function StartWorkoutButton() {
-  const hasActiveSession = useSyncExternalStore(subscribeToNothing, hasActiveLocalSession, getServerSnapshot);
+  const hasActiveSession = useSyncExternalStore(subscribeToNothing, getClientSnapshot, getServerSnapshot);
 
   if (hasActiveSession === null) {
     return <div className="h-16 w-full animate-pulse rounded-xl bg-surface-2" aria-hidden="true" />;

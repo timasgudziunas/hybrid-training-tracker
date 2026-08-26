@@ -9,6 +9,7 @@
  */
 
 import type { WorkoutSessionRecord } from './workout-session-types';
+import { isResumableSession, isSampleSession } from './resumable-session';
 
 const ACTIVE_SESSION_KEY = 'htt-active-workout-session';
 
@@ -40,10 +41,12 @@ export function clearLocalSession(): void {
   }
 }
 
-/** Synchronous, cheap existence check used by the Today screen to decide
- * between "Start Workout" and "Resume workout" without loading the whole
- * record. */
-export function hasActiveLocalSession(): boolean {
+/** Synchronous check used by the Today screen to decide between "Start
+ * workout" and "Resume workout". Only a real program session that is
+ * genuinely resumable counts — a sample session or an untouched leftover
+ * from a previous day must never hold Today in "Resume" mode (see
+ * resumable-session.ts). */
+export function hasResumableLocalProgramSession(todaysDate: string): boolean {
   const record = loadLocalSession();
-  return record !== null && (record.status === 'active' || record.status === 'modified');
+  return record !== null && !isSampleSession(record) && isResumableSession(record, todaysDate);
 }

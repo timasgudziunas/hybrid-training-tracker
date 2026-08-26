@@ -14,6 +14,7 @@ import {
   loadLocalSession,
   saveLocalSession,
 } from "@/lib/workout-session/local-session-store";
+import { isResumableSession, isSampleSession } from "@/lib/workout-session/resumable-session";
 import type {
   ExerciseSlotLog,
   PreviousPerformanceByExercise,
@@ -85,12 +86,28 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       if (local && local.status === "completed") {
         saveWorkoutSession(local);
       }
-      let resolved: WorkoutSessionRecord | null =
-        local && (local.status === "active" || local.status === "modified") ? local : null;
+      // Resume the local session only when it's genuinely resumable: a
+      // sample session never blocks starting the real program workout, and
+      // an untouched leftover from a previous day is stale, not today's
+      // workout. Anything with logged work always resumes (non-negotiable
+      // 22) — including a real in-flight session when the athlete taps the
+      // sample link. Discarding here (the local mirror's second clear site)
+      // is safe precisely because the discarded record is a sample or has
+      // nothing logged.
+      let resolved: WorkoutSessionRecord | null = null;
+      if (local && (local.status === "active" || local.status === "modified")) {
+        if (!isResumableSession(local, getLocalDateString(now))) {
+          clearLocalSession();
+        } else if (source === "program" && isSampleSession(local)) {
+          clearLocalSession();
+        } else {
+          resolved = local;
+        }
+      }
 
       if (!resolved) {
         const remote = await fetchActiveSessionForToday(getLocalDateString(now));
-        if (remote.ok && remote.data) {
+        if (remote.ok && remote.data && !(source === "program" && isSampleSession(remote.data))) {
           resolved = remote.data;
         }
       }
