@@ -142,3 +142,13 @@ The athlete wakes up on a Tuesday morning, opens the app on his phone, and immed
 Over subsequent months it should be obvious from the app whether he is gaining muscle, getting stronger, getting faster, becoming more explosive, improving relative strength, progressing toward an L-sit and planche, training consistently, managing Ultimate workload, and maintaining healthy movement.
 
 Never let tracking the workout become harder than doing the workout.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -1,10 +1,10 @@
-# HANDOFF.md — Session Handoff (updated 2026-08-25 ~21:30 UTC, supersedes all 2026-08-26 ~00:15 UTC and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-08-25 ~22:45 UTC, supersedes all earlier versions)
 
 > To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, domain model, non-negotiables), then `PLAN.md` (build order). `PRODUCT_SPEC.md` and `TRAINING_SYSTEM.md` are the product and program sources of truth; consult them per feature, don't read them wholesale.
 
-## Current state (as of 2026-08-25 ~21:30 UTC)
+## Current state (as of 2026-08-25 ~22:45 UTC)
 
-**Phases 0, 0.5, and 1 complete.** Live at **https://hybrid-training-tracker.vercel.app** behind a passphrase gate. Deployed features: daily body check-in (weight + optional progress photo), browsable history with lightbox + inline editing, 90-day weight trend chart. New this session (Phase 1, committed but has no UI yet): the entire weekly program from `TRAINING_SYSTEM.md` encoded as canonical typed seed data in `lib/program/` — 7 day templates, 58-exercise catalog, rest-guidance table, L-sit/planche progression chains, all validated by a rerunnable script.
+**Phases 0, 0.5, 1, and 2 complete.** Live at **https://hybrid-training-tracker.vercel.app** behind a passphrase gate. Deployed features: home page IS the Today screen (today's full workout rendered from seed data — sections, exercises, prescriptions, rest guidance, Ultimate badge Mon/Wed/Thu, REST DAY on Sunday), daily body check-in (weight + optional progress photo), browsable history with lightbox + inline editing, 90-day weight trend chart. Phase 1's data layer: the entire weekly program from `TRAINING_SYSTEM.md` as canonical typed seed data in `lib/program/` — 7 day templates, 58-exercise catalog, rest-guidance table, L-sit/planche progression chains, validated by a rerunnable script.
 
 - **Stack (settled, do not re-litigate):** Next.js 16.3.3 + Tailwind v4 (CSS-first) on Vercel; Supabase for data + private photo storage. Both owner-confirmed 2026-08-25.
 - **Access gate:** single passphrase, no accounts. Env `APP_PASSPHRASE`; HMAC cookie verified by `proxy.ts` (Next 16 middleware convention) on every route except `/unlock` + static assets. Rotating the passphrase logs out all devices.
@@ -14,7 +14,9 @@
 
 ## Just completed (this session)
 
-Phase 1: program data model + canonical seed data. Built by a Sonnet subagent, QA'd file-by-file against `TRAINING_SYSTEM.md` (verdict: faithful, nothing altered in the prescription). Settled modeling decisions — treat these as standing, don't re-derive:
+Phase 2: Today screen. Home page (`app/page.tsx`) now shows the daily check-in prompt + `app/today/today-workout.tsx`. Weekday detection is device-local in a client boundary using `useSyncExternalStore` (server snapshot is `null` → skeleton; client snapshot is the real weekday; avoids hydration mismatch and the `react-hooks/set-state-in-effect` lint error). No Start button and no week strip on purpose: PRODUCT_SPEC §5's Today screen has neither, and a Start button would be a dead control until Phase 3. Verified headlessly (Playwright + system Edge, mobile viewport, minted session cookie): real Tuesday renders the full correct session, forced-Sunday (stubbed `getDay`) renders REST DAY. Two QA fixes applied after the subagent build: qualitative descriptions no longer render in a `whitespace-nowrap` span (was a horizontal-overflow bug on phones), and an exercise whose name equals its section name (Dynamic Warm-Up) no longer prints twice. Note: `next dev` auto-appends a `nextjs-agent-rules` block to CLAUDE.md — it's vendor tooling, committed to keep the tree clean; it re-creates itself if removed.
+
+Phase 1 (same session): program data model + canonical seed data. Built by a Sonnet subagent, QA'd file-by-file against `TRAINING_SYSTEM.md` (verdict: faithful, nothing altered in the prescription). Settled modeling decisions — treat these as standing, don't re-derive:
 
 - `Prescription` is a discriminated union: `repetitions` / `duration` / `distance` (sprints, `timed: true`) / `hold` / `qualitative` (warm-ups, mobility flows, Zone 2, L-sit practice). String-literal unions everywhere, no enums (survives Node type stripping).
 - Rest is a category (`heavy-compound`/`moderate-compound`/`isolation`/`sprint`/`jump`/`calisthenics-skill`) mapped once to §13 guidance text in `rest-guidance.ts`, never hardcoded seconds.
@@ -30,8 +32,8 @@ Nothing mid-flight. Phase 1 closed with the phase-boundary commit (this handoff'
 
 ## Next steps (priority order)
 
-1. **Phase 2** (`PLAN.md`): Today screen — weekday detection, render the day's workout from `WEEKLY_PROGRAM` (name, target duration, sections, exercises, prescriptions, notes), Ultimate indicator Mon/Wed/Thu, Sunday renders REST DAY. All content from seed data; nothing hardcoded in components (non-negotiable 16).
-2. Phase 3: active workout logging (this is the phase that makes the app genuinely usable).
+1. **Phase 3** (`PLAN.md`): active workout logging — start workout, inline set logging (weight/reps/RIR), add/remove set, skip/substitute, continuous autosave surviving refresh (non-negotiable 22), completion summary. This is the phase that makes the app genuinely usable. Needs Supabase schema for WorkoutSession/ExercisePerformance/SetPerformance (owner applies schema.sql changes in the SQL editor).
+2. Phase 4: progression engine (transparent double progression).
 
 ## Open decisions / blockers
 
@@ -53,6 +55,8 @@ Nothing mid-flight. Phase 1 closed with the phase-boundary commit (this handoff'
 | `lib/auth/passphrase-cookie.ts` | HMAC cookie sign/verify (Web Crypto, Edge-safe) |
 | `lib/supabase/server-client.ts` | Server-only service-role Supabase client |
 | `lib/date/local-date-string.ts` | Device-local YYYY-MM-DD (check-in dates are device-local, never server UTC) |
+| `app/page.tsx` + `app/today/` | Today screen: client weekday boundary, workout/rest cards, prescription formatting, exercise-name resolution |
+| `lib/date/weekday-from-date.ts` | Device-local weekday from a Date (same principle as local-date-string) |
 | `app/unlock/` · `app/daily-checkin-prompt.tsx` · `app/body/` | Unlock flow, new-day prompt, body check-in pages |
 | `supabase/schema.sql` | Idempotent DB schema (owner applies in Supabase SQL editor) |
 

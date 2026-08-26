@@ -40,10 +40,10 @@ Turn the full weekly program in `TRAINING_SYSTEM.md` into structured seed data. 
 
 ## Phase 2: Today screen
 
-- [ ] Detect current weekday.
-- [ ] Load and render the corresponding workout: date, workout name, target duration, sections, exercises, sets/reps, relevant notes.
-- [ ] Show an Ultimate practice indicator on Monday, Wednesday, Thursday.
-- [ ] Sunday renders REST DAY, never a manufactured workout.
+- [x] Detect current weekday. Device-local via `lib/date/weekday-from-date.ts` in a client boundary (server never guesses a day; skeleton until hydration).
+- [x] Load and render the corresponding workout: date, workout name, target duration, sections, exercises, sets/reps, relevant notes. Home page renders `app/today/*` entirely from `WEEKLY_PROGRAM` (non-negotiable 16).
+- [x] Show an Ultimate practice indicator on Monday, Wednesday, Thursday. Driven by the template's `ultimatePracticeLater` flag, not a weekday list.
+- [x] Sunday renders REST DAY, never a manufactured workout. `RestDayTemplate` has no sections; verified visually via forced-Sunday headless browser screenshot 2026-08-25.
 
 **Done when:** opening the app on any day of the week shows the correct session (or REST DAY on Sunday) sourced entirely from seed data.
 
