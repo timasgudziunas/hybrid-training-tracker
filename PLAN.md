@@ -18,10 +18,12 @@ Confirm the tech stack with the owner before writing any code, then scaffold the
 
 Owner-requested 2026-08-25. Independent of the program/workout engine, so it ships immediately after Phase 0. Behavior spec: `PRODUCT_SPEC.md` section 10, "Daily body check-in".
 
-- [ ] Supabase schema for body check-ins (date, bodyweight in lbs, photo reference) plus a private storage bucket for photos.
-- [ ] New-day detection: on the first open of a new calendar day, prompt for current weight (lbs) and an optional photo from the camera roll. At most once per day, dismissible in one tap, never blocks reaching today's workout.
-- [ ] Late entry: a skipped check-in can be filled in later that day from the body tracking area.
-- [ ] History view: browsable timeline of dated weights and photos, plus a weight trend chart (this becomes the data source for Phase 7's bodyweight trend).
+- [x] Supabase schema for body check-ins (date, bodyweight in lbs, photo reference) plus a private storage bucket for photos. `supabase/schema.sql` (RLS on, no policies, service-role only); applied by owner 2026-08-25.
+- [x] New-day detection: on the first open of a new calendar day, prompt for current weight (lbs) and an optional photo from the camera roll. At most once per day, dismissible in one tap, never blocks reaching today's workout. Device-local date; dismissal in localStorage.
+- [x] Late entry: a skipped check-in can be filled in later that day from the body tracking area. Card shows on `/body` only when today is unlogged; any history row is editable inline.
+- [x] History view: browsable timeline of dated weights and photos (tap photo to enlarge), plus a weight trend chart (this becomes the data source for Phase 7's bodyweight trend).
+
+Also shipped in this phase: passphrase access gate (owner decision 2026-08-25 — env `APP_PASSPHRASE`, HMAC cookie, `proxy.ts`) since the deployed app is public and photos are private; photos upload browser→Supabase via signed upload URLs because Vercel's ~4.5 MB function payload cap rejects photo bytes routed through a server action (hit in testing).
 
 **Done when:** opening the deployed app on a new day prompts once, a weight + photo entry saves to Supabase from the phone, and past entries with photos are browsable on both phone and desktop.
 
