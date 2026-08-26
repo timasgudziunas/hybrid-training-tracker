@@ -40,10 +40,12 @@ function getServerToday(): null {
 export default function HistoryCalendarClient({
   sessions,
   bodyCheckinDates,
+  ultimatePracticeDates,
   program,
 }: {
   sessions: SessionSummary[];
   bodyCheckinDates: string[];
+  ultimatePracticeDates: string[];
   program: ActiveProgramWeek | null;
 }) {
   const today = useSyncExternalStore(subscribeToNothing, getClientToday, getServerToday);
@@ -51,6 +53,7 @@ export default function HistoryCalendarClient({
 
   const sessionByDate = useMemo(() => groupSessionsByDate(sessions), [sessions]);
   const bodyCheckinDateSet = useMemo(() => new Set(bodyCheckinDates), [bodyCheckinDates]);
+  const ultimatePracticeDateSet = useMemo(() => new Set(ultimatePracticeDates), [ultimatePracticeDates]);
 
   if (today === null) {
     return <div className="h-[30rem] w-full animate-pulse rounded-2xl bg-surface-1" aria-hidden="true" />;
@@ -114,6 +117,7 @@ export default function HistoryCalendarClient({
                   program,
                   session: sessionByDate.get(cell.date) ?? null,
                   hasBodyCheckin: bodyCheckinDateSet.has(cell.date),
+                  hasUltimatePractice: ultimatePracticeDateSet.has(cell.date),
                 });
                 return (
                   <CalendarDayCell

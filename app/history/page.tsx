@@ -1,6 +1,7 @@
 import { fetchActiveProgram } from "@/app/program/actions";
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
 import { fetchBodyCheckinDates, fetchSessionSummaries } from "./actions";
+import { fetchUltimatePracticeDates } from "@/app/today/ultimate-practice-actions";
 import HistoryCalendarClient from "./history-calendar-client";
 import SiteHeader from "@/app/site-header";
 
@@ -28,10 +29,11 @@ function activeSinceDateFromCreatedAt(createdAt: string): string {
  * calendar date.
  */
 export default async function HistoryPage() {
-  const [programResult, sessionsResult, checkinsResult] = await Promise.all([
+  const [programResult, sessionsResult, checkinsResult, ultimatePracticeResult] = await Promise.all([
     fetchActiveProgram(),
     fetchSessionSummaries(),
     fetchBodyCheckinDates(),
+    fetchUltimatePracticeDates(),
   ]);
 
   const errors: string[] = [];
@@ -48,6 +50,7 @@ export default async function HistoryPage() {
 
   const sessions = sessionsResult.ok ? sessionsResult.data : [];
   const bodyCheckinDates = checkinsResult.ok ? checkinsResult.data : [];
+  const ultimatePracticeDates = ultimatePracticeResult.ok ? ultimatePracticeResult.data : [];
 
   return (
     <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
@@ -65,7 +68,12 @@ export default async function HistoryPage() {
           </p>
         ) : null}
 
-        <HistoryCalendarClient sessions={sessions} bodyCheckinDates={bodyCheckinDates} program={program} />
+        <HistoryCalendarClient
+          sessions={sessions}
+          bodyCheckinDates={bodyCheckinDates}
+          ultimatePracticeDates={ultimatePracticeDates}
+          program={program}
+        />
       </div>
     </div>
   );

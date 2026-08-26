@@ -100,3 +100,16 @@ create table if not exists readiness_entries (
 );
 
 alter table readiness_entries enable row level security;
+
+-- Ultimate practice attendance (2026-08-26): the program flag only means
+-- practice is SCHEDULED that day; this table records days the athlete
+-- actually went (checked in-app). One row per attended day; unchecking
+-- deletes the row.
+create table if not exists ultimate_practice_days (
+  id uuid primary key default gen_random_uuid(),
+  practice_date date not null unique,
+  created_at timestamptz not null default now()
+);
+
+-- Same RLS posture as every other table: service-role access only, no policies.
+alter table ultimate_practice_days enable row level security;

@@ -32,7 +32,7 @@ export default function WorkoutCard({
             ) : null}
             {template.ultimatePracticeLater ? (
               <span className="rounded-full border border-line-default px-2.5 py-0.5 text-xs font-medium text-ink-secondary">
-                Ultimate practice later today
+                Ultimate practice scheduled today
               </span>
             ) : null}
           </div>

@@ -25,7 +25,7 @@ export default function CalendarDayCell({
   inCurrentMonth: boolean;
   classification: DayClassification;
 }) {
-  const { date, state, isToday, ultimatePracticeLater, hasBodyCheckin, session } = classification;
+  const { date, state, isToday, hasUltimatePractice, hasBodyCheckin, session } = classification;
 
   const body = (
     <div
@@ -34,9 +34,9 @@ export default function CalendarDayCell({
       } ${STATE_CLASS_NAMES[state]} ${inCurrentMonth ? "" : "opacity-35"}`}
     >
       <span className="font-display text-sm font-semibold tabular-nums">{day}</span>
-      {ultimatePracticeLater || hasBodyCheckin ? (
+      {hasUltimatePractice || hasBodyCheckin ? (
         <span className="flex items-center gap-0.5">
-          {ultimatePracticeLater ? <span className="h-1 w-1 rounded-full bg-accent" aria-hidden="true" /> : null}
+          {hasUltimatePractice ? <span className="h-1 w-1 rounded-full bg-accent" aria-hidden="true" /> : null}
           {hasBodyCheckin ? <span className="h-1 w-1 rounded-full bg-ink-tertiary" aria-hidden="true" /> : null}
         </span>
       ) : null}

@@ -10,9 +10,9 @@
  * The History feature's own fetchSessionSummaries (app/history/actions.ts)
  * deliberately omits the `performance` jsonb blob to keep the calendar's
  * client bundle small. Review needs the full record (templateSnapshot,
- * slots, exercisesSnapshot) to compute exercise progression, section-type
- * exposures, and Ultimate-practice flags, so it gets its own range query
- * rather than modifying that file's shape for one other caller.
+ * slots, exercisesSnapshot) to compute exercise progression and section-type
+ * exposures, so it gets its own range query rather than modifying that
+ * file's shape for one other caller.
  */
 
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";

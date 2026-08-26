@@ -1,11 +1,10 @@
 /**
  * Pure, small metrics over a date window for the Review dashboard: section-
- * type exposures (speed/power) and Ultimate-practice day counts. Both read
- * only what was actually logged or actively programmed — no inference.
+ * type exposures (speed/power) and Ultimate-practice attendance counts. Both
+ * read only what was actually logged or explicitly recorded — no inference.
  */
 
-import type { SectionType, Weekday } from "@/lib/program/program-types";
-import type { ActiveProgramWeek } from "@/lib/history/day-classification";
+import type { SectionType } from "@/lib/program/program-types";
 import type { WorkoutSessionRecord, WorkoutSessionStatus } from "@/lib/workout-session/workout-session-types";
 import { addDays, compareDateStrings } from "@/lib/history/calendar-grid";
 
@@ -23,34 +22,22 @@ export function countSectionTypeExposures(sessions: WorkoutSessionRecord[], sect
 }
 
 /**
- * Counts calendar days in `dates` where Ultimate practice happened later
- * that day. For a day with a real logged session, reads that session's own
- * templateSnapshot flag (what was true the day it was started — immune to a
- * later re-paste); for a day with no session, falls back to the active
- * program's current template for that weekday, a plain approximation since
- * no snapshot exists for a day nothing was logged.
+ * Counts calendar days in `dates` where the athlete explicitly checked
+ * Ultimate practice as attended in-app (2026-08-26,
+ * app/today/ultimate-practice-actions.ts). Never assumes attendance from the
+ * program's `ultimatePracticeLater` schedule flag: practice can be missed,
+ * cancelled, or rescheduled, so only a checked day counts.
  */
 export function countUltimatePracticeDays({
   dates,
-  sessionByDate,
-  program,
-  getWeekday,
+  attendedDates,
 }: {
   dates: string[];
-  sessionByDate: Map<string, WorkoutSessionRecord>;
-  program: ActiveProgramWeek | null;
-  getWeekday: (date: string) => Weekday;
+  attendedDates: ReadonlySet<string>;
 }): number {
   let count = 0;
   for (const date of dates) {
-    const session = sessionByDate.get(date);
-    if (session) {
-      if (session.performance.templateSnapshot.ultimatePracticeLater) count += 1;
-      continue;
-    }
-    if (!program || compareDateStrings(date, program.activeSinceDate) < 0) continue;
-    const template = program.templates[getWeekday(date)];
-    if (!template.restDay && template.ultimatePracticeLater) count += 1;
+    if (attendedDates.has(date)) count += 1;
   }
   return count;
 }

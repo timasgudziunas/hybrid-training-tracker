@@ -7,6 +7,7 @@ import { getLocalWeekday } from "@/lib/date/weekday-from-date";
 import { capitalizeLabel } from "./capitalize-label";
 import WorkoutCard from "./workout-card";
 import RestDayCard from "./rest-day-card";
+import UltimatePracticeCheckbox from "./ultimate-practice-checkbox";
 
 // There's nothing external to subscribe to: the device-local weekday only
 // needs to be read once per mount (a new calendar day requires a fresh page
@@ -45,7 +46,10 @@ export default function TodayWorkoutClient({ program }: { program: ResolvedProgr
       {template.restDay ? (
         <RestDayCard template={template} />
       ) : (
-        <WorkoutCard template={template} exercises={program.exercises} />
+        <>
+          <WorkoutCard template={template} exercises={program.exercises} />
+          <UltimatePracticeCheckbox scheduled={template.ultimatePracticeLater} />
+        </>
       )}
     </div>
   );

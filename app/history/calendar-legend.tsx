@@ -29,7 +29,7 @@ export default function CalendarLegend() {
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-tertiary">
         <div className="flex items-center gap-1.5">
           <span className="h-1 w-1 rounded-full bg-accent" aria-hidden="true" />
-          Ultimate practice that day
+          Ultimate practice attended
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-1 w-1 rounded-full bg-ink-tertiary" aria-hidden="true" />

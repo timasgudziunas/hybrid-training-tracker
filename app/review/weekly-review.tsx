@@ -22,6 +22,7 @@ export default function WeeklyReview({
   sessionByDate,
   readinessEntries,
   bodyweightSeries,
+  ultimatePracticeDates,
 }: {
   today: string;
   program: ActiveProgramWeek | null;
@@ -29,6 +30,7 @@ export default function WeeklyReview({
   sessionByDate: Map<string, WorkoutSessionRecord>;
   readinessEntries: ReadinessEntry[];
   bodyweightSeries: BodyweightPoint[];
+  ultimatePracticeDates: string[];
 }) {
   const weekStart = addDays(today, -(WEEK_WINDOW_DAYS - 1));
   const sessionsInWeek = sessions.filter((s) => s.sessionDate >= weekStart && s.sessionDate <= today);
@@ -49,9 +51,7 @@ export default function WeeklyReview({
 
   const ultimateDays = countUltimatePracticeDays({
     dates: dateRange(weekStart, today),
-    sessionByDate,
-    program,
-    getWeekday: weekdayOfDateString,
+    attendedDates: new Set(ultimatePracticeDates),
   });
 
   const progression = summarizeWeeklyProgression(sessionsInWeek);
@@ -78,7 +78,7 @@ export default function WeeklyReview({
             value={adherence.percent !== null ? `${adherence.metDays}/${adherence.scheduledDays}` : "—"}
             sub={adherence.percent !== null ? `${adherence.percent}% adherence` : "No scheduled days yet"}
           />
-          <ReviewStatTile label="Ultimate practices" value={String(ultimateDays)} sub="days this week" />
+          <ReviewStatTile label="Ultimate practices" value={String(ultimateDays)} sub="days attended" />
           <ReviewStatTile label="Speed sessions" value={String(speedSessions)} sub="this week" />
           <ReviewStatTile label="Power sessions" value={String(powerSessions)} sub="this week" />
         </div>

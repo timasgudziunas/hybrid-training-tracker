@@ -42,7 +42,11 @@ export interface DayClassification {
   weekday: Weekday;
   isToday: boolean;
   state: DayState;
-  ultimatePracticeLater: boolean;
+  /** Whether Ultimate practice was explicitly checked as attended in-app
+   * that day (app/today/ultimate-practice-actions.ts) — never inferred from
+   * the program's `ultimatePracticeLater` schedule flag, since a scheduled
+   * practice can be missed, cancelled, or rescheduled. */
+  hasUltimatePractice: boolean;
   /** The representative real (non-sample) session for this date, if any —
    * present regardless of `state` so the UI can still link to, say, a
    * "missed" day that actually has an unfinished (active/planned) row to
@@ -60,6 +64,7 @@ export function classifyDay({
   program,
   session,
   hasBodyCheckin = false,
+  hasUltimatePractice = false,
 }: {
   /** yyyy-mm-dd, device-local. */
   date: string;
@@ -70,6 +75,10 @@ export function classifyDay({
   program: ActiveProgramWeek | null;
   session: DaySessionRef | null;
   hasBodyCheckin?: boolean;
+  /** Explicit attendance for this date, from the caller's own lookup against
+   * ultimate_practice_days — this function never derives it from the
+   * program's schedule flag. */
+  hasUltimatePractice?: boolean;
 }): DayClassification {
   const isToday = date === today;
   const isFuture = compareDateStrings(date, today) > 0;
@@ -77,7 +86,6 @@ export function classifyDay({
   const programCoversDate = program !== null && !isFuture && compareDateStrings(date, program.activeSinceDate) >= 0;
   const template = programCoversDate ? program!.templates[weekday] : null;
   const isTrainingDay = template !== null && !template.restDay;
-  const ultimatePracticeLater = Boolean(template && !template.restDay && template.ultimatePracticeLater);
 
   let state: DayState;
 
@@ -95,5 +103,5 @@ export function classifyDay({
     state = "missed";
   }
 
-  return { date, weekday, isToday, state, ultimatePracticeLater, session, hasBodyCheckin };
+  return { date, weekday, isToday, state, hasUltimatePractice, session, hasBodyCheckin };
 }
