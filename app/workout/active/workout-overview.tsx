@@ -1,7 +1,8 @@
 import type { Exercise } from "@/lib/program/program-types";
 import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
-import type { ExerciseSlotLog } from "@/lib/workout-session/workout-session-types";
+import type { EndedEarlyReason, ExerciseSlotLog } from "@/lib/workout-session/workout-session-types";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
+import EndWorkoutEarlyControl from "./end-workout-early-control";
 
 const STATUS_LABEL: Record<ExerciseSlotLog["status"], string> = {
   completed: "Done",
@@ -18,6 +19,9 @@ export default function WorkoutOverview({
   exercises,
   onJump,
   onClose,
+  recoveryMode,
+  onToggleRecoveryMode,
+  onEndWorkoutEarly,
 }: {
   templateSlots: TemplateSlot[];
   slotLogs: Record<string, ExerciseSlotLog>;
@@ -25,6 +29,9 @@ export default function WorkoutOverview({
   exercises: Record<string, Exercise>;
   onJump: (slotKey: string) => void;
   onClose: () => void;
+  recoveryMode: boolean;
+  onToggleRecoveryMode: () => void;
+  onEndWorkoutEarly: (reason?: EndedEarlyReason) => void;
 }) {
   const sections = new Map<string, TemplateSlot[]>();
   for (const slot of templateSlots) {
@@ -90,6 +97,25 @@ export default function WorkoutOverview({
             </ul>
           </div>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-3 border-t border-line-hairline pt-5">
+        <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+          Modify session
+        </p>
+        <button
+          type="button"
+          onClick={onToggleRecoveryMode}
+          aria-pressed={recoveryMode}
+          className={`self-start rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+            recoveryMode
+              ? "border-accent bg-accent-soft text-accent-strong"
+              : "border-line-default text-ink-secondary active:bg-surface-2"
+          }`}
+        >
+          Recovery mode {recoveryMode ? "on" : "off"}
+        </button>
+        <EndWorkoutEarlyControl onConfirm={onEndWorkoutEarly} />
       </div>
     </div>
   );

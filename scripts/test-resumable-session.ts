@@ -109,7 +109,11 @@ check(
 );
 check('completed session is never resumable', isResumableSession(makeSession({ status: 'completed' }), TODAY), false);
 check('missed session is never resumable', isResumableSession(makeSession({ status: 'missed' }), TODAY), false);
-check('modified session from today is resumable', isResumableSession(makeSession({ status: 'modified' }), TODAY), true);
+// Phase 5 semantics change (2026-08-26): 'modified' is now a TERMINAL status
+// assigned only at Finish, the same moment 'completed' is — a session is
+// never "modified" mid-workout, so it must never be resumed, exactly like
+// 'completed'.
+check('modified session from today is NOT resumable (terminal status, Phase 5)', isResumableSession(makeSession({ status: 'modified' }), TODAY), false);
 check(
   'untouched sample session from today is resumable AS a sample (Today-button exclusion is isSampleSession, tested above)',
   isResumableSession(makeSession({ workoutTemplateId: 'sample-monday' }), TODAY),

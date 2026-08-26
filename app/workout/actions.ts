@@ -93,9 +93,11 @@ export async function saveWorkoutSession(record: WorkoutSessionRecord): Promise<
   }
 }
 
-/** Looks up a resumable session for today: most recent active/modified row
- * for this calendar date. Returns `data: null` (not a failure) when there
- * simply isn't one yet. */
+/** Looks up a resumable session for today: most recent 'active' row for
+ * this calendar date. 'modified' is excluded (Phase 5, 2026-08-26): it is a
+ * TERMINAL status assigned only at Finish, so a modified row is a finished
+ * session, never one to resume (see resumable-session.ts). Returns
+ * `data: null` (not a failure) when there simply isn't one yet. */
 export async function fetchActiveSessionForToday(sessionDate: string): Promise<ActionResult<WorkoutSessionRecord | null>> {
   let supabase;
   try {
@@ -110,7 +112,7 @@ export async function fetchActiveSessionForToday(sessionDate: string): Promise<A
       .from(TABLE)
       .select("*")
       .eq("session_date", sessionDate)
-      .in("status", ["active", "modified"])
+      .eq("status", "active")
       .order("started_at", { ascending: false })
       .limit(1);
 

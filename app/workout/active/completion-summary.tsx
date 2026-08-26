@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { CompletionStats } from "@/lib/workout-session/workout-session-types";
+import type { SessionDeviation } from "@/lib/workout-session/session-deviations";
+import type { CompletionStats, EndedEarlyReason } from "@/lib/workout-session/workout-session-types";
 
 const DIFFICULTY_OPTIONS = [1, 2, 3, 4, 5] as const;
 
@@ -30,6 +31,8 @@ export default function CompletionSummary({
   onFinish,
   finishState,
   onRetry,
+  deviations,
+  endedEarlyReason,
 }: {
   startedAt: string;
   finalDurationSeconds: number | null;
@@ -41,6 +44,8 @@ export default function CompletionSummary({
   onFinish: () => void;
   finishState: FinishState;
   onRetry: () => void;
+  deviations: SessionDeviation[];
+  endedEarlyReason: EndedEarlyReason | undefined;
 }) {
   // Frozen when this screen appears (the parent remounts it on view change)
   // so it doesn't tick while the athlete types a note; the exact stored
@@ -128,6 +133,24 @@ export default function CompletionSummary({
           className="rounded-xl border border-line-default bg-surface-2 p-3 text-sm text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
         />
       </label>
+
+      {deviations.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-line-hairline bg-surface-2 p-4">
+          <p className="text-sm font-semibold text-ink-primary">Saving as Modified</p>
+          <ul className="flex flex-col gap-1 text-sm text-ink-secondary">
+            {deviations.map((deviation, index) => (
+              <li key={`${deviation.kind}-${deviation.slotKey ?? index}`}>{deviation.label}</li>
+            ))}
+          </ul>
+          <p className="text-xs text-ink-tertiary">A modified session still counts as showing up.</p>
+          {endedEarlyReason === "discomfort" ? (
+            <p className="text-xs text-ink-tertiary">
+              This is not a diagnosis. If the discomfort persists or interferes with sprinting or cutting, consider
+              getting assessed by a sports medicine professional or physical therapist.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {finishState === "failed" ? (
         <div className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning-soft p-4">

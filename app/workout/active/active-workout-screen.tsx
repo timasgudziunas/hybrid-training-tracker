@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getLocalDateString } from "@/lib/date/local-date-string";
 import { getLocalWeekday } from "@/lib/date/weekday-from-date";
+import type { Exercise } from "@/lib/program/program-types";
 import { getWorkoutForWeekday, exercisesForTemplate } from "@/lib/program/resolved-program";
 import { SAMPLE_DEMO_WEEKDAY, SAMPLE_PROGRAM } from "@/lib/program/sample-program";
 import { createNewSession } from "@/lib/workout-session/create-session";
@@ -16,8 +17,10 @@ import {
 } from "@/lib/workout-session/local-session-store";
 import { loadPendingSessions, removePendingSession, stashPendingSession } from "@/lib/workout-session/pending-sync-store";
 import { isResumableSession, isSampleSession } from "@/lib/workout-session/resumable-session";
+import { detectSessionDeviations, resolveFinishStatus } from "@/lib/workout-session/session-deviations";
 import { createSessionSaveQueue, type SessionSaveQueue } from "@/lib/workout-session/save-queue";
 import type {
+  EndedEarlyReason,
   ExerciseSlotLog,
   PreviousPerformanceByExercise,
   SetLog,
@@ -134,17 +137,20 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     async function init() {
       const now = new Date();
       const local = loadLocalSession();
-      // A completed session lingering locally means its final save never
-      // landed (e.g. the workout_sessions table wasn't applied yet, or the
-      // network dropped at Finish). Retry the sync through the queue before
-      // anything can overwrite the mirror — awaited (init staying
-      // "non-blocking in spirit" just means this is the one deliberate
-      // exception), so we know before overwriting whether it's safe to drop
-      // the local copy or whether it must be stashed first (see below).
-      let localCompletedRetryFailed = false;
-      if (local && local.status === "completed") {
+      // A completed OR modified session lingering locally means its final
+      // save never landed (e.g. the workout_sessions table wasn't applied
+      // yet, or the network dropped at Finish). Both are terminal,
+      // finished-but-possibly-unsynced statuses since the Phase 5 rework
+      // (modified is assigned deterministically at Finish, same code path as
+      // completed) — retry the sync through the queue before anything can
+      // overwrite the mirror, awaited (init staying "non-blocking in spirit"
+      // just means this is the one deliberate exception), so we know before
+      // overwriting whether it's safe to drop the local copy or whether it
+      // must be stashed first (see below).
+      let localFinishedRetryFailed = false;
+      if (local && (local.status === "completed" || local.status === "modified")) {
         queueRef.current!.request(local);
-        localCompletedRetryFailed = !(await queueRef.current!.settle());
+        localFinishedRetryFailed = !(await queueRef.current!.settle());
       }
       // Resume the local session only when it's genuinely resumable: a
       // sample session never blocks starting the real program workout, and
@@ -155,7 +161,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       // is safe precisely because the discarded record is a sample or has
       // nothing logged.
       let resolved: WorkoutSessionRecord | null = null;
-      if (local && (local.status === "active" || local.status === "modified")) {
+      if (local && local.status === "active") {
         if (!isResumableSession(local, getLocalDateString(now))) {
           clearLocalSession();
         } else if (source === "program" && isSampleSession(local)) {
@@ -207,13 +213,13 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         queueRef.current!.request(resolved);
       }
 
-      // A completed session was lingering locally, its retry above failed,
-      // and it's about to be overwritten by a different session below (it
-      // always is here: a 'completed' record is never itself resumable, so
-      // `resolved` can never BE `local` in this branch) — stash it via the
-      // pending-sync store first so the finished workout is never lost,
-      // even though the local mirror is about to move on.
-      if (local && local.status === "completed" && localCompletedRetryFailed) {
+      // A completed or modified session was lingering locally, its retry
+      // above failed, and it's about to be overwritten by a different
+      // session below (it always is here: neither status is itself
+      // resumable, so `resolved` can never BE `local` in this branch) —
+      // stash it via the pending-sync store first so the finished workout is
+      // never lost, even though the local mirror is about to move on.
+      if (local && (local.status === "completed" || local.status === "modified") && localFinishedRetryFailed) {
         stashPendingSession(local);
       }
 
@@ -372,6 +378,123 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     [persist]
   );
 
+  // --- Phase 5 modify-don't-fail actions. Every handler mirrors updateSlot/
+  // persist's read-sessionRef-current-then-persist shape (landmine 4: never
+  // capture a stale record in a closure, always go through the mount's save
+  // queue via persist). Deviations shown at completion are DERIVED from
+  // these plus the slot logs (session-deviations.ts) — never stored
+  // themselves.
+
+  const handleToggleReducedLoad = useCallback(
+    (slotKey: string) => {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const current = prev.performance.modifications?.reducedLoadSlotKeys ?? [];
+      const next = current.includes(slotKey) ? current.filter((key) => key !== slotKey) : [...current, slotKey];
+      persist({
+        ...prev,
+        performance: {
+          ...prev.performance,
+          modifications: { ...prev.performance.modifications, reducedLoadSlotKeys: next },
+        },
+      });
+    },
+    [persist]
+  );
+
+  const handleSwap = useCallback(
+    (slotKey: string, exercise: Exercise) => {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const slot = prev.performance.slots[slotKey];
+      if (!slot) return;
+      const existingSubs = prev.performance.modifications?.substitutions ?? [];
+      // Picking the slot's own prescribed exercise from the picker (it
+      // reappears in the list once a substitution is active) is a revert,
+      // never a "Substituted X for X" record.
+      const nextSubs =
+        exercise.id === slot.prescribedExerciseId
+          ? existingSubs.filter((sub) => sub.slotKey !== slotKey)
+          : [
+              ...existingSubs.filter((sub) => sub.slotKey !== slotKey),
+              { slotKey, fromExerciseId: slot.prescribedExerciseId, toExerciseId: exercise.id },
+            ];
+      persist({
+        ...prev,
+        performance: {
+          ...prev.performance,
+          slots: { ...prev.performance.slots, [slotKey]: { ...slot, chosenExerciseId: exercise.id } },
+          exercisesSnapshot: { ...prev.performance.exercisesSnapshot, [exercise.id]: exercise },
+          modifications: { ...prev.performance.modifications, substitutions: nextSubs },
+        },
+      });
+    },
+    [persist]
+  );
+
+  const handleRevertSwap = useCallback(
+    (slotKey: string) => {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const slot = prev.performance.slots[slotKey];
+      if (!slot) return;
+      const templateSlot = templateSlots.find((s) => s.slotKey === slotKey);
+      const isChoiceSlot = Boolean(templateSlot?.exercise.alternativeExerciseIds?.length);
+      const nextSubs = (prev.performance.modifications?.substitutions ?? []).filter((sub) => sub.slotKey !== slotKey);
+      persist({
+        ...prev,
+        performance: {
+          ...prev.performance,
+          slots: {
+            ...prev.performance.slots,
+            [slotKey]: { ...slot, chosenExerciseId: isChoiceSlot ? undefined : slot.prescribedExerciseId },
+          },
+          modifications: { ...prev.performance.modifications, substitutions: nextSubs },
+        },
+      });
+    },
+    [persist, templateSlots]
+  );
+
+  const handleToggleRecoveryMode = useCallback(() => {
+    const prev = sessionRef.current;
+    if (!prev) return;
+    persist({
+      ...prev,
+      performance: {
+        ...prev.performance,
+        modifications: {
+          ...prev.performance.modifications,
+          recoveryMode: !prev.performance.modifications?.recoveryMode,
+        },
+      },
+    });
+  }, [persist]);
+
+  const handleEndWorkoutEarly = useCallback(
+    (reason?: EndedEarlyReason) => {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const nextSlots = { ...prev.performance.slots };
+      for (const [slotKey, slot] of Object.entries(nextSlots)) {
+        if (slot.status === "upcoming") {
+          nextSlots[slotKey] = { ...slot, status: "skipped" };
+        }
+      }
+      persist({
+        ...prev,
+        performance: {
+          ...prev.performance,
+          slots: nextSlots,
+          currentSlotKey: null,
+          modifications: { ...prev.performance.modifications, endedEarly: true, endedEarlyReason: reason },
+        },
+      });
+      setOverviewOpen(false);
+    },
+    [persist]
+  );
+
   const handleSetDifficulty = useCallback(
     (value: number | undefined) => {
       const prev = sessionRef.current;
@@ -410,10 +533,15 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     const nowIso = new Date().toISOString();
     const durationSeconds = Math.round((new Date(nowIso).getTime() - new Date(prev.startedAt).getTime()) / 1000);
     const stats = computeCompletionStats(prev.performance, templateSlots);
+    // Deterministic, auto-detected at Finish (Phase 5, owner-approved
+    // 2026-08-26): any deviation makes this a 'modified' session rather than
+    // 'completed'. The completion screen already showed the athlete exactly
+    // this list before they tapped Finish (CLAUDE.md non-negotiable 17).
+    const deviations = detectSessionDeviations(prev.performance, templateSlots);
 
     const finalRecord: WorkoutSessionRecord = {
       ...prev,
-      status: "completed",
+      status: resolveFinishStatus(deviations),
       completedAt: nowIso,
       durationSeconds,
       sessionDifficulty: prev.performance.sessionDifficulty ?? null,
@@ -496,6 +624,13 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   const currentSlotLog = currentSlotKey ? session.performance.slots[currentSlotKey] : null;
 
   const liveStats = computeCompletionStats(session.performance, templateSlots);
+  // Recomputed on every render, same as liveStats above — cheap over a
+  // single day's slots, and the completion screen must always reflect the
+  // athlete's CURRENT state, never a stale snapshot (non-negotiable 17:
+  // shown before Finish, not decided by it).
+  const liveDeviations = detectSessionDeviations(session.performance, templateSlots);
+  const recoveryMode = Boolean(session.performance.modifications?.recoveryMode);
+  const substitutions = session.performance.modifications?.substitutions ?? [];
 
   const viewKey = overviewOpen
     ? "overview"
@@ -529,6 +664,12 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         ) : null}
       </div>
 
+      {recoveryMode ? (
+        <div className="rounded-xl border border-line-default bg-surface-2 px-4 py-3 text-sm text-ink-secondary">
+          Recovery mode: reduce loads and effort, skip anything that does not feel right.
+        </div>
+      ) : null}
+
       <div key={viewKey} className="workout-slide-in">
         {overviewOpen ? (
           <WorkoutOverview
@@ -538,6 +679,9 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             exercises={exercises}
             onJump={handleJump}
             onClose={() => setOverviewOpen(false)}
+            recoveryMode={recoveryMode}
+            onToggleRecoveryMode={handleToggleRecoveryMode}
+            onEndWorkoutEarly={handleEndWorkoutEarly}
           />
         ) : currentTemplateSlot && currentSlotLog ? (
           <ExerciseSlotView
@@ -554,6 +698,13 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onSetNote={(note) => handleSetNote(currentTemplateSlot.slotKey, note)}
             onQualitativeComplete={() => handleQualitativeComplete(currentTemplateSlot.slotKey)}
             onDraftChange={(draft) => handleDraftChange(currentTemplateSlot.slotKey, draft)}
+            reducedLoad={(session.performance.modifications?.reducedLoadSlotKeys ?? []).includes(
+              currentTemplateSlot.slotKey
+            )}
+            onToggleReducedLoad={() => handleToggleReducedLoad(currentTemplateSlot.slotKey)}
+            hasSubstitution={substitutions.some((sub) => sub.slotKey === currentTemplateSlot.slotKey)}
+            onSwap={(exercise) => handleSwap(currentTemplateSlot.slotKey, exercise)}
+            onRevertSwap={() => handleRevertSwap(currentTemplateSlot.slotKey)}
           />
         ) : (
           <CompletionSummary
@@ -567,6 +718,8 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onFinish={handleFinish}
             finishState={finishState}
             onRetry={handleRetryFinish}
+            deviations={liveDeviations}
+            endedEarlyReason={session.performance.modifications?.endedEarlyReason}
           />
         )}
       </div>

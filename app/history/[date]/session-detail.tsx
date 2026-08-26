@@ -1,5 +1,6 @@
 import { computeCompletionStats } from "@/lib/workout-session/completion-stats";
 import { flattenTemplateSlots } from "@/lib/workout-session/flatten-template-slots";
+import { detectSessionDeviations } from "@/lib/workout-session/session-deviations";
 import type { WorkoutSessionRecord, WorkoutSessionStatus } from "@/lib/workout-session/workout-session-types";
 import { formatDateLabel } from "./format-date-label";
 import SessionExerciseList from "./session-exercise-list";
@@ -28,10 +29,14 @@ function formatDuration(totalSeconds: number | null): string | null {
  */
 export default function SessionDetail({ record }: { record: WorkoutSessionRecord }) {
   const { performance } = record;
-  const stats =
-    performance.stats ?? computeCompletionStats(performance, flattenTemplateSlots(performance.templateSnapshot));
+  const templateSlots = flattenTemplateSlots(performance.templateSnapshot);
+  const stats = performance.stats ?? computeCompletionStats(performance, templateSlots);
   const duration = formatDuration(record.durationSeconds);
   const isUnfinished = record.status === "active" || record.status === "planned";
+  // Never stored: recomputed live from the session's own templateSnapshot +
+  // performance every time this record is viewed (session-deviations.ts),
+  // exactly like the completion screen the athlete saw before Finish.
+  const deviations = record.status === "modified" ? detectSessionDeviations(performance, templateSlots) : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,6 +91,19 @@ export default function SessionDetail({ record }: { record: WorkoutSessionRecord
           </div>
         ) : null}
       </div>
+
+      {deviations.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-line-hairline bg-surface-1 p-6 shadow-card sm:p-8">
+          <p className="font-display text-xs font-semibold uppercase tracking-[0.22em] text-ink-tertiary">
+            Modifications
+          </p>
+          <ul className="flex flex-col gap-1 text-sm text-ink-secondary">
+            {deviations.map((deviation, index) => (
+              <li key={`${deviation.kind}-${deviation.slotKey ?? index}`}>{deviation.label}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
         <SessionExerciseList performance={performance} />

@@ -16,8 +16,11 @@
 
 import type { Exercise, TrainingDayTemplate, Weekday } from '@/lib/program/program-types';
 
-/** Mirrors CLAUDE.md's WorkoutSession.status. Modified/missed are Phase
- * 5/6 flows; the type supports them now so the schema never needs to change. */
+/** Mirrors CLAUDE.md's WorkoutSession.status. 'modified' is a TERMINAL
+ * status (Phase 5, 2026-08-26 decision): assigned deterministically at
+ * Finish by resolveFinishStatus (session-deviations.ts) when any deviation
+ * was auto-detected, never chosen mid-workout. 'missed' remains a Phase 6
+ * flow; the type supports it now so the schema never needs to change. */
 export type WorkoutSessionStatus = 'planned' | 'active' | 'completed' | 'modified' | 'missed';
 
 /** One logged set. Which fields are meaningful depends on the exercise's
@@ -48,9 +51,10 @@ export interface ExerciseSlotLog {
   /** The program-defined primary exerciseId for this slot (identifies the
    * slot's "or" choice set, independent of which one was picked). */
   prescribedExerciseId: string;
-  /** The exercise actually being logged: prescribedExerciseId or one of its
-   * alternativeExerciseIds. Undefined until the athlete picks, for slots
-   * that offer a choice. */
+  /** The exercise actually being logged: prescribedExerciseId, one of its
+   * alternativeExerciseIds, or (Phase 5) a catalog substitution id recorded
+   * in performance.modifications.substitutions. Undefined until the athlete
+   * picks, for slots that offer a choice and have not been substituted. */
   chosenExerciseId?: string;
   status: ExerciseSlotStatus;
   sets: SetLog[];
@@ -66,6 +70,28 @@ export interface ExerciseSlotLog {
    * refreshing (the parent remounts ExerciseEntryCard on every commit,
    * which would otherwise reset component-local input state to blank). */
   draft?: { weight?: string; reps?: string; rir?: number; seconds?: string; timeSeconds?: string };
+}
+
+/** One catalog substitution recorded against a slot (Phase 5, "Swap"):
+ * fromExerciseId is always the slot's own prescribedExerciseId, never a
+ * previously chosen "or" alternative. At most one entry per slotKey. */
+export interface SlotSubstitution {
+  slotKey: string;
+  fromExerciseId: string;
+  toExerciseId: string;
+}
+
+export type EndedEarlyReason = 'time' | 'fatigue' | 'discomfort' | 'other';
+
+/** Explicit modify-don't-fail inputs (PRODUCT_SPEC §14, PLAN Phase 5).
+ * Deviations shown to the athlete are DERIVED from this plus the slot logs
+ * by detectSessionDeviations — never stored, so labels can evolve. */
+export interface SessionModificationState {
+  endedEarly?: boolean;
+  endedEarlyReason?: EndedEarlyReason;
+  recoveryMode?: boolean;
+  reducedLoadSlotKeys?: string[];
+  substitutions?: SlotSubstitution[];
 }
 
 /** Fun, restrained completion stats (PRODUCT_SPEC §6 linear execution flow). */
@@ -100,6 +126,11 @@ export interface WorkoutSessionPerformance {
    */
   templateSnapshot: TrainingDayTemplate;
   exercisesSnapshot: Record<string, Exercise>;
+  /** Explicit modify-don't-fail actions (Phase 5): recovery mode, ended
+   * early, reduced load, catalog substitutions. Undefined means none were
+   * ever taken. See session-deviations.ts for how these plus the slot logs
+   * become the deviation list shown to the athlete. */
+  modifications?: SessionModificationState;
 }
 
 /** One full session row — mirrors workout_sessions 1:1. */

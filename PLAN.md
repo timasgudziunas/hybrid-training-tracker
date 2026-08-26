@@ -58,7 +58,7 @@ Owner vision recorded 2026-08-25 (see `PRODUCT_SPEC.md` §6 "Linear execution fl
 - [x] "Help me feel it" on each exercise card: inline-expand activation guidance (intended feeling, cues, common mistakes) from the exercise catalog; content authored for 47 resistance/hold exercises (sprints/jumps/warm-ups intentionally excluded).
 - [x] Fast inline set logging: weight, reps, RIR per set.
 - [x] Add/remove a set.
-- [x] Skip an exercise. *(Substitution beyond program-defined "or" pairs deliberately not built — the program defines what counts as a valid alternative; revisit in Phase 5's modification flow.)*
+- [x] Skip an exercise. *(Substitution beyond program-defined "or" pairs was resolved in Phase 5: catalog substitution, owner-approved 2026-08-26.)*
 - [x] Continuous autosave so the session survives a browser refresh or accidental close. Dual-write: synchronous localStorage mirror + debounced Supabase upsert; verified by mid-session reload in a headless browser 2026-08-25.
 - [x] Completion summary: duration, exercises completed, sets completed, with optional session difficulty and note, plus fun stats (total tonnage, sprint distance, hold time).
 
@@ -92,9 +92,9 @@ Owner decisions: (1) the seeded TRAINING_SYSTEM.md program is deleted from the a
 
 ## Phase 5: Modification system
 
-- [ ] "Modify Workout" flow during an active session: reduce sets, skip exercise, substitute exercise, lower target load, convert to recovery session, stop early.
-- [ ] Store modifications against the session.
-- [ ] Modified status is distinct from both completed and missed ("modify, don't fail").
+- [x] "Modify Workout" flow during an active session: reduce sets (fewer than prescribed, detected automatically), skip exercise, substitute exercise (catalog swap, not just program "or" pairs, owner decision 2026-08-26), lower target load (Going lighter toggle), convert to recovery session, stop early (End workout early, with an optional reason).
+- [x] Store modifications against the session. Explicit inputs (`performance.modifications`) plus the slot logs; deviations are derived on demand by `detectSessionDeviations`, never stored themselves, so wording can change without a migration.
+- [x] Modified status is distinct from both completed and missed ("modify, don't fail"). `modified` is assigned deterministically at Finish by `resolveFinishStatus`: any detected deviation means modified, otherwise completed. It is a terminal status, same as completed, never chosen mid-workout and never resumable.
 
 **Done when:** a session can be modified mid-workout in any of the above ways and is correctly recorded as "modified" rather than completed or missed.
 

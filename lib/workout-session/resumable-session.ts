@@ -38,12 +38,20 @@ export function sessionHasLoggedWork(record: WorkoutSessionRecord): boolean {
 }
 
 /**
- * A session is resumable when it is still in flight (active/modified) and
- * either belongs to today or contains logged work. An untouched session
- * from a previous calendar day is stale: discarding it loses nothing, and
- * resuming it would silently give the athlete the wrong day's workout.
+ * A session is resumable when it is still in flight (active) and either
+ * belongs to today or contains logged work. An untouched session from a
+ * previous calendar day is stale: discarding it loses nothing, and resuming
+ * it would silently give the athlete the wrong day's workout.
+ *
+ * 'modified' is EXCLUDED here (Phase 5 decision, 2026-08-26): it is now a
+ * TERMINAL status assigned deterministically at Finish (see
+ * session-deviations.ts's resolveFinishStatus), the same moment 'completed'
+ * is assigned — a session is never "modified" mid-workout, only after it. A
+ * modified record lingering locally is therefore a finished-but-possibly-
+ * unsynced session, handled the same way a completed one is (retry the
+ * sync, stash to pending-sync if that fails), never resumed.
  */
 export function isResumableSession(record: WorkoutSessionRecord, todaysDate: string): boolean {
-  if (record.status !== 'active' && record.status !== 'modified') return false;
+  if (record.status !== 'active') return false;
   return record.sessionDate === todaysDate || sessionHasLoggedWork(record);
 }

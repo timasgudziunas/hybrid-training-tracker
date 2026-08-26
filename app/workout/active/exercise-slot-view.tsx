@@ -12,6 +12,7 @@ import ExerciseEntryCard from "./exercise-entry-card";
 import QualitativeEntryCard from "./qualitative-entry-card";
 import ExerciseGuidanceDisclosure from "./exercise-guidance-disclosure";
 import ExerciseNoteField from "./exercise-note-field";
+import ExerciseSwapPicker from "./exercise-swap-picker";
 
 /**
  * One card in the linear flow: the "or" choice screen when the slot hasn't
@@ -35,6 +36,11 @@ export default function ExerciseSlotView({
   onSetNote,
   onQualitativeComplete,
   onDraftChange,
+  reducedLoad,
+  onToggleReducedLoad,
+  hasSubstitution,
+  onSwap,
+  onRevertSwap,
 }: {
   templateSlot: TemplateSlot;
   slotLog: ExerciseSlotLog;
@@ -49,6 +55,11 @@ export default function ExerciseSlotView({
   onSetNote: (note: string) => void;
   onQualitativeComplete: () => void;
   onDraftChange: (draft: ExerciseSlotLog["draft"]) => void;
+  reducedLoad: boolean;
+  onToggleReducedLoad: () => void;
+  hasSubstitution: boolean;
+  onSwap: (exercise: Exercise) => void;
+  onRevertSwap: () => void;
 }) {
   const prescribed = templateSlot.exercise;
 
@@ -76,8 +87,15 @@ export default function ExerciseSlotView({
   }
 
   const chosenExercise = exercises[slotLog.chosenExerciseId];
-  const name = resolveExerciseChoiceName(exercises, prescribed.exerciseId, prescribed.alternativeExerciseIds);
+  // The chosen exercise wins the header once one is set: after an "or"
+  // choice it names the picked side, and after a Phase 5 catalog swap it
+  // names the substitute (the prescribed-based "A or B" string would
+  // silently keep showing the original). Falls back to the prescribed
+  // choice string only if the snapshot is somehow missing the chosen id.
+  const name =
+    chosenExercise?.name ?? resolveExerciseChoiceName(exercises, prescribed.exerciseId, prescribed.alternativeExerciseIds);
   const restGuidance = prescribed.restCategory ? REST_GUIDANCE_BY_CATEGORY[prescribed.restCategory] : null;
+  const prescribedName = exercises[prescribed.exerciseId]?.name ?? prescribed.exerciseId;
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
@@ -113,15 +131,39 @@ export default function ExerciseSlotView({
         />
       )}
 
-      <div className="flex items-center justify-between border-t border-line-hairline pt-4">
-        <ExerciseNoteField note={slotLog.note} onChange={onSetNote} />
-        <button
-          type="button"
-          onClick={onSkip}
-          className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
-        >
-          Skip exercise
-        </button>
+      <div className="flex flex-col gap-3 border-t border-line-hairline pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ExerciseNoteField note={slotLog.note} onChange={onSetNote} />
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onToggleReducedLoad}
+              aria-pressed={reducedLoad}
+              className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors ${
+                reducedLoad
+                  ? "border-accent bg-accent-soft text-accent-strong"
+                  : "border-line-default text-ink-tertiary active:bg-surface-2"
+              }`}
+            >
+              Going lighter
+            </button>
+            <ExerciseSwapPicker
+              sectionType={templateSlot.section.type}
+              currentChosenExerciseId={slotLog.chosenExerciseId}
+              prescribedName={prescribedName}
+              hasSubstitution={hasSubstitution}
+              onPick={onSwap}
+              onRevert={onRevertSwap}
+            />
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
+            >
+              Skip exercise
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
