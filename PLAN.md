@@ -31,10 +31,10 @@ Also shipped in this phase: passphrase access gate (owner decision 2026-08-25 โ€
 
 Turn the full weekly program in `TRAINING_SYSTEM.md` into structured seed data. One canonical program definition; UI renders from it, nothing is hardcoded into page components.
 
-- [ ] Implement the domain model (or a simpler equivalent) from `CLAUDE.md`: Exercise, WorkoutTemplate, WorkoutSection, PrescribedExercise.
-- [ ] Support all section types used in the program: warmup, speed, power, calisthenics, strength, core, mobility, recovery, cardio.
-- [ ] Support all prescription types: repetitions, duration, distance, timed sprint, hold, qualitative completion.
-- [ ] Encode the full week (Monday through Sunday, including Ultimate practice days and Sunday rest) as seed data.
+- [x] Implement the domain model (or a simpler equivalent) from `CLAUDE.md`: Exercise, WorkoutTemplate, WorkoutSection, PrescribedExercise. `lib/program/program-types.ts`; string-literal unions, no enums.
+- [x] Support all section types used in the program: warmup, speed, power, calisthenics, strength, core, mobility, recovery, cardio.
+- [x] Support all prescription types: repetitions, duration, distance, timed sprint, hold, qualitative completion. Discriminated `Prescription` union; sprints are `distance` with `timed: true`; per-side work flagged `perSide`.
+- [x] Encode the full week (Monday through Sunday, including Ultimate practice days and Sunday rest) as seed data. `lib/program/days/*` + `weekly-program.ts`; 58-exercise catalog; rest guidance (ยง13) and L-sit/planche progression chains as data. Verified by `npx tsx scripts/validate-program.ts` (referential integrity + full printout eyeballed against `TRAINING_SYSTEM.md`).
 
 **Done when:** the entire weekly program can be loaded and inspected as structured data, with no workout content duplicated in UI code.
 
