@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getLocalDateString } from "@/lib/date/local-date-string";
 import { getLocalWeekday } from "@/lib/date/weekday-from-date";
-import { getWorkoutForWeekday } from "@/lib/program/weekly-program";
+import { getWorkoutForWeekday, exercisesForTemplate } from "@/lib/program/resolved-program";
+import { SAMPLE_DEMO_WEEKDAY, SAMPLE_PROGRAM } from "@/lib/program/sample-program";
 import { createNewSession } from "@/lib/workout-session/create-session";
 import { computeCompletionStats } from "@/lib/workout-session/completion-stats";
 import { flattenTemplateSlots, nextSlotKey, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
@@ -19,6 +20,7 @@ import type {
   SetLog,
   WorkoutSessionRecord,
 } from "@/lib/workout-session/workout-session-types";
+import { fetchActiveProgram } from "@/app/program/actions";
 import { fetchActiveSessionForToday, fetchPreviousPerformance, saveWorkoutSession } from "@/app/workout/actions";
 import SessionTimer from "./session-timer";
 import SyncStatusBadge from "./sync-status-badge";
@@ -28,11 +30,15 @@ import CompletionSummary from "./completion-summary";
 
 const SAVE_DEBOUNCE_MS = 2500;
 
-type Phase = "loading" | "rest-day" | "ready";
+type Phase = "loading" | "rest-day" | "no-program" | "ready";
 
-export default function ActiveWorkoutScreen() {
+export default function ActiveWorkoutScreen({ source }: { source: "sample" | "program" }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [session, setSession] = useState<WorkoutSessionRecord | null>(null);
+  // Only populated when phase becomes "rest-day" — since the 2026-08-25
+  // pivot ANY weekday can be a rest day, not only Sunday, so the message
+  // shown must come from the actual rest template, never a hardcoded name.
+  const [restDayDescription, setRestDayDescription] = useState<string | null>(null);
   const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformanceByExercise>({});
   const [synced, setSynced] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -41,11 +47,14 @@ export default function ActiveWorkoutScreen() {
   const sessionRef = useRef<WorkoutSessionRecord | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const template = session ? getWorkoutForWeekday(session.weekday) : null;
-  const templateSlots: TemplateSlot[] = useMemo(
-    () => (template && !template.restDay ? flattenTemplateSlots(template) : []),
-    [template]
-  );
+  // The program is never re-resolved for an existing session — its
+  // TrainingDayTemplate and referenced exercises were snapshotted into
+  // performance.templateSnapshot/exercisesSnapshot at Start Workout, exactly
+  // so a mid-week re-paste of the active program can never corrupt an
+  // in-flight or historical session (2026-08-25 rework, program pivot).
+  const template = session ? session.performance.templateSnapshot : null;
+  const exercises = session ? session.performance.exercisesSnapshot : {};
+  const templateSlots: TemplateSlot[] = useMemo(() => (template ? flattenTemplateSlots(template) : []), [template]);
 
   const persist = useCallback((next: WorkoutSessionRecord) => {
     sessionRef.current = next;
@@ -87,12 +96,37 @@ export default function ActiveWorkoutScreen() {
       }
 
       if (!resolved) {
-        const deviceTemplate = getWorkoutForWeekday(getLocalWeekday(now));
-        if (deviceTemplate.restDay) {
-          if (!cancelled) setPhase("rest-day");
+        // Starting brand new: resolve which program is in scope. The sample
+        // is a static, already-parsed module — no server round trip needed.
+        // Otherwise use whatever program is currently active; if none is,
+        // there is nothing to start (mirrors the Today screen's waiting
+        // state, for anyone who lands on this URL directly).
+        const program =
+          source === "sample"
+            ? SAMPLE_PROGRAM
+            : await (async () => {
+                const activeResult = await fetchActiveProgram();
+                return activeResult.ok ? activeResult.data?.parsed ?? null : null;
+              })();
+
+        if (!program) {
+          if (!cancelled) setPhase("no-program");
           return;
         }
-        resolved = createNewSession(deviceTemplate, now);
+
+        // The sample always starts its showcase day so the demo never
+        // dead-ends on one of the sample's rest days.
+        const weekday = source === "sample" ? SAMPLE_DEMO_WEEKDAY : getLocalWeekday(now);
+        const deviceTemplate = getWorkoutForWeekday(program, weekday);
+        if (deviceTemplate.restDay) {
+          if (!cancelled) {
+            setRestDayDescription(deviceTemplate.description);
+            setPhase("rest-day");
+          }
+          return;
+        }
+        const exercisesSnapshot = exercisesForTemplate(program, deviceTemplate);
+        resolved = createNewSession(deviceTemplate, exercisesSnapshot, now);
         saveWorkoutSession(resolved).then((result) => {
           if (!cancelled) setSynced(result.ok);
         });
@@ -103,11 +137,8 @@ export default function ActiveWorkoutScreen() {
       if (cancelled) return;
       setSession(resolved);
 
-      const resolvedTemplate = getWorkoutForWeekday(resolved.weekday);
-      if (!resolvedTemplate.restDay) {
-        const prev = await fetchPreviousPerformance(resolvedTemplate.id, resolved.sessionDate);
-        if (!cancelled && prev.ok) setPreviousPerformance(prev.data);
-      }
+      const prev = await fetchPreviousPerformance(resolved.workoutTemplateId, resolved.sessionDate);
+      if (!cancelled && prev.ok) setPreviousPerformance(prev.data);
 
       if (!cancelled) setPhase("ready");
     }
@@ -116,7 +147,7 @@ export default function ActiveWorkoutScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [source]);
 
   // Best-effort immediate flush (in addition to the debounce) when the tab
   // is being hidden or closed — cheap insurance on top of the localStorage
@@ -291,7 +322,9 @@ export default function ActiveWorkoutScreen() {
   if (phase === "rest-day") {
     return (
       <div className="flex flex-col gap-4">
-        <p className="text-sm text-zinc-400">Sunday is a complete rest day. There is nothing to start.</p>
+        <p className="text-sm text-zinc-400">
+          There is nothing to start today. {restDayDescription ?? "Rest or easy movement only."}
+        </p>
         <Link href="/" className="text-sm text-white underline underline-offset-4">
           Back to Today
         </Link>
@@ -299,7 +332,29 @@ export default function ActiveWorkoutScreen() {
     );
   }
 
-  if (!session || !template || template.restDay) {
+  if (phase === "no-program") {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-zinc-400">No program is loaded yet.</p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link
+            href="/program"
+            className="flex h-12 flex-1 items-center justify-center rounded-md bg-white text-sm font-semibold text-black active:bg-zinc-300"
+          >
+            Paste your program
+          </Link>
+          <Link
+            href="/workout/active?source=sample"
+            className="flex h-12 flex-1 items-center justify-center rounded-md border border-zinc-700 text-sm font-medium text-zinc-300 active:bg-zinc-900"
+          >
+            Try the sample workout
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || !template) {
     return null;
   }
 
@@ -339,6 +394,7 @@ export default function ActiveWorkoutScreen() {
             templateSlots={templateSlots}
             slotLogs={session.performance.slots}
             currentSlotKey={currentSlotKey}
+            exercises={exercises}
             onJump={handleJump}
             onClose={() => setOverviewOpen(false)}
           />
@@ -347,6 +403,7 @@ export default function ActiveWorkoutScreen() {
             templateSlot={currentTemplateSlot}
             slotLog={currentSlotLog}
             previousPerformance={previousPerformance}
+            exercises={exercises}
             onChoose={(exerciseId) => handleChoose(currentTemplateSlot.slotKey, exerciseId)}
             onLogSet={(set) => handleLogSet(currentTemplateSlot.slotKey, set)}
             onRemoveLastSet={() => handleRemoveLastSet(currentTemplateSlot.slotKey)}

@@ -1,8 +1,14 @@
-import type { WorkoutSection } from "@/lib/program/program-types";
+import type { Exercise, WorkoutSection } from "@/lib/program/program-types";
 import { capitalizeLabel } from "./capitalize-label";
 import PrescribedExerciseRow from "./prescribed-exercise-row";
 
-export default function WorkoutSectionCard({ section }: { section: WorkoutSection }) {
+export default function WorkoutSectionCard({
+  section,
+  exercises,
+}: {
+  section: WorkoutSection;
+  exercises: Record<string, Exercise>;
+}) {
   const orderedExercises = [...section.exercises].sort((a, b) => a.order - b.order);
 
   return (
@@ -34,6 +40,7 @@ export default function WorkoutSectionCard({ section }: { section: WorkoutSectio
             key={`${exercise.order}-${exercise.exerciseId}`}
             exercise={exercise}
             sectionName={section.name}
+            exercises={exercises}
           />
         ))}
       </ul>

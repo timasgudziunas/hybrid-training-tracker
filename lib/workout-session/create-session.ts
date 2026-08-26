@@ -7,11 +7,22 @@
 
 import { getLocalDateString } from '@/lib/date/local-date-string';
 import { getLocalWeekday } from '@/lib/date/weekday-from-date';
-import type { TrainingDayTemplate } from '@/lib/program/program-types';
+import type { Exercise, TrainingDayTemplate } from '@/lib/program/program-types';
 import { flattenTemplateSlots } from './flatten-template-slots';
 import type { ExerciseSlotLog, WorkoutSessionRecord } from './workout-session-types';
 
-export function createNewSession(template: TrainingDayTemplate, now: Date): WorkoutSessionRecord {
+/**
+ * `exercisesSnapshot` should be every exercise this template's sections
+ * reference (see lib/program/resolved-program.ts's exercisesForTemplate) —
+ * taken from whatever program was active at this exact moment, so the
+ * session never needs to re-resolve the program again (see
+ * WorkoutSessionPerformance.templateSnapshot).
+ */
+export function createNewSession(
+  template: TrainingDayTemplate,
+  exercisesSnapshot: Record<string, Exercise>,
+  now: Date
+): WorkoutSessionRecord {
   const slots = flattenTemplateSlots(template);
 
   const slotLogs: Record<string, ExerciseSlotLog> = {};
@@ -43,6 +54,8 @@ export function createNewSession(template: TrainingDayTemplate, now: Date): Work
     performance: {
       slots: slotLogs,
       currentSlotKey: slots[0]?.slotKey ?? null,
+      templateSnapshot: template,
+      exercisesSnapshot,
     },
   };
 }

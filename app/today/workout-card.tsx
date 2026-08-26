@@ -1,8 +1,18 @@
-import type { TrainingDayTemplate } from "@/lib/program/program-types";
+import type { Exercise, TrainingDayTemplate } from "@/lib/program/program-types";
 import WorkoutSectionCard from "./workout-section-card";
 import StartWorkoutButton from "./start-workout-button";
 
-export default function WorkoutCard({ template }: { template: TrainingDayTemplate }) {
+export default function WorkoutCard({
+  template,
+  exercises,
+  showStartButton = true,
+}: {
+  template: TrainingDayTemplate;
+  exercises: Record<string, Exercise>;
+  /** Off for a program preview (paste screen) — there is nothing to start
+   * yet, this template may not even be saved. */
+  showStartButton?: boolean;
+}) {
   const orderedSections = [...template.sections].sort((a, b) => a.order - b.order);
 
   return (
@@ -25,11 +35,11 @@ export default function WorkoutCard({ template }: { template: TrainingDayTemplat
         ) : null}
       </div>
 
-      <StartWorkoutButton />
+      {showStartButton ? <StartWorkoutButton /> : null}
 
       <div className="flex flex-col">
         {orderedSections.map((section) => (
-          <WorkoutSectionCard key={section.id} section={section} />
+          <WorkoutSectionCard key={section.id} section={section} exercises={exercises} />
         ))}
       </div>
     </div>

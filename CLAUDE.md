@@ -15,7 +15,7 @@ The primary experience is execution, not analysis. Opening the app in the gym sh
 | Doc | Role |
 |---|---|
 | `PRODUCT_SPEC.md` | Source of truth for product behavior: screens, UX rules, non-negotiables. |
-| `TRAINING_SYSTEM.md` | Source of truth for the training program and programming rules. Never casually alter the training prescription while implementing features. |
+| `TRAINING_SYSTEM.md` | Source of truth for programming RULES and philosophy (RIR, rest, speed/power philosophy, groin management). Its specific weekly program was removed from the app in the 2026-08-25 rework: program content now enters via the in-app paste feature (owner decision; a new program document is coming). Never casually alter a training prescription while implementing features. |
 | `PLAN.md` | Phased build plan, top to bottom. |
 | `HANDOFF.md` | Current session state. Read this first at the start of any session. |
 
@@ -60,7 +60,7 @@ The repo is empty of code.
 13. Adherence over months matters more than any single perfect workout.
 14. The app should reduce decision-making, not add to it.
 15. The logging experience must never be harder than doing the workout.
-16. There is one canonical seed program definition. Never hardcode a workout (e.g. Monday's session) directly into a page component; UI renders from program data.
+16. There is one canonical program definition: the active pasted program in `training_programs` (plus the built-in sample used only when no program is active). Never hardcode a workout directly into a page component; UI renders from program data.
 17. Progression logic is transparent and deterministic. Never hide it behind an AI model. Always show the athlete why a recommendation was made.
 18. No manufactured single "athleticism score." Show underlying metrics instead.
 19. The software is not a medical diagnostic system. No diagnoses. Groin/pain symptoms get restrained messaging that recommends professional sports medicine or physical therapy assessment if they persist or interfere with sprinting or cutting; never an automatic rehab protocol.

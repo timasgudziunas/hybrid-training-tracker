@@ -14,7 +14,7 @@
  * session regardless of which "or" alternative the athlete picks.
  */
 
-import type { Weekday } from '@/lib/program/program-types';
+import type { Exercise, TrainingDayTemplate, Weekday } from '@/lib/program/program-types';
 
 /** Mirrors CLAUDE.md's WorkoutSession.status. Modified/missed are Phase
  * 5/6 flows; the type supports them now so the schema never needs to change. */
@@ -83,6 +83,18 @@ export interface WorkoutSessionPerformance {
   sessionNote?: string;
   /** Computed once, at Finish. */
   stats?: CompletionStats;
+  /**
+   * Snapshot taken once at "Start Workout" (2026-08-25 rework, program
+   * pivot): the program is no longer a fixed code constant, it is whatever
+   * program was active (or the sample) at that moment. Storing the exact
+   * TrainingDayTemplate the athlete started, plus every exercise it
+   * references, INTO the session itself means the active-workout screen
+   * never re-resolves the program on resume — a mid-week re-paste can never
+   * corrupt an in-flight or historical session. flattenTemplateSlots always
+   * runs against this snapshot, never against the current active program.
+   */
+  templateSnapshot: TrainingDayTemplate;
+  exercisesSnapshot: Record<string, Exercise>;
 }
 
 /** One full session row — mirrors workout_sessions 1:1. */

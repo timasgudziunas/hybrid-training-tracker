@@ -1,3 +1,4 @@
+import type { Exercise } from "@/lib/program/program-types";
 import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import type { ExerciseSlotLog } from "@/lib/workout-session/workout-session-types";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
@@ -14,12 +15,14 @@ export default function WorkoutOverview({
   templateSlots,
   slotLogs,
   currentSlotKey,
+  exercises,
   onJump,
   onClose,
 }: {
   templateSlots: TemplateSlot[];
   slotLogs: Record<string, ExerciseSlotLog>;
   currentSlotKey: string | null;
+  exercises: Record<string, Exercise>;
   onJump: (slotKey: string) => void;
   onClose: () => void;
 }) {
@@ -48,6 +51,7 @@ export default function WorkoutOverview({
                 const log = slotLogs[slot.slotKey];
                 const isCurrent = slot.slotKey === currentSlotKey;
                 const name = resolveExerciseChoiceName(
+                  exercises,
                   slot.exercise.exerciseId,
                   slot.exercise.alternativeExerciseIds
                 );

@@ -64,6 +64,23 @@ Owner vision recorded 2026-08-25 (see `PRODUCT_SPEC.md` §6 "Linear execution fl
 
 **Done when:** the athlete can run and log a real session start to finish on a phone with near-zero friction, and a refresh mid-workout never loses data. The app is genuinely usable at this point, not just at the end of the plan.
 
+## Rework plan (owner pivot, 2026-08-25)
+
+Owner decisions: (1) the seeded TRAINING_SYSTEM.md program is deleted from the app; a built-in sample workout demonstrates every card type instead, and the Today screen shows a waiting-for-program state; (2) programs enter the app through an in-app paste feature with a defined text format; (3) everything else in the app gets built now (the feature content of old Phases 4-10, restructured below); (4) full visual rework: elevated dark performance design, premium feel, pleasant daily use. Specific exercises/rep ranges arrive later in an owner-provided document.
+
+- [x] **R1. Program pivot:** paste screen with defined text format (`PROGRAM_FORMAT.md`), deterministic parser with preview + clear errors, programs stored in `training_programs` (active + history), Today and active workout read the active program, sample program showcasing every card type (always starts its showcase day), seeded day files deleted, catalog retained as guidance knowledge base matched by normalized name, sessions snapshot their template at start so re-pastes never corrupt in-flight sessions.
+- [ ] **R2. Design system + restyle:** elevated dark performance design system (tokens, typography, surfaces, motion), applied across Today, active workout cards, body, unlock, paste screen.
+- [ ] **R3. Progression engine:** transparent deterministic double progression with visible reasons (old Phase 4 checklist).
+- [ ] **R4. History:** calendar, day drill-down, adherence percent (old Phase 6 checklist); sample-workout sessions excluded from adherence.
+- [ ] **R5. Benchmarks + progress dashboards:** old Phase 7 checklist on `athletic_benchmarks`.
+- [ ] **R6. Exercise library:** old Phase 8 checklist from the catalog knowledge base.
+- [ ] **R7. Readiness:** old Phase 9 checklist on `readiness_entries`.
+- [ ] **R8. Reviews + integration polish:** old Phase 10 checklist, app-wide navigation, final QA pass.
+
+**Done when:** every screen exists, looks and feels premium, and the only missing ingredient is the owner's real program paste.
+
+> The phases below predate the rework. Their FEATURE checklists remain the requirements source for R3-R8 above; their ordering and the assumption of a code-seeded program are superseded.
+
 ## Phase 4: Progression engine
 
 - [ ] Implement double progression as transparent, deterministic logic (no AI model).

@@ -1,9 +1,14 @@
 /**
- * Core type definitions for the canonical training program.
+ * Core type definitions for the training program shape.
  *
- * Source of truth for the program content itself is TRAINING_SYSTEM.md.
- * These types only describe the shape of that content. No workout content
- * belongs here — see exercise-catalog.ts, days/*.ts, and weekly-program.ts.
+ * Since the 2026-08-25 rework there is no more code-seeded program content:
+ * the owner pastes a program in-app (see lib/program/parse-program-text.ts),
+ * which is stored parsed in `training_programs` and rendered through
+ * ResolvedProgram below. lib/program/exercise-catalog.ts remains as a
+ * knowledge base the parser matches parsed exercise names against (never a
+ * source of workout content on its own), and lib/program/sample-program.ts
+ * provides the built-in sample shown before any program has been pasted.
+ * No workout content belongs in this file — only the shape of it.
  *
  * String-literal unions are used throughout instead of enums so this file
  * survives Node's native TypeScript type stripping (enums are not erasable
@@ -194,13 +199,17 @@ export interface TrainingDayTemplate {
 }
 
 /**
- * Sunday: a true, complete rest day (CLAUDE.md non-negotiable 11 and 20).
- * Never manufacture a workout for it — this shape has no sections at all.
+ * A rest day: no workout at all — this shape has no sections field, so
+ * there is structurally nothing to render but name + description. Sunday is
+ * always one (CLAUDE.md non-negotiables 11 and 20; never manufacture a
+ * workout for it). Since the 2026-08-25 pivot, ANY weekday absent from a
+ * pasted program is also a rest day — `weekday` was widened from the
+ * literal 'sunday' to the full Weekday union to represent that.
  */
 export interface RestDayTemplate {
   restDay: true;
   id: string;
-  weekday: 'sunday';
+  weekday: Weekday;
   name: string;
   description: string;
 }
@@ -224,4 +233,25 @@ export interface Exercise {
   cues?: string[];
   commonMistakes?: string[];
   intendedFeeling?: string;
+}
+
+/**
+ * A fully resolved program (2026-08-25 rework, non-negotiable 16): exactly
+ * one WorkoutTemplate per weekday, plus an entry for every exercise
+ * referenced anywhere in it. This is the single shape everything in the app
+ * renders from once a program is active — the owner's pasted-and-parsed
+ * program, or the built-in sample when none is active yet. UI code must
+ * never hardcode workout content; it always reads through a ResolvedProgram.
+ *
+ * `exercises` entries come from lib/program/exercise-catalog.ts (the
+ * knowledge base, matched by normalized name) where a match exists, or a
+ * minimal generated entry (name only, no guidance) otherwise. Either way the
+ * `id` used throughout a ResolvedProgram is the slugified exercise name, so
+ * the same exercise name always resolves to the same id across re-pastes,
+ * independent of the catalog's own internal id spelling.
+ */
+export interface ResolvedProgram {
+  name: string;
+  templates: Record<Weekday, WorkoutTemplate>;
+  exercises: Record<string, Exercise>;
 }

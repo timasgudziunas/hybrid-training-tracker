@@ -1,4 +1,4 @@
-import type { PrescribedExercise, QualitativePrescription } from "@/lib/program/program-types";
+import type { Exercise, PrescribedExercise, QualitativePrescription } from "@/lib/program/program-types";
 import { REST_GUIDANCE_BY_CATEGORY } from "@/lib/program/rest-guidance";
 import { formatApproxMinutes, formatPrescription } from "./format-prescription";
 import { resolveExerciseChoiceName } from "./resolve-exercise-name";
@@ -24,11 +24,13 @@ function QualitativePrescriptionDetails({ prescription }: { prescription: Qualit
 export default function PrescribedExerciseRow({
   exercise,
   sectionName,
+  exercises,
 }: {
   exercise: PrescribedExercise;
   sectionName: string;
+  exercises: Record<string, Exercise>;
 }) {
-  const name = resolveExerciseChoiceName(exercise.exerciseId, exercise.alternativeExerciseIds);
+  const name = resolveExerciseChoiceName(exercises, exercise.exerciseId, exercise.alternativeExerciseIds);
   const restGuidance = exercise.restCategory ? REST_GUIDANCE_BY_CATEGORY[exercise.restCategory] : null;
   // A section like "Dynamic Warm-Up" holding a single same-named qualitative
   // exercise would otherwise print its name twice in a row.

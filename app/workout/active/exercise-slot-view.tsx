@@ -1,4 +1,4 @@
-import { EXERCISE_CATALOG } from "@/lib/program/exercise-catalog";
+import type { Exercise } from "@/lib/program/program-types";
 import { REST_GUIDANCE_BY_CATEGORY } from "@/lib/program/rest-guidance";
 import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import type { ExerciseSlotLog, PreviousPerformanceByExercise, SetLog } from "@/lib/workout-session/workout-session-types";
@@ -9,18 +9,19 @@ import QualitativeEntryCard from "./qualitative-entry-card";
 import ExerciseGuidanceDisclosure from "./exercise-guidance-disclosure";
 import ExerciseNoteField from "./exercise-note-field";
 
-const EXERCISE_BY_ID = new Map(EXERCISE_CATALOG.map((exercise) => [exercise.id, exercise]));
-
 /**
  * One card in the linear flow: the "or" choice screen when the slot hasn't
  * been decided yet, otherwise the type-appropriate logging body, plus the
  * chrome every slot shares (name, rest guidance, "Help me feel it", note,
- * skip).
+ * skip). `exercises` is the session's own exercisesSnapshot (2026-08-25
+ * rework) — never the old static catalog — so names/guidance always match
+ * exactly what was active when this session started.
  */
 export default function ExerciseSlotView({
   templateSlot,
   slotLog,
   previousPerformance,
+  exercises,
   onChoose,
   onLogSet,
   onRemoveLastSet,
@@ -33,6 +34,7 @@ export default function ExerciseSlotView({
   templateSlot: TemplateSlot;
   slotLog: ExerciseSlotLog;
   previousPerformance: PreviousPerformanceByExercise;
+  exercises: Record<string, Exercise>;
   onChoose: (exerciseId: string) => void;
   onLogSet: (set: SetLog) => void;
   onRemoveLastSet: () => void;
@@ -50,6 +52,7 @@ export default function ExerciseSlotView({
         <ExerciseChoiceCard
           primaryExerciseId={prescribed.exerciseId}
           alternativeExerciseIds={prescribed.alternativeExerciseIds ?? []}
+          exercises={exercises}
           onChoose={onChoose}
         />
         <button type="button" onClick={onSkip} className="self-start text-xs text-zinc-500 active:text-zinc-300">
@@ -59,8 +62,8 @@ export default function ExerciseSlotView({
     );
   }
 
-  const chosenExercise = EXERCISE_BY_ID.get(slotLog.chosenExerciseId);
-  const name = resolveExerciseChoiceName(prescribed.exerciseId, prescribed.alternativeExerciseIds);
+  const chosenExercise = exercises[slotLog.chosenExerciseId];
+  const name = resolveExerciseChoiceName(exercises, prescribed.exerciseId, prescribed.alternativeExerciseIds);
   const restGuidance = prescribed.restCategory ? REST_GUIDANCE_BY_CATEGORY[prescribed.restCategory] : null;
 
   return (

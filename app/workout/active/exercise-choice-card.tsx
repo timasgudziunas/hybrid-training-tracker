@@ -1,19 +1,20 @@
-import { EXERCISE_CATALOG } from "@/lib/program/exercise-catalog";
-
-const EXERCISE_NAME_BY_ID = new Map(EXERCISE_CATALOG.map((exercise) => [exercise.id, exercise.name]));
+import type { Exercise } from "@/lib/program/program-types";
 
 /**
  * "Or" choice cards (PRODUCT_SPEC §6): presented only when the program
  * itself defines alternativeExerciseIds for this slot. Options come solely
- * from seed data — never invented here.
+ * from the program — never invented here. `exercises` is the session's
+ * exercisesSnapshot (2026-08-25 rework), not a static catalog.
  */
 export default function ExerciseChoiceCard({
   primaryExerciseId,
   alternativeExerciseIds,
+  exercises,
   onChoose,
 }: {
   primaryExerciseId: string;
   alternativeExerciseIds: string[];
+  exercises: Record<string, Exercise>;
   onChoose: (exerciseId: string) => void;
 }) {
   const options = [primaryExerciseId, ...alternativeExerciseIds];
@@ -30,7 +31,7 @@ export default function ExerciseChoiceCard({
             className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 p-5 text-left transition-colors active:border-white"
           >
             <span className="text-base font-medium text-white">
-              {EXERCISE_NAME_BY_ID.get(exerciseId) ?? exerciseId}
+              {exercises[exerciseId]?.name ?? exerciseId}
             </span>
           </button>
         ))}

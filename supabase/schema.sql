@@ -47,3 +47,56 @@ create index if not exists workout_sessions_template_idx
 
 -- Same RLS posture as body_checkins: service-role access only, no policies.
 alter table workout_sessions enable row level security;
+
+-- Training programs (2026-08-25 rework): the program is no longer seeded in
+-- code. The owner pastes a program document in-app; it is parsed and stored
+-- here. Exactly one program is active at a time; older rows are kept as
+-- history so a paste can be rolled back by re-activating a previous row.
+create table if not exists training_programs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  -- The raw pasted text, kept verbatim so it can be re-edited and re-parsed.
+  source_text text not null,
+  -- The parsed program. Shape owned by the TypeScript types in lib/program/.
+  parsed jsonb not null,
+  is_active boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists training_programs_active_idx
+  on training_programs (is_active) where is_active;
+
+alter table training_programs enable row level security;
+
+-- Athletic benchmarks (sprints, jumps, strict pull-ups/dips, L-sit,
+-- planche progression level). One row per measurement.
+create table if not exists athletic_benchmarks (
+  id uuid primary key default gen_random_uuid(),
+  benchmark_type text not null,
+  measured_on date not null,
+  value numeric not null,
+  unit text not null,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists athletic_benchmarks_type_date_idx
+  on athletic_benchmarks (benchmark_type, measured_on desc);
+
+alter table athletic_benchmarks enable row level security;
+
+-- Morning readiness check-ins. groin_status uses the 0-5 scale from
+-- PRODUCT_SPEC §13; the app must never diagnose (CLAUDE.md non-negotiable 19).
+create table if not exists readiness_entries (
+  id uuid primary key default gen_random_uuid(),
+  entry_date date not null unique,
+  sleep_hours numeric(3,1),
+  energy smallint,
+  soreness smallint,
+  groin_status smallint,
+  readiness text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+alter table readiness_entries enable row level security;
