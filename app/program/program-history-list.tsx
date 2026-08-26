@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import type { ProgramRecord } from "./actions";
 import { activateProgram } from "./actions";
 
-/** Every program ever saved, newest first, with a one-tap rollback to any
- * earlier one — nothing is ever deleted when a new program is activated. */
+/** Every program ever saved, newest first. Exactly one is active at a time;
+ * any other can be switched to with one tap — nothing is ever deleted when a
+ * new program is pasted or activated, so this doubles as paste rollback. */
 export default function ProgramHistoryList({
   programs,
   activeId,
@@ -40,7 +41,10 @@ export default function ProgramHistoryList({
   return (
     <div className="flex flex-col gap-3">
       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
-        Program history
+        Your programs
+      </p>
+      <p className="text-xs text-ink-tertiary">
+        Every program you have pasted is kept here. Tap one to make it active at any time.
       </p>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       <ul className="flex flex-col divide-y divide-line-hairline rounded-2xl border border-line-hairline bg-surface-1 px-5">
@@ -63,7 +67,7 @@ export default function ProgramHistoryList({
                   disabled={isPending && pendingId === program.id}
                   className="rounded-lg border border-line-default px-3 py-2 text-xs font-medium text-ink-secondary transition-colors active:bg-surface-2 disabled:opacity-50"
                 >
-                  {isPending && pendingId === program.id ? "Activating..." : "Re-activate"}
+                  {isPending && pendingId === program.id ? "Switching..." : "Switch to"}
                 </button>
               )}
             </li>

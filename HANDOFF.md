@@ -8,7 +8,7 @@
 
 Screens, all on the R2 design system (Big Shoulders + IBM Plex Sans, surface/line/ink/accent tokens in `app/globals.css`): Today (home, one job: start today), active workout (linear card flow, timer, choice cards, Help me feel it, progression suggestion strip with Why + Use chips, autosave, completion stats), `/program` (paste/preview/history), `/body`, `/readiness`, `/history` (calendar + adherence + drill-down), `/progress` (benchmarks + trends + athleticism vs bodyweight), `/exercises` (library), `/review` (weekly/monthly). Nav: mobile Today/History/Progress + More disclosure; desktop all inline; no header on `/workout/active` or `/unlock`.
 
-- **Supabase** (ref `woawbkhcoegvwrsfgbix`, service-role only, RLS no-policies by design): `body_checkins` (1 real row, 2026-08-25, 190.5 lbs + photo), `workout_sessions` (applied, 0 rows). **NOT yet applied: `training_programs`, `athletic_benchmarks`, `readiness_entries`** — schema.sql grew 2026-08-25/26; owner must paste it again (idempotent). Until then those features show quiet "apply supabase/schema.sql" degradation, never crash.
+- **Supabase** (ref `woawbkhcoegvwrsfgbix`, service-role only, RLS no-policies by design): full schema applied by owner 2026-08-26 and verified via REST (all five tables present: `body_checkins` 1 real row 2026-08-25 190.5 lbs + photo; `workout_sessions`, `training_programs`, `athletic_benchmarks`, `readiness_entries` all 0 rows). Program saving, readiness, and benchmarks are unblocked.
 - **Verification state:** `npm run build` + lint green; `npx tsx scripts/validate-program.ts` (parses/validates sample program + prescription-type coverage) and `npx tsx scripts/test-progression.ts` (34/34 pre-registered) both pass; every route driven headlessly at 390x844, zero page errors, all DB test rows cleaned (workout_sessions at 0).
 
 ## Just completed (this session, in commit order)
@@ -26,16 +26,17 @@ Nothing mid-flight. R8 closed with this handoff's commit.
 
 ## Next steps (priority order)
 
-1. **Owner: paste the updated `supabase/schema.sql` in the Supabase SQL editor** (one paste, idempotent) — unlocks program saving, readiness entries, benchmarks.
-2. **Owner: paste the real training program** at `/program` when their document is ready (`PROGRAM_FORMAT.md` shows the format; a Claude session can also convert an arbitrary document into the format on request).
-3. After both: verify end-to-end on the phone (paste → Today shows the day → run a real session → history/adherence/review populate) and fix whatever real use surfaces.
+1. ~~Schema paste~~ DONE 2026-08-26, verified.
+2. **Owner: paste Block 1** at `/program`. The real program ("Athletic Muscle Base — Block 1") is stored verbatim at `programs/block-1-athletic-muscle-base.md` and validated 2026-08-26 via `npx tsx scripts/validate-program-file.ts programs/block-1-athletic-muscle-base.md` (zero errors, zero warnings, 51/70 exercise slots matched catalog guidance). Copy the file's contents into the paste screen. Deliberately NOT pre-inserted into the DB so the owner's first paste doubles as the end-to-end verification of the paste flow.
+3. After that: verify end-to-end on the phone (paste → Today shows the day → run a real session → history/adherence/review populate) and fix whatever real use surfaces.
 4. Deferred list in CLAUDE.md non-negotiable 23 still stands (no AI analysis, no HYROX phase, etc.).
 
 ## Open decisions / blockers
 
-- Three tables unapplied (see Next steps 1) — expected degradation, not a bug.
 - Old Phase 5 (modification system: modify-don't-fail flows beyond skip) was NOT part of the rework scope decision and remains unbuilt; `status: modified` is supported in types/queries everywhere, no UI produces it yet.
 - Substitution beyond program-defined "or" pairs: deliberately not built (program defines valid alternatives).
+- Multiple programs + switching: already supported natively (every paste is kept in `training_programs`; the "Your programs" list on `/program` switches the active one with one tap; relabeled from "Program history" 2026-08-26 at owner request). Sessions snapshot their template at start, so switching never corrupts history.
+- Multi-word target durations like "65-70 minutes" parse as the lower bound only (65). Cosmetic; fine unless the owner objects.
 
 ## Where everything lives
 
@@ -54,6 +55,8 @@ Nothing mid-flight. R8 closed with this handoff's commit.
 | `app/body/` · `app/unlock/` · `proxy.ts` · `lib/auth/` · `lib/supabase/` · `lib/date/` | Unchanged roles from earlier phases |
 | `supabase/schema.sql` | Idempotent schema: body_checkins, workout_sessions, training_programs, athletic_benchmarks, readiness_entries |
 | `PROGRAM_FORMAT.md` | Owner-facing paste format with full example week |
+| `programs/` | Owner's real programs in paste format, verbatim (`block-1-athletic-muscle-base.md`) |
+| `scripts/validate-program-file.ts` | Parses any program file through the real parser; use before pasting a new program |
 
 ## Operational landmines
 
