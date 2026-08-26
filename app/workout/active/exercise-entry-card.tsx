@@ -5,6 +5,7 @@ import type { Prescription } from "@/lib/program/program-types";
 import type { ExerciseSlotLog, SetLog } from "@/lib/workout-session/workout-session-types";
 import RirSelector from "./rir-selector";
 import PreviousPerformanceSummary from "./previous-performance-summary";
+import ProgressionSuggestion from "./progression-suggestion";
 
 function formatRange(min: number, max: number): string {
   return min === max ? `${min}` : `${min}-${max}`;
@@ -89,6 +90,13 @@ export default function ExerciseEntryCard({
   return (
     <div className="flex flex-col gap-5">
       <PreviousPerformanceSummary previousSets={previousSets} prescriptionType={prescription.type} />
+
+      <ProgressionSuggestion
+        prescription={prescription}
+        previousSets={previousSets}
+        onUseWeight={(value) => setWeight(String(value))}
+        onUseSeconds={(value) => setSeconds(String(value))}
+      />
 
       <div className="flex items-baseline justify-between">
         <p className="font-display text-xl font-semibold tabular-nums text-ink-primary">
