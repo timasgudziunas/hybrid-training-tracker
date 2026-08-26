@@ -2,6 +2,18 @@
 
 > To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables), then `PLAN.md` (the "Rework plan" section reflects current reality; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth; `TRAINING_SYSTEM.md` is programming rules/philosophy only (its weekly program was removed from the app); `PROGRAM_FORMAT.md` is the owner-facing paste format.
 
+## ⚡ RUN THIS FIRST — owner's pending prompt (added 2026-08-26)
+
+The owner left the following prompt at the end of the last session, to be executed at the start of this one as if the owner had just typed it. Treat it as the session's opening user request. Once you have run it, DELETE this entire section from HANDOFF.md (the owner asked for that explicitly). Note before starting: the fourth item (finish not saving) is a report of a real incident from the owner's first workout on 2026-08-26 — investigate root cause before changing anything, and check `workout_sessions` in Supabase plus the localStorage-mirror flow in `app/workout/active/active-workout-screen.tsx` first. The owner's prompt, verbatim:
+
+```
+I finished my first workout today, here is what I noticed:
+I want ther to be a timer for how long I have been on an exercise. It shouldn't be huge, but still exist.
+I couldn't find a button to go back to the previous set in case I input the wrong data for a set (i.e weight or reps)
+When I left an exercise after changing the weight it didn't save the new weight. It defaulted to the weight I used last set instead.
+After finishing my workout today and clicking "finish workout" I don't think it saved. I am still prompted to do today's workout as if I hadn't touched it this morning. Can you much that it saved, have the webapp clearly depict that it saved, and make sure this doesn't happen again?
+```
+
 ## Current state (as of 2026-08-26 ~12:15 UTC)
 
 **The app is fully live and in real use.** R1-R8 rework complete, deployed at **https://hybrid-training-tracker.vercel.app** behind the passphrase gate. The owner's real program **"Athletic Muscle Base — Block 1"** was pasted and activated 2026-08-26 11:42 UTC (row `aea8db93-...` in `training_programs`, is_active=true, verified via REST: all 7 days parsed, 6 training days + Sunday rest). The program source is stored verbatim in the repo at `programs/block-1-athletic-muscle-base.md`.
