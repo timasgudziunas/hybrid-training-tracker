@@ -14,7 +14,9 @@ import {
   loadLocalSession,
   saveLocalSession,
 } from "@/lib/workout-session/local-session-store";
+import { loadPendingSessions, removePendingSession, stashPendingSession } from "@/lib/workout-session/pending-sync-store";
 import { isResumableSession, isSampleSession } from "@/lib/workout-session/resumable-session";
+import { createSessionSaveQueue, type SessionSaveQueue } from "@/lib/workout-session/save-queue";
 import type {
   ExerciseSlotLog,
   PreviousPerformanceByExercise,
@@ -24,10 +26,11 @@ import type {
 import { fetchActiveProgram } from "@/app/program/actions";
 import { fetchActiveSessionForToday, fetchPreviousPerformance, saveWorkoutSession } from "@/app/workout/actions";
 import SessionTimer from "./session-timer";
+import ExerciseTimer from "./exercise-timer";
 import SyncStatusBadge from "./sync-status-badge";
 import WorkoutOverview from "./workout-overview";
 import ExerciseSlotView from "./exercise-slot-view";
-import CompletionSummary from "./completion-summary";
+import CompletionSummary, { type FinishState } from "./completion-summary";
 
 const SAVE_DEBOUNCE_MS = 2500;
 
@@ -43,10 +46,36 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformanceByExercise>({});
   const [synced, setSynced] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
-  const [finished, setFinished] = useState(false);
+  // Replaces the old bare `finished` boolean (2026-08-26 save-queue rework)
+  // so the completion screen can show saving/saved/failed distinctly and
+  // offer a retry instead of silently claiming "Saved" on a failed save.
+  const [finishState, setFinishState] = useState<FinishState>("idle");
+  // When the current slot was entered, for the small per-exercise timer.
+  // Deliberately not persisted — a refresh or an Overview jump restarting
+  // the count is fine for a glance-only indicator.
+  const [slotEnteredAtMs, setSlotEnteredAtMs] = useState<number | null>(null);
 
   const sessionRef = useRef<WorkoutSessionRecord | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // One save queue per mount, wrapping the saveWorkoutSession server action
+  // so every save (debounced autosave, visibility flush, initial save,
+  // Finish, retry) funnels through a single serialized pipe — the fix for
+  // the 2026-08-26 incident where a stale pre-finish autosave landed AFTER
+  // the finish save and silently reverted status back to 'active'. Every
+  // completed save (success or failure) drives `synced`, exactly like the
+  // old bare .then(setSynced) calls did. Lazily created into a ref (rather
+  // than a plain useCallback wrapper) so it survives re-renders as one
+  // instance without upsetting exhaustive-deps on every callback that uses
+  // it — refs are exempt from that lint rule.
+  const queueRef = useRef<SessionSaveQueue | null>(null);
+  if (queueRef.current === null) {
+    queueRef.current = createSessionSaveQueue(async (record) => {
+      const result = await saveWorkoutSession(record);
+      setSynced(result.ok);
+      return { ok: result.ok };
+    });
+  }
 
   // The program is never re-resolved for an existing session — its
   // TrainingDayTemplate and referenced exercises were snapshotted into
@@ -57,6 +86,26 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   const exercises = session ? session.performance.exercisesSnapshot : {};
   const templateSlots: TemplateSlot[] = useMemo(() => (template ? flattenTemplateSlots(template) : []), [template]);
 
+  // Computed early (rather than after the phase early-returns below) so the
+  // per-exercise timer effect, right after, has a plain value to depend on.
+  // `null` in any phase before "ready".
+  const currentSlotKey = session?.performance.currentSlotKey ?? null;
+
+  // Resets the per-exercise timer whenever the athlete lands on a new
+  // current slot (advance, skip, or an Overview jump). Reading/writing refs
+  // and calling Date.now() are both disallowed during render by this
+  // project's stricter React Compiler-era lint rules (react-hooks/refs,
+  // react-hooks/purity), so this stays a real Effect; the setState call is
+  // nested inside an inner function (matching the `init()` pattern above)
+  // rather than sitting directly in the effect body, per this project's
+  // react-hooks/set-state-in-effect rule.
+  useEffect(() => {
+    function markEntered() {
+      if (currentSlotKey) setSlotEnteredAtMs(Date.now());
+    }
+    markEntered();
+  }, [currentSlotKey]);
+
   const persist = useCallback((next: WorkoutSessionRecord) => {
     sessionRef.current = next;
     setSession(next);
@@ -64,7 +113,13 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveWorkoutSession(next).then((result) => setSynced(result.ok));
+      // Reads sessionRef.current at fire time, not a captured `next` — a
+      // debounce closure capturing a stale snapshot is exactly what let a
+      // pre-finish autosave overwrite the finish save (root cause of the
+      // 2026-08-26 incident). The queue's own coalescing then guarantees
+      // this can never persist out of order relative to a Finish/retry
+      // request that lands first.
+      if (sessionRef.current) queueRef.current!.request(sessionRef.current);
     }, SAVE_DEBOUNCE_MS);
   }, []);
 
@@ -81,10 +136,15 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       const local = loadLocalSession();
       // A completed session lingering locally means its final save never
       // landed (e.g. the workout_sessions table wasn't applied yet, or the
-      // network dropped at Finish). Retry the sync before anything can
-      // overwrite the mirror — best effort, never blocks starting today.
+      // network dropped at Finish). Retry the sync through the queue before
+      // anything can overwrite the mirror — awaited (init staying
+      // "non-blocking in spirit" just means this is the one deliberate
+      // exception), so we know before overwriting whether it's safe to drop
+      // the local copy or whether it must be stashed first (see below).
+      let localCompletedRetryFailed = false;
       if (local && local.status === "completed") {
-        saveWorkoutSession(local);
+        queueRef.current!.request(local);
+        localCompletedRetryFailed = !(await queueRef.current!.settle());
       }
       // Resume the local session only when it's genuinely resumable: a
       // sample session never blocks starting the real program workout, and
@@ -144,9 +204,17 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         }
         const exercisesSnapshot = exercisesForTemplate(program, deviceTemplate);
         resolved = createNewSession(deviceTemplate, exercisesSnapshot, now);
-        saveWorkoutSession(resolved).then((result) => {
-          if (!cancelled) setSynced(result.ok);
-        });
+        queueRef.current!.request(resolved);
+      }
+
+      // A completed session was lingering locally, its retry above failed,
+      // and it's about to be overwritten by a different session below (it
+      // always is here: a 'completed' record is never itself resumable, so
+      // `resolved` can never BE `local` in this branch) — stash it via the
+      // pending-sync store first so the finished workout is never lost,
+      // even though the local mirror is about to move on.
+      if (local && local.status === "completed" && localCompletedRetryFailed) {
+        stashPendingSession(local);
       }
 
       saveLocalSession(resolved);
@@ -156,6 +224,16 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
       const prev = await fetchPreviousPerformance(resolved.workoutTemplateId, resolved.sessionDate);
       if (!cancelled && prev.ok) setPreviousPerformance(prev.data);
+
+      // Fire-and-forget: retry any previously stashed finished-but-unsynced
+      // sessions. These are different session ids than the one just
+      // resolved above, so their upserts can never interleave with or be
+      // reordered by the active session's own save queue.
+      for (const pending of loadPendingSessions()) {
+        saveWorkoutSession(pending).then((result) => {
+          if (result.ok) removePendingSession(pending.id);
+        });
+      }
 
       if (!cancelled) setPhase("ready");
     }
@@ -172,7 +250,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   useEffect(() => {
     function flush() {
       if (sessionRef.current) {
-        saveWorkoutSession(sessionRef.current);
+        queueRef.current!.request(sessionRef.current);
       }
     }
     function onVisibilityChange() {
@@ -224,9 +302,21 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     (slotKey: string, set: SetLog) =>
       updateSlot(slotKey, (slot) => {
         const sets = [...slot.sets];
+        // A set number beyond the currently committed count is the new
+        // "current" set being entered — committing it clears the draft, so
+        // the next fresh set starts blank. A set number within the
+        // existing range is a correction to an earlier set (edit-a-set):
+        // the draft for whatever set is currently being entered must
+        // survive that untouched.
+        const isNewCurrentSet = set.setNumber > slot.sets.length;
         sets[set.setNumber - 1] = set;
-        return { ...slot, sets };
+        return { ...slot, sets, draft: isNewCurrentSet ? undefined : slot.draft };
       }),
+    [updateSlot]
+  );
+
+  const handleDraftChange = useCallback(
+    (slotKey: string, draft: ExerciseSlotLog["draft"]) => updateSlot(slotKey, (slot) => ({ ...slot, draft })),
     [updateSlot]
   );
 
@@ -303,6 +393,20 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   const handleFinish = useCallback(async () => {
     const prev = sessionRef.current;
     if (!prev) return;
+
+    // Cancel any pending debounced autosave FIRST. Without this, the
+    // debounce timer scheduled by the athlete's last mutation before
+    // Finish could still fire after the final save below, requesting a
+    // stale pre-finish record into the queue — exactly the bug this
+    // save-queue rework fixes. Reading sessionRef.current at fire time
+    // (see `persist`) closes the other half of the original hole, but
+    // there is no reason to let that stale request happen at all when
+    // Finish is already in flight.
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
     const nowIso = new Date().toISOString();
     const durationSeconds = Math.round((new Date(nowIso).getTime() - new Date(prev.startedAt).getTime()) / 1000);
     const stats = computeCompletionStats(prev.performance, templateSlots);
@@ -320,17 +424,30 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     sessionRef.current = finalRecord;
     setSession(finalRecord);
     saveLocalSession(finalRecord);
-    const result = await saveWorkoutSession(finalRecord);
-    setSynced(result.ok);
+    setFinishState("saving");
+
+    queueRef.current!.request(finalRecord);
+    const ok = await queueRef.current!.settle();
+
     // Only drop the local mirror once the server actually has the session.
     // If the save failed (table not applied yet, network drop), the local
-    // copy is the ONLY record of this workout — keep it; the next visit
-    // retries the sync. A completed record never renders as "Resume".
-    if (result.ok) {
+    // copy is the ONLY record of this workout — keep it; Retry save (or the
+    // pending-sync stash, the next time a session starts) covers the rest.
+    if (ok) {
       clearLocalSession();
     }
-    setFinished(true);
+    setFinishState(ok ? "saved" : "failed");
   }, [templateSlots]);
+
+  const handleRetryFinish = useCallback(async () => {
+    const record = sessionRef.current;
+    if (!record) return;
+    setFinishState("saving");
+    queueRef.current!.request(record);
+    const ok = await queueRef.current!.settle();
+    if (ok) clearLocalSession();
+    setFinishState(ok ? "saved" : "failed");
+  }, []);
 
   if (phase === "loading") {
     return <div className="h-64 w-full animate-pulse rounded-2xl bg-surface-1" aria-hidden="true" />;
@@ -375,7 +492,6 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     return null;
   }
 
-  const currentSlotKey = session.performance.currentSlotKey;
   const currentTemplateSlot = currentSlotKey ? templateSlots.find((s) => s.slotKey === currentSlotKey) ?? null : null;
   const currentSlotLog = currentSlotKey ? session.performance.slots[currentSlotKey] : null;
 
@@ -392,6 +508,14 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-line-hairline bg-surface-0/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
           <SessionTimer startedAt={session.startedAt} />
+          {currentSlotKey && !overviewOpen && slotEnteredAtMs !== null ? (
+            <>
+              <span className="text-ink-tertiary" aria-hidden="true">
+                &middot;
+              </span>
+              <ExerciseTimer sinceMs={slotEnteredAtMs} />
+            </>
+          ) : null}
           <SyncStatusBadge synced={synced} />
         </div>
         {currentSlotKey ? (
@@ -429,6 +553,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onSkip={() => advanceFrom(currentTemplateSlot.slotKey, "skipped")}
             onSetNote={(note) => handleSetNote(currentTemplateSlot.slotKey, note)}
             onQualitativeComplete={() => handleQualitativeComplete(currentTemplateSlot.slotKey)}
+            onDraftChange={(draft) => handleDraftChange(currentTemplateSlot.slotKey, draft)}
           />
         ) : (
           <CompletionSummary
@@ -440,12 +565,13 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onSetDifficulty={handleSetDifficulty}
             onSetNote={handleSetSessionNote}
             onFinish={handleFinish}
-            finished={finished}
+            finishState={finishState}
+            onRetry={handleRetryFinish}
           />
         )}
       </div>
 
-      {finished ? (
+      {finishState !== "idle" ? (
         <Link href="/" className="text-center text-sm font-medium text-accent-strong underline underline-offset-4">
           Back to Today
         </Link>

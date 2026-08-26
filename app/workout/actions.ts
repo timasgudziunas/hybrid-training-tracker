@@ -127,6 +127,55 @@ export async function fetchActiveSessionForToday(sessionDate: string): Promise<A
   }
 }
 
+/** Lightweight summary of the most recent completed/modified session for a
+ * date, for the Today screen's "Completed today" panel (start-workout-
+ * button.tsx). Sample sessions never count as the athlete's own workout, so
+ * they're filtered out after the fetch (matching resumable-session.ts's
+ * isSampleSession rule, without importing a client-only local-storage
+ * module here). `data: null` means nothing real was completed that date yet
+ * — not a failure. */
+export async function fetchLatestSessionSummaryForDate(
+  sessionDate: string
+): Promise<
+  ActionResult<{ status: WorkoutSessionStatus; durationSeconds: number | null; workoutTemplateId: string } | null>
+> {
+  let supabase;
+  try {
+    supabase = createServerSupabaseClient();
+  } catch (err) {
+    console.error("[workout/actions] Supabase client init failed:", err);
+    return { ok: false, reason: "Storage is not configured." };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .select("status, duration_seconds, workout_template_id")
+      .eq("session_date", sessionDate)
+      .in("status", ["completed", "modified"])
+      .order("started_at", { ascending: false });
+
+    if (error) {
+      console.error("[workout/actions] Latest session summary lookup failed:", error);
+      return { ok: false, reason: "Could not check today's session." };
+    }
+
+    const rows = (data ?? []) as { status: WorkoutSessionStatus; duration_seconds: number | null; workout_template_id: string }[];
+    const row = rows.find((candidate) => !candidate.workout_template_id.startsWith("sample-"));
+    if (!row) {
+      return { ok: true, data: null };
+    }
+
+    return {
+      ok: true,
+      data: { status: row.status, durationSeconds: row.duration_seconds, workoutTemplateId: row.workout_template_id },
+    };
+  } catch (err) {
+    console.error("[workout/actions] Latest session summary lookup threw:", err);
+    return { ok: false, reason: "Could not check today's session." };
+  }
+}
+
 /** Previous performance per exercise (PRODUCT_SPEC §7): the most recent
  * prior completed/modified session for this program template, keyed by the
  * exercise actually performed (so it still shows correctly if the athlete

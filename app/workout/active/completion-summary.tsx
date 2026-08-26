@@ -5,6 +5,12 @@ import type { CompletionStats } from "@/lib/workout-session/workout-session-type
 
 const DIFFICULTY_OPTIONS = [1, 2, 3, 4, 5] as const;
 
+/** Mirrors the save-queue outcome of Finish, replacing the old bare
+ * `finished` boolean so the UI can distinguish "saving", "saved", and
+ * "failed" instead of collapsing them all into one disabled state (the
+ * 2026-08-26 incident: a save that actually failed still showed "Saved"). */
+export type FinishState = "idle" | "saving" | "saved" | "failed";
+
 function formatDuration(totalSeconds: number): string {
   const minutes = Math.round(totalSeconds / 60);
   return `${minutes} min`;
@@ -22,7 +28,8 @@ export default function CompletionSummary({
   onSetDifficulty,
   onSetNote,
   onFinish,
-  finished,
+  finishState,
+  onRetry,
 }: {
   startedAt: string;
   finalDurationSeconds: number | null;
@@ -32,13 +39,16 @@ export default function CompletionSummary({
   onSetDifficulty: (value: number | undefined) => void;
   onSetNote: (value: string) => void;
   onFinish: () => void;
-  finished: boolean;
+  finishState: FinishState;
+  onRetry: () => void;
 }) {
   // Frozen when this screen appears (the parent remounts it on view change)
   // so it doesn't tick while the athlete types a note; the exact stored
-  // duration takes over once Finish has been pressed.
+  // duration takes over once Finish has been pressed (any state past
+  // "idle" means handleFinish has run and finalDurationSeconds is set).
   const [reachedAtSeconds] = useState(() => (Date.now() - new Date(startedAt).getTime()) / 1000);
-  const durationSeconds = finished && finalDurationSeconds !== null ? finalDurationSeconds : reachedAtSeconds;
+  const isFinished = finishState !== "idle";
+  const durationSeconds = isFinished && finalDurationSeconds !== null ? finalDurationSeconds : reachedAtSeconds;
 
   const todayStats = [
     stats.totalTonnage > 0 ? { label: "Lifted", value: `${Math.round(stats.totalTonnage).toLocaleString()} lb` } : null,
@@ -119,14 +129,34 @@ export default function CompletionSummary({
         />
       </label>
 
+      {finishState === "failed" ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
+          <p className="text-sm text-ink-primary">
+            Not saved to the cloud yet. Your workout is safe on this device and will sync automatically next time you
+            open a workout.
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="h-11 self-start rounded-lg border border-line-default px-4 text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2"
+          >
+            Retry save
+          </button>
+        </div>
+      ) : null}
+
       <button
         type="button"
         onClick={onFinish}
-        disabled={finished}
+        disabled={isFinished}
         className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong disabled:opacity-50"
       >
-        {finished ? "Saved" : "Finish"}
+        {finishState === "saving" ? "Saving" : finishState === "saved" ? "Saved to your history" : "Finish workout"}
       </button>
+
+      {finishState === "saved" ? (
+        <p className="text-center text-xs text-ink-tertiary">This session is synced and will appear in your history.</p>
+      ) : null}
     </div>
   );
 }

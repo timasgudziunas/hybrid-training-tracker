@@ -61,6 +61,11 @@ export interface ExerciseSlotLog {
    * have no sets — a single mark-complete tap. */
   qualitativeCompleted?: boolean;
   note?: string;
+  /** Uncommitted input values for the set currently being entered,
+   * persisted so nothing typed is ever lost when leaving the exercise or
+   * refreshing (the parent remounts ExerciseEntryCard on every commit,
+   * which would otherwise reset component-local input state to blank). */
+  draft?: { weight?: string; reps?: string; rir?: number; seconds?: string; timeSeconds?: string };
 }
 
 /** Fun, restrained completion stats (PRODUCT_SPEC §6 linear execution flow). */

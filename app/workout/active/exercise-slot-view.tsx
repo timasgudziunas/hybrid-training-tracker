@@ -1,7 +1,11 @@
 import type { Exercise } from "@/lib/program/program-types";
 import { REST_GUIDANCE_BY_CATEGORY } from "@/lib/program/rest-guidance";
 import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
-import type { ExerciseSlotLog, PreviousPerformanceByExercise, SetLog } from "@/lib/workout-session/workout-session-types";
+import type {
+  ExerciseSlotLog,
+  PreviousPerformanceByExercise,
+  SetLog,
+} from "@/lib/workout-session/workout-session-types";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
 import ExerciseChoiceCard from "./exercise-choice-card";
 import ExerciseEntryCard from "./exercise-entry-card";
@@ -30,6 +34,7 @@ export default function ExerciseSlotView({
   onSkip,
   onSetNote,
   onQualitativeComplete,
+  onDraftChange,
 }: {
   templateSlot: TemplateSlot;
   slotLog: ExerciseSlotLog;
@@ -43,6 +48,7 @@ export default function ExerciseSlotView({
   onSkip: () => void;
   onSetNote: (note: string) => void;
   onQualitativeComplete: () => void;
+  onDraftChange: (draft: ExerciseSlotLog["draft"]) => void;
 }) {
   const prescribed = templateSlot.exercise;
 
@@ -103,6 +109,7 @@ export default function ExerciseSlotView({
           onRemoveLastSet={onRemoveLastSet}
           onAddExtraSet={onAddExtraSet}
           onAdvance={onAdvance}
+          onDraftChange={onDraftChange}
         />
       )}
 
