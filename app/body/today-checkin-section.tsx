@@ -52,7 +52,7 @@ export default function TodayCheckinSection() {
   }
 
   if (loadState.status === "error") {
-    return <p className="text-sm text-red-400">Could not load today&rsquo;s check-in.</p>;
+    return <p className="text-sm text-danger">Could not load today&rsquo;s check-in.</p>;
   }
 
   // Today already logged: nothing to show here — the entry lives in the
@@ -62,8 +62,8 @@ export default function TodayCheckinSection() {
   }
 
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-      <h2 className="text-sm font-medium text-zinc-200">Log today&rsquo;s entry</h2>
+    <section className="flex flex-col gap-3 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card">
+      <h2 className="text-sm font-semibold text-ink-primary">Log today&rsquo;s entry</h2>
       <CheckinForm
         key={refreshKey}
         date={today}

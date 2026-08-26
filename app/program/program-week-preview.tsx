@@ -19,12 +19,14 @@ const WEEK_ORDER: Weekday[] = [
  * Today will look like on each day. */
 export default function ProgramWeekPreview({ program }: { program: ResolvedProgram }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {WEEK_ORDER.map((weekday) => {
         const template = program.templates[weekday];
         return (
-          <div key={weekday} className="flex flex-col gap-3 border-t border-zinc-800 pt-4 first:border-t-0 first:pt-0">
-            <p className="text-xs uppercase tracking-widest text-zinc-500">{capitalizeLabel(weekday)}</p>
+          <div key={weekday} className="flex flex-col gap-2">
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+              {capitalizeLabel(weekday)}
+            </p>
             {template.restDay ? (
               <RestDayCard template={template} />
             ) : (

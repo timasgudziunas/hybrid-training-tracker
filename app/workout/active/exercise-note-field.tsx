@@ -18,7 +18,7 @@ export default function ExerciseNoteField({
       <button
         type="button"
         onClick={() => setExpanded(true)}
-        className="self-start text-xs text-zinc-500 active:text-zinc-300"
+        className="self-start text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
       >
         + Add note
       </button>
@@ -31,7 +31,8 @@ export default function ExerciseNoteField({
       value={note ?? ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Note"
-      className="rounded-md border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-300"
+      autoFocus
+      className="rounded-lg border border-line-default bg-surface-2 px-3 py-2 text-sm text-ink-primary focus:border-accent focus:outline-none"
     />
   );
 }

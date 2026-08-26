@@ -21,16 +21,16 @@ export default function ExerciseChoiceCard({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-zinc-400">Pick one, whatever you feel today.</p>
+      <p className="text-sm text-ink-secondary">Pick one, whatever you feel today.</p>
       <div className="flex flex-col gap-3 sm:flex-row">
         {options.map((exerciseId) => (
           <button
             key={exerciseId}
             type="button"
             onClick={() => onChoose(exerciseId)}
-            className="flex-1 rounded-lg border border-zinc-700 bg-zinc-950 p-5 text-left transition-colors active:border-white"
+            className="flex-1 cursor-pointer rounded-2xl border border-line-default bg-surface-1 p-6 text-left shadow-card transition-colors hover:border-accent active:border-accent active:bg-surface-2"
           >
-            <span className="text-base font-medium text-white">
+            <span className="font-display text-xl font-bold text-ink-primary">
               {exercises[exerciseId]?.name ?? exerciseId}
             </span>
           </button>

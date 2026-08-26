@@ -88,11 +88,11 @@ export default function CheckinForm({
   }, initialState);
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="date" value={date} />
 
-      <label className="flex flex-col gap-1 text-sm text-zinc-300">
-        Bodyweight (lbs)
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Bodyweight (lbs)</span>
         <input
           type="number"
           name="weight"
@@ -102,26 +102,28 @@ export default function CheckinForm({
           max="999"
           defaultValue={existing?.weightLbs ?? ""}
           required
-          className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-3 text-lg text-white focus:border-zinc-400 focus:outline-none"
+          className="h-14 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-2xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-zinc-300">
-        Progress photo {existing?.hasPhoto ? "(optional, replaces current)" : "(optional)"}
+      <label className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">
+          Progress photo {existing?.hasPhoto ? "(optional, replaces current)" : "(optional)"}
+        </span>
         <input
           type="file"
           name="photo"
           accept="image/*"
-          className="text-sm text-zinc-400 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-zinc-200"
+          className="text-sm text-ink-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-surface-3 file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink-primary"
         />
       </label>
 
-      {state.error ? <p className="text-sm text-red-400">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-danger">{state.error}</p> : null}
 
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-white px-4 py-3 font-medium text-black disabled:opacity-50"
+        className="h-12 rounded-xl bg-accent text-sm font-semibold text-accent-ink transition-colors active:bg-accent-strong disabled:opacity-50"
       >
         {isPending ? "Saving..." : submitLabel}
       </button>

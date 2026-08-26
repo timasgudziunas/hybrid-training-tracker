@@ -17,13 +17,13 @@ export default function UnlockForm({ redirectTo }: { redirectTo: string }) {
         autoFocus
         autoComplete="current-password"
         placeholder="Passphrase"
-        className="rounded-md border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-500 focus:border-zinc-400 focus:outline-none"
+        className="h-14 rounded-xl border border-line-default bg-surface-1 px-4 text-base text-ink-primary shadow-well transition-colors placeholder:text-ink-tertiary focus:border-accent focus:outline-none"
       />
-      {state.error ? <p className="text-sm text-red-400">{state.error}</p> : null}
+      {state.error ? <p className="text-sm text-danger">{state.error}</p> : null}
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-white px-4 py-3 font-medium text-black disabled:opacity-50"
+        className="h-14 rounded-xl bg-accent text-base font-semibold text-accent-ink transition-colors active:bg-accent-strong disabled:opacity-50"
       >
         {isPending ? "Checking..." : "Unlock"}
       </button>

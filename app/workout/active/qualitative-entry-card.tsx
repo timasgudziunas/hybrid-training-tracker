@@ -21,22 +21,22 @@ export default function QualitativeEntryCard({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-zinc-400">{prescription.description}</p>
+      <p className="text-sm text-ink-secondary">{prescription.description}</p>
 
       {prescription.items?.length ? (
-        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
+        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-tertiary">
           {prescription.items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
       ) : null}
 
-      {minutes ? <p className="text-xs text-zinc-600">{minutes}</p> : null}
+      {minutes ? <p className="text-xs text-ink-tertiary">{minutes}</p> : null}
 
       <button
         type="button"
         onClick={onComplete}
-        className="h-16 rounded-md bg-white text-lg font-semibold text-black active:bg-zinc-300"
+        className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink transition-colors active:bg-accent-strong"
       >
         Mark complete
       </button>

@@ -30,7 +30,7 @@ export default function SessionTimer({ startedAt }: { startedAt: string }) {
   const elapsedSeconds = (now - new Date(startedAt).getTime()) / 1000;
 
   return (
-    <span className="font-mono text-sm tabular-nums text-zinc-200" aria-label="Session duration">
+    <span className="font-display text-lg font-semibold tabular-nums text-ink-primary" aria-label="Session duration">
       {formatElapsed(elapsedSeconds)}
     </span>
   );

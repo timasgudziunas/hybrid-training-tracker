@@ -12,8 +12,8 @@ export default function RirSelector({
   onChange: (value: number | undefined) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-widest text-zinc-600">RIR</span>
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">RIR</span>
       <div className="flex gap-1.5">
         {RIR_OPTIONS.map((option) => {
           const selected = value === option;
@@ -22,10 +22,10 @@ export default function RirSelector({
               key={option}
               type="button"
               onClick={() => onChange(selected ? undefined : option)}
-              className={`h-11 w-11 rounded-md border text-sm font-medium transition-colors ${
+              className={`h-11 w-11 rounded-lg border font-display text-base font-semibold tabular-nums transition-colors ${
                 selected
-                  ? "border-white bg-white text-black"
-                  : "border-zinc-700 text-zinc-300 active:bg-zinc-800"
+                  ? "border-accent bg-accent text-accent-ink"
+                  : "border-line-default text-ink-secondary active:bg-surface-2"
               }`}
               aria-pressed={selected}
             >

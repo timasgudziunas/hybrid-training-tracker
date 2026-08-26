@@ -91,35 +91,35 @@ export default function ExerciseEntryCard({
       <PreviousPerformanceSummary previousSets={previousSets} prescriptionType={prescription.type} />
 
       <div className="flex items-baseline justify-between">
-        <p className="text-sm font-medium text-zinc-300">
-          Set {currentSetNumber} of {targetSets}
+        <p className="font-display text-xl font-semibold tabular-nums text-ink-primary">
+          Set {currentSetNumber} <span className="text-ink-tertiary">of {targetSets}</span>
           {perSideLabel}
         </p>
-        <p className="text-xs text-zinc-500">Target: {rangeLabel}</p>
+        <p className="text-xs text-ink-tertiary">Target: {rangeLabel}</p>
       </div>
 
       {prescription.type === "repetitions" ? (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase tracking-widest text-zinc-600">Weight (lb)</span>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Weight (lb)</span>
               <input
                 type="text"
                 inputMode="decimal"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                className="h-14 rounded-md border border-zinc-700 bg-black px-3 text-lg text-white"
+                className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
                 placeholder="0"
               />
             </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase tracking-widest text-zinc-600">Reps</span>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Reps</span>
               <input
                 type="text"
                 inputMode="numeric"
                 value={reps}
                 onChange={(e) => setReps(e.target.value)}
-                className="h-14 rounded-md border border-zinc-700 bg-black px-3 text-lg text-white"
+                className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
                 placeholder={formatRange(prescription.minReps, prescription.maxReps)}
                 autoFocus
               />
@@ -137,7 +137,7 @@ export default function ExerciseEntryCard({
                 rir,
               })
             }
-            className="h-14 rounded-md bg-white text-base font-semibold text-black active:bg-zinc-300"
+            className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
           >
             Next
           </button>
@@ -146,14 +146,14 @@ export default function ExerciseEntryCard({
 
       {prescription.type === "hold" || prescription.type === "duration" ? (
         <div className="flex flex-col gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-zinc-600">Seconds achieved</span>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Seconds achieved</span>
             <input
               type="text"
               inputMode="numeric"
               value={seconds}
               onChange={(e) => setSeconds(e.target.value)}
-              className="h-14 rounded-md border border-zinc-700 bg-black px-3 text-lg text-white"
+              className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
               autoFocus
             />
           </label>
@@ -166,7 +166,7 @@ export default function ExerciseEntryCard({
                 seconds: seconds ? Number.parseInt(seconds, 10) : undefined,
               })
             }
-            className="h-14 rounded-md bg-white text-base font-semibold text-black active:bg-zinc-300"
+            className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
           >
             Next
           </button>
@@ -175,8 +175,8 @@ export default function ExerciseEntryCard({
 
       {prescription.type === "distance" ? (
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-zinc-600">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">
               Time (sec), optional
             </span>
             <input
@@ -184,7 +184,7 @@ export default function ExerciseEntryCard({
               inputMode="decimal"
               value={timeSeconds}
               onChange={(e) => setTimeSeconds(e.target.value)}
-              className="h-12 rounded-md border border-zinc-700 bg-black px-3 text-base text-white"
+              className="h-14 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-2xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
             />
           </label>
           <button
@@ -197,7 +197,7 @@ export default function ExerciseEntryCard({
                 timeSeconds: timeSeconds ? Number.parseFloat(timeSeconds) : undefined,
               })
             }
-            className="h-16 rounded-md bg-white text-lg font-semibold text-black active:bg-zinc-300"
+            className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
           >
             Done: rep {currentSetNumber} of {targetSets}
           </button>
@@ -208,7 +208,7 @@ export default function ExerciseEntryCard({
         <button
           type="button"
           onClick={onAddExtraSet}
-          className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-400 active:bg-zinc-800"
+          className="rounded-lg border border-line-default px-3 py-2 text-xs font-medium text-ink-secondary transition-colors active:bg-surface-2"
         >
           + Add set
         </button>
@@ -216,9 +216,9 @@ export default function ExerciseEntryCard({
           <button
             type="button"
             onClick={onRemoveLastSet}
-            className="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-400 active:bg-zinc-800"
+            className="rounded-lg border border-line-default px-3 py-2 text-xs font-medium text-ink-secondary transition-colors active:bg-surface-2"
           >
-            − Remove set
+            &minus; Remove set
           </button>
         ) : null}
       </div>

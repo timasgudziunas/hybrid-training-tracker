@@ -316,16 +316,16 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   }, [templateSlots]);
 
   if (phase === "loading") {
-    return <div className="h-64 w-full animate-pulse rounded-lg bg-zinc-950" aria-hidden="true" />;
+    return <div className="h-64 w-full animate-pulse rounded-2xl bg-surface-1" aria-hidden="true" />;
   }
 
   if (phase === "rest-day") {
     return (
-      <div className="flex flex-col gap-4">
-        <p className="text-sm text-zinc-400">
+      <div className="flex flex-col gap-4 rounded-2xl border border-line-hairline bg-surface-1 p-6 shadow-card">
+        <p className="text-sm text-ink-secondary">
           There is nothing to start today. {restDayDescription ?? "Rest or easy movement only."}
         </p>
-        <Link href="/" className="text-sm text-white underline underline-offset-4">
+        <Link href="/" className="text-sm font-medium text-accent-strong underline underline-offset-4">
           Back to Today
         </Link>
       </div>
@@ -334,18 +334,18 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
   if (phase === "no-program") {
     return (
-      <div className="flex flex-col gap-4">
-        <p className="text-sm text-zinc-400">No program is loaded yet.</p>
+      <div className="flex flex-col gap-5 rounded-2xl border border-line-hairline bg-surface-1 p-6 shadow-card">
+        <p className="text-sm text-ink-secondary">No program is loaded yet.</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             href="/program"
-            className="flex h-12 flex-1 items-center justify-center rounded-md bg-white text-sm font-semibold text-black active:bg-zinc-300"
+            className="flex h-12 flex-1 items-center justify-center rounded-xl bg-accent text-sm font-semibold text-accent-ink transition-colors active:bg-accent-strong"
           >
             Paste your program
           </Link>
           <Link
             href="/workout/active?source=sample"
-            className="flex h-12 flex-1 items-center justify-center rounded-md border border-zinc-700 text-sm font-medium text-zinc-300 active:bg-zinc-900"
+            className="flex h-12 flex-1 items-center justify-center rounded-xl border border-line-default text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2"
           >
             Try the sample workout
           </Link>
@@ -372,7 +372,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-line-hairline bg-surface-0/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
           <SessionTimer startedAt={session.startedAt} />
           <SyncStatusBadge synced={synced} />
@@ -381,7 +381,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
           <button
             type="button"
             onClick={() => setOverviewOpen((prev) => !prev)}
-            className="text-sm text-zinc-400 active:text-white"
+            className="rounded-lg px-2 py-1 text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2 active:text-ink-primary"
           >
             {overviewOpen ? "Close" : "Overview"}
           </button>
@@ -429,7 +429,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       </div>
 
       {finished ? (
-        <Link href="/" className="text-center text-sm text-zinc-400 underline underline-offset-4">
+        <Link href="/" className="text-center text-sm font-medium text-accent-strong underline underline-offset-4">
           Back to Today
         </Link>
       ) : null}

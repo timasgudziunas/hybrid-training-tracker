@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import SiteHeader from "@/app/site-header";
 import TodayCheckinSection from "./today-checkin-section";
 import CheckinHistory from "./checkin-history";
 import WeightTrendChart from "./weight-trend-chart";
@@ -86,30 +86,27 @@ export default async function BodyPage() {
     .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
 
   return (
-    <div className="flex flex-1 flex-col bg-black px-4 py-8 text-white">
+    <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Body</h1>
-          <Link href="/" className="text-sm text-zinc-400 hover:text-white">
-            Home
-          </Link>
-        </div>
+        <SiteHeader active="body" />
 
         {error ? (
-          <p className="rounded-md border border-red-900 bg-red-950/50 px-4 py-3 text-sm text-red-400">
-            {error}
-          </p>
+          <p className="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>
         ) : null}
 
         <TodayCheckinSection />
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-zinc-200">Weight trend (90 days)</h2>
-          <WeightTrendChart data={chartData} />
+          <h2 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+            Weight trend, 90 days
+          </h2>
+          <div className="rounded-2xl border border-line-hairline bg-surface-1 p-4 shadow-card sm:p-5">
+            <WeightTrendChart data={chartData} />
+          </div>
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-zinc-200">History</h2>
+          <h2 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">History</h2>
           <CheckinHistory rows={rows} photoUrls={photoUrls} />
         </section>
       </div>

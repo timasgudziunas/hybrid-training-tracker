@@ -19,15 +19,15 @@ export default function StartWorkoutButton() {
   const hasActiveSession = useSyncExternalStore(subscribeToNothing, hasActiveLocalSession, getServerSnapshot);
 
   if (hasActiveSession === null) {
-    return <div className="h-14 w-full animate-pulse rounded-md bg-zinc-950" aria-hidden="true" />;
+    return <div className="h-16 w-full animate-pulse rounded-xl bg-surface-2" aria-hidden="true" />;
   }
 
   return (
     <Link
       href="/workout/active"
-      className="flex h-14 w-full items-center justify-center rounded-md bg-white text-base font-semibold text-black active:bg-zinc-300"
+      className="flex h-16 w-full items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
     >
-      {hasActiveSession ? "Resume workout" : "Start Workout"}
+      {hasActiveSession ? "Resume workout" : "Start workout"}
     </Link>
   );
 }

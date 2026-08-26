@@ -50,7 +50,7 @@ export default function ProgramPasteForm() {
   return (
     <div className="flex flex-col gap-4">
       <label className="flex flex-col gap-2">
-        <span className="text-xs uppercase tracking-widest text-zinc-500">Paste your program</span>
+        <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Paste your program</span>
         <textarea
           value={sourceText}
           onChange={(e) => {
@@ -60,7 +60,8 @@ export default function ProgramPasteForm() {
           }}
           rows={14}
           placeholder="# Program Name&#10;&#10;## Monday: Upper Body&#10;### Strength (strength)&#10;- Hack Squat: 3 x 6-10"
-          className="rounded-md border border-zinc-700 bg-zinc-950 p-3 font-mono text-sm text-white"
+          spellCheck={false}
+          className="rounded-xl border border-line-default bg-surface-2 p-4 font-mono text-sm leading-relaxed text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
         />
       </label>
 
@@ -69,7 +70,7 @@ export default function ProgramPasteForm() {
           type="button"
           onClick={handlePreview}
           disabled={isPreviewing || sourceText.trim().length === 0}
-          className="h-11 rounded-md border border-zinc-700 px-4 text-sm font-medium text-zinc-200 active:bg-zinc-900 disabled:opacity-50"
+          className="h-12 rounded-xl border border-line-default px-4 text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2 disabled:opacity-50"
         >
           {isPreviewing ? "Checking..." : "Preview"}
         </button>
@@ -77,23 +78,23 @@ export default function ProgramPasteForm() {
           type="button"
           onClick={handleActivate}
           disabled={!canActivate || isSaving}
-          className="h-11 rounded-md bg-white px-4 text-sm font-semibold text-black active:bg-zinc-300 disabled:opacity-50"
+          className="h-12 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-ink transition-colors active:bg-accent-strong disabled:opacity-50"
         >
           {isSaving ? "Saving..." : "Activate this program"}
         </button>
       </div>
 
-      {saved ? <p className="text-sm text-emerald-400">Program saved and activated.</p> : null}
-      {saveError ? <p className="text-sm text-red-400">{saveError}</p> : null}
+      {saved ? <p className="text-sm text-success">Program saved and activated.</p> : null}
+      {saveError ? <p className="text-sm text-danger">{saveError}</p> : null}
 
       {preview.status === "previewed" ? (
         <div className="flex flex-col gap-4">
           {preview.errors.length > 0 ? (
-            <div className="flex flex-col gap-1 rounded-md border border-red-900 bg-red-950/40 p-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-red-400">
+            <div className="flex flex-col gap-1.5 rounded-xl border border-danger/30 bg-danger-soft p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-danger">
                 {preview.errors.length} {preview.errors.length === 1 ? "error" : "errors"}, could not be saved
               </p>
-              <ul className="flex flex-col gap-1 text-sm text-red-300">
+              <ul className="flex flex-col gap-1 text-sm text-ink-primary">
                 {preview.errors.map((error, index) => (
                   <li key={index}>{error}</li>
                 ))}
@@ -102,11 +103,11 @@ export default function ProgramPasteForm() {
           ) : null}
 
           {preview.warnings.length > 0 ? (
-            <div className="flex flex-col gap-1 rounded-md border border-amber-900 bg-amber-950/30 p-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+            <div className="flex flex-col gap-1.5 rounded-xl border border-warning/30 bg-warning-soft p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-warning">
                 {preview.warnings.length} {preview.warnings.length === 1 ? "warning" : "warnings"}
               </p>
-              <ul className="flex flex-col gap-1 text-sm text-amber-200">
+              <ul className="flex flex-col gap-1 text-sm text-ink-primary">
                 {preview.warnings.map((warning, index) => (
                   <li key={index}>{warning}</li>
                 ))}
@@ -115,8 +116,10 @@ export default function ProgramPasteForm() {
           ) : null}
 
           {preview.program ? (
-            <div className="rounded-lg border border-zinc-800 p-4">
-              <p className="mb-4 text-xs uppercase tracking-widest text-zinc-500">Preview: {preview.program.name}</p>
+            <div className="rounded-2xl border border-line-hairline bg-surface-1 p-4 shadow-card sm:p-5">
+              <p className="mb-4 font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+                Preview: {preview.program.name}
+              </p>
               <ProgramWeekPreview program={preview.program} />
             </div>
           ) : null}

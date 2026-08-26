@@ -34,10 +34,14 @@ export default function WorkoutOverview({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-white">Session overview</h2>
-        <button type="button" onClick={onClose} className="text-sm text-zinc-400 active:text-white">
+        <h2 className="font-display text-lg font-bold text-ink-primary">Session overview</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg px-2 py-1 text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2 active:text-ink-primary"
+        >
           Close
         </button>
       </div>
@@ -45,8 +49,10 @@ export default function WorkoutOverview({
       <div className="flex flex-col gap-5 overflow-y-auto">
         {[...sections.entries()].map(([sectionId, slots]) => (
           <div key={sectionId} className="flex flex-col gap-1.5">
-            <p className="text-[10px] uppercase tracking-widest text-zinc-600">{slots[0].section.name}</p>
-            <ul className="flex flex-col divide-y divide-zinc-900">
+            <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+              {slots[0].section.name}
+            </p>
+            <ul className="flex flex-col divide-y divide-line-hairline">
               {slots.map((slot) => {
                 const log = slotLogs[slot.slotKey];
                 const isCurrent = slot.slotKey === currentSlotKey;
@@ -61,20 +67,18 @@ export default function WorkoutOverview({
                     <button
                       type="button"
                       onClick={() => onJump(slot.slotKey)}
-                      className={`flex w-full items-center justify-between gap-3 py-3 text-left ${
-                        isCurrent ? "text-white" : "text-zinc-300"
+                      className={`flex w-full items-center justify-between gap-3 py-3 text-left transition-colors ${
+                        isCurrent ? "text-accent-strong" : "text-ink-secondary hover:text-ink-primary"
                       }`}
                     >
                       <span className="text-sm font-medium">{name}</span>
                       <span
-                        className={`text-xs ${
+                        className={`text-xs font-medium ${
                           isCurrent
-                            ? "text-white"
+                            ? "text-accent-strong"
                             : log?.status === "completed"
-                              ? "text-zinc-500"
-                              : log?.status === "skipped"
-                                ? "text-zinc-600"
-                                : "text-zinc-600"
+                              ? "text-success"
+                              : "text-ink-tertiary"
                         }`}
                       >
                         {isCurrent ? "Current" : STATUS_LABEL[log?.status ?? "upcoming"]}

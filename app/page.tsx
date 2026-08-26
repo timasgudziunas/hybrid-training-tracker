@@ -1,23 +1,12 @@
-import Link from "next/link";
 import DailyCheckinPrompt from "./daily-checkin-prompt";
 import TodayWorkout from "./today/today-workout";
+import SiteHeader from "./site-header";
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col bg-black px-4 py-8 text-white">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-sm font-medium text-zinc-400">Hybrid Training Tracker</h1>
-          <div className="flex items-center gap-4">
-            <Link href="/program" className="text-sm text-zinc-400 hover:text-white">
-              Program
-            </Link>
-            <Link href="/body" className="text-sm text-zinc-400 hover:text-white">
-              Body
-            </Link>
-          </div>
-        </div>
-
+    <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
+        <SiteHeader active="today" />
         <DailyCheckinPrompt />
         <TodayWorkout />
       </div>

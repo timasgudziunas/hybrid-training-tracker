@@ -49,13 +49,20 @@ export default function ExerciseSlotView({
   if (!slotLog.chosenExerciseId) {
     return (
       <div className="flex flex-col gap-5">
+        <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+          {templateSlot.section.name}
+        </p>
         <ExerciseChoiceCard
           primaryExerciseId={prescribed.exerciseId}
           alternativeExerciseIds={prescribed.alternativeExerciseIds ?? []}
           exercises={exercises}
           onChoose={onChoose}
         />
-        <button type="button" onClick={onSkip} className="self-start text-xs text-zinc-500 active:text-zinc-300">
+        <button
+          type="button"
+          onClick={onSkip}
+          className="self-start text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
+        >
           Skip this exercise
         </button>
       </div>
@@ -67,13 +74,15 @@ export default function ExerciseSlotView({
   const restGuidance = prescribed.restCategory ? REST_GUIDANCE_BY_CATEGORY[prescribed.restCategory] : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <p className="text-[10px] uppercase tracking-widest text-zinc-600">{templateSlot.section.name}</p>
-        <h1 className="text-lg font-semibold text-white">{name}</h1>
-        {restGuidance ? <p className="text-xs text-zinc-600">Rest: {restGuidance.guidance}</p> : null}
+    <div className="flex flex-col gap-6 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
+      <div className="flex flex-col gap-1.5">
+        <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+          {templateSlot.section.name}
+        </p>
+        <h1 className="font-display text-2xl font-bold leading-tight text-ink-primary sm:text-3xl">{name}</h1>
+        {restGuidance ? <p className="text-xs text-ink-tertiary">Rest: {restGuidance.guidance}</p> : null}
         {prescribed.notes?.length ? (
-          <ul className="flex flex-col gap-0.5 text-xs text-zinc-500">
+          <ul className="flex flex-col gap-0.5 text-xs text-ink-tertiary">
             {prescribed.notes.map((note) => (
               <li key={note}>{note}</li>
             ))}
@@ -97,9 +106,13 @@ export default function ExerciseSlotView({
         />
       )}
 
-      <div className="flex items-center justify-between border-t border-zinc-900 pt-3">
+      <div className="flex items-center justify-between border-t border-line-hairline pt-4">
         <ExerciseNoteField note={slotLog.note} onChange={onSetNote} />
-        <button type="button" onClick={onSkip} className="text-xs text-zinc-500 active:text-zinc-300">
+        <button
+          type="button"
+          onClick={onSkip}
+          className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
+        >
           Skip exercise
         </button>
       </div>

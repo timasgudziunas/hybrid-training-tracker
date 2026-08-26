@@ -6,8 +6,8 @@ export default function SyncStatusBadge({ synced }: { synced: boolean }) {
   if (synced) return null;
 
   return (
-    <span className="flex items-center gap-1 text-[10px] uppercase tracking-widest text-zinc-600">
-      <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" aria-hidden="true" />
+    <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-warning">
+      <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
       Not synced
     </span>
   );

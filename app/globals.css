@@ -1,12 +1,88 @@
 @import "tailwindcss";
 
-/* Active workout linear flow: a smooth, fast slide/fade between sets,
+/*
+ * Design tokens for the "elevated dark performance" system (R2 rework,
+ * 2026-08-26). Single source of truth for surface elevation, ink, the one
+ * committed accent, muted semantic states, and the type pairing. Every
+ * screen consumes these tokens via generated Tailwind utilities
+ * (bg-surface-1, text-ink-secondary, border-line-default, font-display,
+ * shadow-card, ...) rather than raw zinc/black/white values.
+ */
+@theme {
+  /* Surface scale: page -> raised card -> inset field -> overlay. Neutral
+     graphite, not blue-black slate, so the accent stays the only color
+     doing work. */
+  --color-surface-0: #0a0a0a;
+  --color-surface-1: #141414;
+  --color-surface-2: #1e1e1e;
+  --color-surface-3: #292929;
+
+  /* Hairline borders, layered by emphasis. */
+  --color-line-hairline: rgba(255, 255, 255, 0.06);
+  --color-line-default: rgba(255, 255, 255, 0.12);
+  --color-line-strong: rgba(255, 255, 255, 0.24);
+
+  /* Ink (text) scale. */
+  --color-ink-primary: #f3f2ef;
+  --color-ink-secondary: #a4a19b;
+  --color-ink-tertiary: #6e6b66;
+
+  /* The one committed accent: primary action, active states, the timer.
+     Deep signal blue, saturated enough for white text at AA contrast. */
+  --color-accent: #2e5fdb;
+  --color-accent-strong: #4d78ea;
+  --color-accent-soft: rgba(46, 95, 219, 0.16);
+  --color-accent-ink: #f8faff;
+
+  /* Semantic states, kept muted per PRODUCT_SPEC 20 (no alarm colors). */
+  --color-success: #45a870;
+  --color-success-soft: rgba(69, 168, 112, 0.14);
+  --color-warning: #d6a344;
+  --color-warning-soft: rgba(214, 163, 68, 0.14);
+  --color-danger: #dd6b5d;
+  --color-danger-soft: rgba(221, 107, 93, 0.14);
+
+  /* Type pairing: Big Shoulders Display (stadium-signage condensed grotesk)
+     carries workout names, weekday eyebrows, and every big numeral; IBM
+     Plex Sans (engineering-grade humanist sans) carries everything else.
+     CSS variables are supplied by next/font in app/layout.tsx. */
+  --font-display: var(--font-shoulders), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+
+  /* Elevation: real depth from a soft dark drop shadow plus a hairline top
+     highlight, never a glow. */
+  --shadow-card:
+    0 1px 0 0 rgba(255, 255, 255, 0.05) inset,
+    0 20px 40px -24px rgba(0, 0, 0, 0.75),
+    0 2px 8px -2px rgba(0, 0, 0, 0.55);
+  --shadow-well: inset 0 1px 3px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-surface-0);
+    color: var(--color-ink-primary);
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+    color: var(--color-ink-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent-strong);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* Active workout linear flow: a fast, directional slide/fade between sets,
    exercises, and sections (PRODUCT_SPEC §6 "Linear execution flow"). Applied
    via a key-based remount, never a page navigation. */
 @keyframes workout-slide-in {
   from {
     opacity: 0;
-    transform: translateX(14px);
+    transform: translateX(20px);
   }
   to {
     opacity: 1;
@@ -15,11 +91,34 @@
 }
 
 .workout-slide-in {
-  animation: workout-slide-in 240ms ease-out;
+  animation: workout-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .workout-slide-in {
     animation: none;
+  }
+}
+
+/* "Help me feel it" and other inline disclosures: height animates via
+   grid-template-rows (0fr -> 1fr) so content never needs a measured pixel
+   height, and the panel can hold arbitrary text. */
+.disclosure-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.disclosure-panel.is-open {
+  grid-template-rows: 1fr;
+}
+
+.disclosure-panel > div {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure-panel {
+    transition: none;
   }
 }

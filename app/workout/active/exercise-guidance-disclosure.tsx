@@ -28,41 +28,50 @@ export default function ExerciseGuidanceDisclosure({ exercise }: { exercise: Exe
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
         aria-expanded={expanded}
-        className="self-start text-xs font-medium text-zinc-400 underline decoration-zinc-700 underline-offset-4 active:text-zinc-200"
+        className="flex w-fit cursor-pointer items-center gap-1.5 text-xs font-medium text-accent-strong transition-colors active:text-ink-primary"
       >
+        <svg
+          viewBox="0 0 12 12"
+          className={`h-3 w-3 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+          aria-hidden="true"
+        >
+          <path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         {expanded ? "Hide guidance" : "Help me feel it"}
       </button>
 
-      {expanded ? (
-        <div className="flex flex-col gap-2 rounded-md border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-400">
-          {exercise.intendedFeeling ? (
-            <p>
-              <span className="font-medium text-zinc-300">Where you should feel it: </span>
-              {exercise.intendedFeeling}
-            </p>
-          ) : null}
-          {exercise.cues?.length ? (
-            <div>
-              <p className="font-medium text-zinc-300">Cues</p>
-              <ul className="list-inside list-disc">
-                {exercise.cues.map((cue) => (
-                  <li key={cue}>{cue}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          {exercise.commonMistakes?.length ? (
-            <div>
-              <p className="font-medium text-zinc-300">Common mistakes</p>
-              <ul className="list-inside list-disc">
-                {exercise.commonMistakes.map((mistake) => (
-                  <li key={mistake}>{mistake}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+      <div className={`disclosure-panel ${expanded ? "is-open" : ""}`}>
+        <div>
+          <div className="flex flex-col gap-2 rounded-xl border border-line-hairline bg-surface-2 p-4 text-xs text-ink-secondary">
+            {exercise.intendedFeeling ? (
+              <p>
+                <span className="font-medium text-ink-primary">Where you should feel it: </span>
+                {exercise.intendedFeeling}
+              </p>
+            ) : null}
+            {exercise.cues?.length ? (
+              <div>
+                <p className="font-medium text-ink-primary">Cues</p>
+                <ul className="list-inside list-disc">
+                  {exercise.cues.map((cue) => (
+                    <li key={cue}>{cue}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {exercise.commonMistakes?.length ? (
+              <div>
+                <p className="font-medium text-ink-primary">Common mistakes</p>
+                <ul className="list-inside list-disc">
+                  {exercise.commonMistakes.map((mistake) => (
+                    <li key={mistake}>{mistake}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

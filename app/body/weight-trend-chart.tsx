@@ -5,14 +5,22 @@ const HEIGHT = 220;
 const PADDING = { top: 16, right: 16, bottom: 28, left: 40 };
 const GRID_LINES = 4;
 
+// Hardcoded to match the design tokens in globals.css: SVG presentation
+// attributes don't reliably resolve CSS custom properties, so these mirror
+// --color-line-hairline / --color-ink-tertiary / --color-accent directly.
+const GRID_COLOR = "rgba(255, 255, 255, 0.08)";
+const AXIS_TEXT_COLOR = "#8a8781";
+const LINE_COLOR = "#4d78ea";
+const POINT_COLOR = "#7aa0f4";
+
 export default function WeightTrendChart({ data }: { data: ChartRow[] }) {
   if (data.length === 0) {
-    return <p className="text-sm text-zinc-500">No entries in the last 90 days.</p>;
+    return <p className="text-sm text-ink-tertiary">No entries in the last 90 days.</p>;
   }
 
   if (data.length === 1) {
     return (
-      <p className="text-sm text-zinc-500">
+      <p className="text-sm text-ink-tertiary">
         One entry so far: {data[0].weight_lbs.toFixed(1)} lbs on {data[0].checkin_date}.
       </p>
     );
@@ -46,30 +54,23 @@ export default function WeightTrendChart({ data }: { data: ChartRow[] }) {
         const value = yMax - ((yMax - yMin) / GRID_LINES) * i;
         return (
           <g key={i}>
-            <line
-              x1={PADDING.left}
-              x2={WIDTH - PADDING.right}
-              y1={y}
-              y2={y}
-              stroke="#27272a"
-              strokeWidth={1}
-            />
-            <text x={PADDING.left - 8} y={y + 3} textAnchor="end" fontSize={10} fill="#71717a">
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={y} y2={y} stroke={GRID_COLOR} strokeWidth={1} />
+            <text x={PADDING.left - 8} y={y + 3} textAnchor="end" fontSize={10} fill={AXIS_TEXT_COLOR}>
               {value.toFixed(0)}
             </text>
           </g>
         );
       })}
 
-      <polyline points={points} fill="none" stroke="#e4e4e7" strokeWidth={2} />
+      <polyline points={points} fill="none" stroke={LINE_COLOR} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
       {data.map((row, i) => (
-        <circle key={row.checkin_date} cx={xFor(i)} cy={yFor(row.weight_lbs)} r={2.5} fill="#e4e4e7" />
+        <circle key={row.checkin_date} cx={xFor(i)} cy={yFor(row.weight_lbs)} r={3} fill={POINT_COLOR} />
       ))}
 
-      <text x={PADDING.left} y={HEIGHT - 6} fontSize={10} fill="#71717a">
+      <text x={PADDING.left} y={HEIGHT - 6} fontSize={10} fill={AXIS_TEXT_COLOR}>
         {data[0].checkin_date}
       </text>
-      <text x={WIDTH - PADDING.right} y={HEIGHT - 6} fontSize={10} fill="#71717a" textAnchor="end">
+      <text x={WIDTH - PADDING.right} y={HEIGHT - 6} fontSize={10} fill={AXIS_TEXT_COLOR} textAnchor="end">
         {data[data.length - 1].checkin_date}
       </text>
     </svg>

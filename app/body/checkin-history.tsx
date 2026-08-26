@@ -14,11 +14,11 @@ export default function CheckinHistory({
   photoUrls: Map<string, string>;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-zinc-500">No entries yet.</p>;
+    return <p className="text-sm text-ink-tertiary">No entries yet.</p>;
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-zinc-900">
+    <ul className="flex flex-col divide-y divide-line-hairline rounded-2xl border border-line-hairline bg-surface-1 px-5">
       {rows.map((row) => (
         <HistoryEntry
           key={row.checkin_date}

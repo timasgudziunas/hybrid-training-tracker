@@ -43,12 +43,12 @@ export default function PhotoLightbox({
           aria-modal="true"
           aria-label={`Photo from ${date}`}
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/95 p-4"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-surface-0/95 p-4"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="" className="max-h-[85vh] max-w-full object-contain" />
-          <p className="text-sm text-zinc-400">
-            {date} · {weightLbs.toFixed(1)} lbs · tap to close
+          <img src={url} alt="" className="max-h-[85vh] max-w-full rounded-lg object-contain" />
+          <p className="text-sm text-ink-secondary">
+            {date} &middot; {weightLbs.toFixed(1)} lbs &middot; tap to close
           </p>
         </div>
       ) : null}

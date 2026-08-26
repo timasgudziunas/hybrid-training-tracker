@@ -62,16 +62,21 @@ export default function DailyCheckinPrompt() {
   };
 
   return (
-    <div className="w-full max-w-sm rounded-lg border border-zinc-800 bg-zinc-950 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-zinc-200">Body check-in</h2>
+    <div className="w-full rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Daily check-in</p>
+          <h2 className="text-sm font-semibold text-ink-primary">Log today&rsquo;s bodyweight</h2>
+        </div>
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="px-2 text-lg leading-none text-zinc-500 hover:text-zinc-300"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-tertiary transition-colors hover:bg-surface-2 hover:text-ink-primary"
         >
-          &times;
+          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
         </button>
       </div>
       <CheckinForm date={today} existing={null} onSaved={dismiss} submitLabel="Save" />

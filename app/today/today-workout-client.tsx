@@ -32,14 +32,16 @@ export default function TodayWorkoutClient({ program }: { program: ResolvedProgr
   const weekday = useSyncExternalStore(subscribeToNothing, getClientWeekday, getServerWeekday);
 
   if (weekday === null) {
-    return <div className="h-48 w-full animate-pulse rounded-lg bg-zinc-950" aria-hidden="true" />;
+    return <div className="h-48 w-full animate-pulse rounded-2xl bg-surface-1" aria-hidden="true" />;
   }
 
   const template = getWorkoutForWeekday(program, weekday);
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs uppercase tracking-widest text-zinc-500">{capitalizeLabel(weekday)}</p>
+      <p className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
+        {capitalizeLabel(weekday)}
+      </p>
       {template.restDay ? (
         <RestDayCard template={template} />
       ) : (
