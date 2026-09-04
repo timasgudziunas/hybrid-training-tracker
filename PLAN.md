@@ -79,6 +79,22 @@ Owner decisions: (1) the seeded TRAINING_SYSTEM.md program is deleted from the a
 
 **Done when:** every screen exists, looks and feels premium, and the only missing ingredient is the owner's real program paste.
 
+## R9. First real week of use: mechanics rework (owner feedback, 2026-09-04)
+
+Owner ran Block 1 for a week (2026-08-26 to 2026-09-02) and listed what got in the way. All settled and shipped 2026-09-04; design summary in `PRODUCT_SPEC.md` §6 "Set editing, navigation, and cardio blocks".
+
+- [x] Cardio blocks get a resistance field, an explicit Start, a running clock, Stop, then time / avg watts / avg speed / distance entry; readouts show as Last time on the next exposure. `lib/workout-session/cardio-slot.ts` + `app/workout/active/cardio-entry-card.tsx`.
+- [x] Remove set removes the CURRENT unlogged set (target shrinks); any logged set can be deleted from its edit form. Pure reducers in `lib/workout-session/slot-set-edits.ts`.
+- [x] Next skips exercises already completed or skipped; after the last exercise with anything left, the overview opens (Finish workout available there) instead of the completion screen. `nextUnfinishedSlotKey` in `flatten-template-slots.ts`.
+- [x] Session timer freezes at Finish; primary button after save is Back to Today.
+- [x] Per-exercise set inputs as config (`lib/program/set-entry-fields.ts`): box jump logs box height, broad jump logs distance, power work has no weight/RIR.
+- [x] Last time is per exercise across all past sessions, not only the same weekday template.
+- [x] Unfinished session from a previous day is auto-closed as Modified ("Left unfinished") instead of resuming the next day (`RESUME_ACROSS_MIDNIGHT_HOURS` window for late sessions).
+- [x] Swap picker lists exercises targeting the same primary muscles first (`lib/program/rank-substitutes.ts`).
+- [x] Program can be deactivated from the program page ("Stop using this program"); Block 1 deactivated 2026-09-04 at the owner's request.
+
+**Done when:** verified headlessly end to end on the sample workout (34 checks) and by the owner in the gym on the next real session.
+
 > The phases below predate the rework. Their FEATURE checklists remain the requirements source for R3-R8 above; their ordering and the assumption of a code-seeded program are superseded.
 
 ## Phase 4: Progression engine

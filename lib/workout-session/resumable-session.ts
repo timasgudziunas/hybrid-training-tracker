@@ -15,6 +15,13 @@
 
 import type { WorkoutSessionRecord } from './workout-session-types';
 
+/** A workout that started late and crosses midnight is still resumed within
+ * this window; beyond it, an active session left over from a previous day
+ * is stale and must never hijack the next day's Today screen (owner: "I
+ * don't want tomorrow's session to change because I didn't finish exercises
+ * from the session before"). Config, not a magic number scattered inline. */
+export const RESUME_ACROSS_MIDNIGHT_HOURS = 6;
+
 /** Sample-program sessions are demos: excluded from adherence, history, and
  * reviews, and they must never hold the Today screen in "Resume" mode. */
 export function isSampleSession(record: WorkoutSessionRecord): boolean {
@@ -39,9 +46,14 @@ export function sessionHasLoggedWork(record: WorkoutSessionRecord): boolean {
 
 /**
  * A session is resumable when it is still in flight (active) and either
- * belongs to today or contains logged work. An untouched session from a
- * previous calendar day is stale: discarding it loses nothing, and resuming
- * it would silently give the athlete the wrong day's workout.
+ * belongs to today, or contains logged work AND was started recently enough
+ * to still plausibly be "tonight's" workout (within RESUME_ACROSS_MIDNIGHT_
+ * HOURS of `nowMs`). An untouched session from a previous calendar day is
+ * always stale: discarding it loses nothing, and resuming it would silently
+ * give the athlete the wrong day's workout. A session with real logged work
+ * from too long ago is ALSO stale (2026-09-04 fix): without the time bound,
+ * an unfinished session from days ago could resurface and hijack a later
+ * day's Today screen forever.
  *
  * 'modified' is EXCLUDED here (Phase 5 decision, 2026-08-26): it is now a
  * TERMINAL status assigned deterministically at Finish (see
@@ -51,7 +63,22 @@ export function sessionHasLoggedWork(record: WorkoutSessionRecord): boolean {
  * unsynced session, handled the same way a completed one is (retry the
  * sync, stash to pending-sync if that fails), never resumed.
  */
-export function isResumableSession(record: WorkoutSessionRecord, todaysDate: string): boolean {
+export function isResumableSession(record: WorkoutSessionRecord, todaysDate: string, nowMs: number): boolean {
   if (record.status !== 'active') return false;
-  return record.sessionDate === todaysDate || sessionHasLoggedWork(record);
+  if (record.sessionDate === todaysDate) return true;
+  if (!sessionHasLoggedWork(record)) return false;
+  return nowMs - Date.parse(record.startedAt) <= RESUME_ACROSS_MIDNIGHT_HOURS * 3600_000;
+}
+
+/**
+ * True for an active session that has real logged work but is no longer
+ * resumable (see isResumableSession above) — a workout the athlete left
+ * mid-flight on some earlier day and never finished. The active-workout
+ * screen closes these automatically via closeUnfinishedSession.ts so they
+ * can never hijack a later day's session instead of quietly being lost.
+ */
+export function isStaleUnfinishedSession(record: WorkoutSessionRecord, todaysDate: string, nowMs: number): boolean {
+  if (record.status !== 'active') return false;
+  if (!sessionHasLoggedWork(record)) return false;
+  return !isResumableSession(record, todaysDate, nowMs);
 }

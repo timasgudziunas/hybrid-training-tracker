@@ -130,6 +130,17 @@ A short qualitative line with no sub items works too:
 - L-Sit Practice: Four to five high quality attempts.
 ```
 
+### Cardio blocks
+
+A cycling, rowing, running, or similar block is written like any qualitative or duration line. The app recognizes it as cardio when the section type is cardio, when the exercise name contains a cardio word (cycling, bike, row, run, jog, treadmill, elliptical, stair, ski, swim, walk), or when the exercise is a cardio entry in the exercise library.
+
+```
+### Easy Aerobic Warm-Up (cardio)
+- Easy Cycling: Comfortable conversational cycling. (~8-10 min)
+```
+
+In the workout, a cardio block does not start on its own. You enter the resistance, tap Start, and a timer runs until you tap Stop. Then you log the time, average watts, average speed, and optional distance. Those numbers show up as Last time the next time the same block comes up.
+
 ### Per side work
 
 Add "each side" or "per leg" to a repetitions, duration, or hold prescription for work performed on one side at a time.

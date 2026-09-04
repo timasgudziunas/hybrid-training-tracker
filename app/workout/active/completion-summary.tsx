@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { SessionDeviation } from "@/lib/workout-session/session-deviations";
 import type { CompletionStats, EndedEarlyReason } from "@/lib/workout-session/workout-session-types";
@@ -59,6 +60,9 @@ export default function CompletionSummary({
     stats.totalTonnage > 0 ? { label: "Lifted", value: `${Math.round(stats.totalTonnage).toLocaleString()} lb` } : null,
     stats.totalSprintDistanceMeters > 0 ? { label: "Sprinted", value: `${stats.totalSprintDistanceMeters} m` } : null,
     stats.totalHoldSeconds > 0 ? { label: "Held", value: `${stats.totalHoldSeconds}s` } : null,
+    stats.totalCardioSeconds && stats.totalCardioSeconds > 0
+      ? { label: "Cardio", value: `${Math.max(1, Math.round(stats.totalCardioSeconds / 60))} min` }
+      : null,
   ].filter((entry): entry is { label: string; value: string } => entry !== null);
 
   return (
@@ -158,28 +162,41 @@ export default function CompletionSummary({
             Not saved to the cloud yet. Your workout is safe on this device and will sync automatically next time you
             open a workout.
           </p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="h-11 self-start rounded-lg border border-line-default px-4 text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2"
-          >
-            Retry save
-          </button>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={onRetry}
+              className="h-11 rounded-lg border border-line-default px-4 text-sm font-medium text-ink-secondary transition-colors active:bg-surface-2"
+            >
+              Retry save
+            </button>
+            <Link href="/" className="text-sm font-medium text-accent-strong underline underline-offset-4">
+              Back to Today
+            </Link>
+          </div>
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onClick={onFinish}
-        disabled={isFinished}
-        className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong disabled:opacity-50"
-      >
-        {finishState === "saving" ? "Saving" : finishState === "saved" ? "Saved to your history" : "Finish workout"}
-      </button>
-
       {finishState === "saved" ? (
-        <p className="text-center text-xs text-ink-tertiary">This session is synced and will appear in your history.</p>
-      ) : null}
+        <div className="flex flex-col gap-2">
+          <p className="text-center text-xs text-ink-tertiary">Saved to your history.</p>
+          <Link
+            href="/"
+            className="flex h-16 items-center justify-center rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
+          >
+            Back to Today
+          </Link>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onFinish}
+          disabled={isFinished}
+          className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong disabled:opacity-50"
+        >
+          {finishState === "saving" ? "Saving" : "Finish workout"}
+        </button>
+      )}
     </div>
   );
 }

@@ -11,9 +11,10 @@
  */
 
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { extractPreviousPerformance } from "@/lib/workout-session/previous-performance";
 import type {
+  ExerciseSlotLog,
   PreviousPerformanceByExercise,
-  SetLog,
   WorkoutSessionRecord,
   WorkoutSessionStatus,
 } from "@/lib/workout-session/workout-session-types";
@@ -21,6 +22,10 @@ import type {
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 
 const TABLE = "workout_sessions";
+
+/** How many recent real sessions (newest first, across ALL templates) are
+ * scanned for per-exercise "previous performance" history. */
+const PREVIOUS_PERFORMANCE_SESSION_SCAN_LIMIT = 60;
 
 type WorkoutSessionDbRow = {
   id: string;
@@ -178,14 +183,23 @@ export async function fetchLatestSessionSummaryForDate(
   }
 }
 
-/** Previous performance per exercise (PRODUCT_SPEC §7): the most recent
- * prior completed/modified session for this program template, keyed by the
- * exercise actually performed (so it still shows correctly if the athlete
- * picked a different "or" alternative last time). */
+/** Previous performance per exercise (PRODUCT_SPEC §7), scoped to the exact
+ * exercise ids passed in rather than a single day template (2026-09-04
+ * rework, owner request: "I already did calf exercise... it is still the
+ * exact same exercise" — the same exercise done on a different day should
+ * still show its last numbers). Scans the most recent real sessions across
+ * ALL templates (PREVIOUS_PERFORMANCE_SESSION_SCAN_LIMIT, newest first) and
+ * takes, per exercise id, the sets from the newest row that actually chose
+ * and logged it (extractPreviousPerformance). Sample sessions are excluded
+ * (repo-wide rule). Empty `exerciseIds` short-circuits without querying. */
 export async function fetchPreviousPerformance(
-  workoutTemplateId: string,
+  exerciseIds: string[],
   beforeDate: string
 ): Promise<ActionResult<PreviousPerformanceByExercise>> {
+  if (exerciseIds.length === 0) {
+    return { ok: true, data: {} };
+  }
+
   let supabase;
   try {
     supabase = createServerSupabaseClient();
@@ -195,32 +209,29 @@ export async function fetchPreviousPerformance(
   }
 
   try {
+    // `performance->slots` (no alias) resolves to a top-level `slots` key in
+    // the response — PostgREST/postgrest-js name a json path field after its
+    // LAST accessor, not the base column — so the row shape below is
+    // `{ slots: ... }`, not `{ performance: { slots: ... } }`. Verified
+    // against @supabase/postgrest-js's select-query-parser (GetFieldNodeResultName
+    // uses the json accessor's property name as the implicit alias).
     const { data, error } = await supabase
       .from(TABLE)
-      .select("performance")
-      .eq("workout_template_id", workoutTemplateId)
+      .select("workout_template_id, session_date, started_at, performance->slots")
       .lt("session_date", beforeDate)
       .in("status", ["completed", "modified"])
+      .not("workout_template_id", "like", "sample-%")
       .order("session_date", { ascending: false })
-      .limit(1);
+      .order("started_at", { ascending: false })
+      .limit(PREVIOUS_PERFORMANCE_SESSION_SCAN_LIMIT);
 
     if (error) {
       console.error("[workout/actions] Previous performance lookup failed:", error);
       return { ok: false, reason: "Could not load previous performance." };
     }
 
-    const row = data?.[0] as { performance: WorkoutSessionRecord["performance"] } | undefined;
-    if (!row) {
-      return { ok: true, data: {} };
-    }
-
-    const byExercise: PreviousPerformanceByExercise = {};
-    for (const slot of Object.values(row.performance.slots ?? {})) {
-      if (!slot.chosenExerciseId || slot.sets.length === 0) continue;
-      byExercise[slot.chosenExerciseId] = slot.sets.filter((set): set is SetLog => Boolean(set));
-    }
-
-    return { ok: true, data: byExercise };
+    const rows = (data ?? []) as unknown as Array<{ slots: Record<string, ExerciseSlotLog> | null }>;
+    return { ok: true, data: extractPreviousPerformance(rows, exerciseIds) };
   } catch (err) {
     console.error("[workout/actions] Previous performance lookup threw:", err);
     return { ok: false, reason: "Could not load previous performance." };

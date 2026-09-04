@@ -121,6 +121,17 @@ The active workout is primarily a linear, one-thing-at-a-time experience, like m
 - Each exercise card has a "Help me feel it" control (owner request 2026-08-25): tapping it reveals muscle-activation guidance — where the exercise should be felt, execution cues, and common mistakes — sourced from the exercise catalog's instructional fields. Inline expand, never a blocking modal; hidden when an exercise has no guidance content.
 - Completion ends with the summary plus a few fun, session-unique stats: total weight lifted (tonnage), total sprint distance, total hold time, and similar. Keep it restrained (data, not badges).
 
+### Set editing, navigation, and cardio blocks (owner feedback from the first week of real use, 2026-09-04)
+
+- Removing a set always removes the set the athlete is currently on (the unlogged one), shrinking the target set count. It never deletes an earlier logged set. Any logged set can be opened from the list and deleted from its edit form; later sets renumber.
+- Next after an exercise skips exercises already completed or skipped. If nothing is left after the current exercise but earlier exercises are still not done, the flow opens the session overview instead of the completion screen, listing what is left, with Finish workout available there. The completion screen keeps the overview one tap away until Finish is pressed.
+- The session timer stops at Finish. After a successful save, the primary button returns to Today.
+- An active session left unfinished from a previous day is closed automatically the next time the app opens a workout (saved as Modified, "Left unfinished"), unless it started within the last few hours (a late session crossing midnight still resumes). The next day always starts its own session.
+- Cardio blocks (cycling, rowing, running and similar) never start on their own: the athlete sets the resistance, taps Start, and a timer runs until Stop. At the end they log time, average watts, average speed, and optional distance. Those readouts are shown as Last time on the next exposure of the same block.
+- Some exercises use different set inputs. A box jump logs box height and reps, a broad jump logs distance and reps, and power work has no weight or RIR input. The mapping is configuration (one line per exercise), not component code.
+- The swap picker lists exercises that target the same primary muscles first, with their muscles shown, then everything else.
+- Last time performance is looked up per exercise across every past session, not only the same weekday's template.
+
 ## 7. Previous Performance
 
 Previous performance should be highly visible. For every strength exercise, show "LAST TIME" with weight x reps for each set, for example:

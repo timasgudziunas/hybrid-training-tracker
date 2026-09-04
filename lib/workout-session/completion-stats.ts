@@ -6,6 +6,7 @@
  */
 
 import type { TemplateSlot } from './flatten-template-slots';
+import { isCardioSet } from './cardio-slot';
 import type { CompletionStats, WorkoutSessionPerformance } from './workout-session-types';
 
 export function computeCompletionStats(
@@ -17,6 +18,7 @@ export function computeCompletionStats(
   let totalTonnage = 0;
   let totalSprintDistanceMeters = 0;
   let totalHoldSeconds = 0;
+  let totalCardioSeconds = 0;
   let exercisesCompleted = 0;
   let exercisesSkipped = 0;
   let setsCompleted = 0;
@@ -41,7 +43,14 @@ export function computeCompletionStats(
       if (prescription?.type === 'repetitions' && set.weight !== undefined && set.reps !== undefined) {
         totalTonnage += set.weight * set.reps;
       }
-      if ((prescription?.type === 'hold' || prescription?.type === 'duration') && set.seconds !== undefined) {
+      // A cardio set (see cardio-slot.ts) counts toward totalCardioSeconds
+      // only, never totalHoldSeconds, even when its nominal prescription
+      // type is 'duration' — a rowing-machine block and a plain isometric
+      // hold both use `duration`/`hold` types, but they are different
+      // metrics to the athlete.
+      if (set.seconds !== undefined && isCardioSet(set, prescription?.type)) {
+        totalCardioSeconds += set.seconds;
+      } else if ((prescription?.type === 'hold' || prescription?.type === 'duration') && set.seconds !== undefined) {
         totalHoldSeconds += set.seconds;
       }
       if (prescription?.type === 'distance' && set.distanceCompleted) {
@@ -58,6 +67,7 @@ export function computeCompletionStats(
     totalTonnage,
     totalSprintDistanceMeters,
     totalHoldSeconds,
+    totalCardioSeconds,
     exercisesCompleted,
     exercisesSkipped,
     setsCompleted,

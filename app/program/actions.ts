@@ -196,6 +196,37 @@ export async function fetchProgramHistory(): Promise<ActionResult<ProgramRecord[
   }
 }
 
+/** Deactivates every active program row (owner request 2026-09-04: "I won't
+ * be following the same training program anymore, I will be changing it up,
+ * so please remove it from my setup"). Reversible, never deletes: history
+ * rows already snapshot their own template (workout-session-types.ts's
+ * templateSnapshot/exercisesSnapshot), so nothing else breaks, and the
+ * program stays in fetchProgramHistory for activateProgram to switch back
+ * to. With no active program, the Today screen falls back to its
+ * waiting-for-program state (same as before any program was ever pasted). */
+export async function deactivateActiveProgram(): Promise<ActionResult<null>> {
+  let supabase;
+  try {
+    supabase = createServerSupabaseClient();
+  } catch (err) {
+    console.error("[program/actions] Supabase client init failed:", err);
+    return { ok: false, reason: "Storage is not configured." };
+  }
+
+  try {
+    const { error } = await supabase.from(TABLE).update({ is_active: false }).eq("is_active", true);
+    if (error) {
+      console.error("[program/actions] deactivateActiveProgram failed:", error);
+      return { ok: false, reason: "Could not stop using this program." };
+    }
+
+    return { ok: true, data: null };
+  } catch (err) {
+    console.error("[program/actions] deactivateActiveProgram threw:", err);
+    return { ok: false, reason: "Could not stop using this program." };
+  }
+}
+
 /** Re-activates a previously saved program (a paste rollback): deactivates
  * every other row, activates this one. The row's already-parsed content is
  * reused as-is; it is not re-parsed. */

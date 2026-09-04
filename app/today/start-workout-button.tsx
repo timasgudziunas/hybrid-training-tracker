@@ -20,7 +20,13 @@ function getServerSnapshot(): null {
 }
 
 function getClientSnapshot(): boolean {
-  return hasResumableLocalProgramSession(getLocalDateString(new Date()));
+  // Date.now() here (via `new Date()`) is fine even though this runs during
+  // render: useSyncExternalStore's getSnapshot contract requires a
+  // synchronous read, and a resumability check that's off by the render's
+  // own timing is harmless — it only ever affects the multi-hour midnight
+  // rollover window, not this render's snapshot value.
+  const now = new Date();
+  return hasResumableLocalProgramSession(getLocalDateString(now), now.getTime());
 }
 
 /** Whether today's completed session is confirmed synced (server fetch) or

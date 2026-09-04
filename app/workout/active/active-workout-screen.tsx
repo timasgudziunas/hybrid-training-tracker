@@ -7,18 +7,21 @@ import { getLocalWeekday } from "@/lib/date/weekday-from-date";
 import type { Exercise } from "@/lib/program/program-types";
 import { getWorkoutForWeekday, exercisesForTemplate } from "@/lib/program/resolved-program";
 import { SAMPLE_DEMO_WEEKDAY, SAMPLE_PROGRAM } from "@/lib/program/sample-program";
+import { closeUnfinishedSession } from "@/lib/workout-session/close-unfinished-session";
 import { createNewSession } from "@/lib/workout-session/create-session";
 import { computeCompletionStats } from "@/lib/workout-session/completion-stats";
-import { flattenTemplateSlots, nextSlotKey, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
+import { flattenTemplateSlots, nextUnfinishedSlotKey, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import {
   clearLocalSession,
   loadLocalSession,
   saveLocalSession,
 } from "@/lib/workout-session/local-session-store";
 import { loadPendingSessions, removePendingSession, stashPendingSession } from "@/lib/workout-session/pending-sync-store";
-import { isResumableSession, isSampleSession } from "@/lib/workout-session/resumable-session";
+import { isResumableSession, isSampleSession, isStaleUnfinishedSession } from "@/lib/workout-session/resumable-session";
 import { detectSessionDeviations, resolveFinishStatus } from "@/lib/workout-session/session-deviations";
 import { createSessionSaveQueue, type SessionSaveQueue } from "@/lib/workout-session/save-queue";
+import { isCardioSlot } from "@/lib/workout-session/cardio-slot";
+import { addExtraSet, deleteLoggedSet, removeCurrentSet } from "@/lib/workout-session/slot-set-edits";
 import type {
   EndedEarlyReason,
   ExerciseSlotLog,
@@ -136,6 +139,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
     async function init() {
       const now = new Date();
+      const today = getLocalDateString(now);
       const local = loadLocalSession();
       // A completed OR modified session lingering locally means its final
       // save never landed (e.g. the workout_sessions table wasn't applied
@@ -152,17 +156,43 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         queueRef.current!.request(local);
         localFinishedRetryFailed = !(await queueRef.current!.settle());
       }
+
+      // A stale unfinished session (active, has logged work, but started too
+      // long ago to still be "tonight's" workout — resumable-session.ts)
+      // must never hijack a later day's Today screen (owner: "I don't want
+      // tomorrow's session to change because I didn't finish exercises from
+      // the session before"). Close it as Modified via closeUnfinishedSession
+      // and retry the sync through the queue, same shape as the
+      // completed/modified branch above: await the settle so we know before
+      // this session moves on to today's workout whether it's safe to drop
+      // the closed copy or whether it must be stashed first (see below).
+      let localStaleCloseFailed = false;
+      let closedStaleLocal: WorkoutSessionRecord | null = null;
+      if (
+        local &&
+        local.status === "active" &&
+        !isSampleSession(local) &&
+        isStaleUnfinishedSession(local, today, now.getTime())
+      ) {
+        closedStaleLocal = closeUnfinishedSession(local, flattenTemplateSlots(local.performance.templateSnapshot));
+        queueRef.current!.request(closedStaleLocal);
+        localStaleCloseFailed = !(await queueRef.current!.settle());
+      }
+
       // Resume the local session only when it's genuinely resumable: a
-      // sample session never blocks starting the real program workout, and
-      // an untouched leftover from a previous day is stale, not today's
-      // workout. Anything with logged work always resumes (non-negotiable
-      // 22) — including a real in-flight session when the athlete taps the
-      // sample link. Discarding here (the local mirror's second clear site)
-      // is safe precisely because the discarded record is a sample or has
-      // nothing logged.
+      // sample session never blocks starting the real program workout, an
+      // untouched leftover from a previous day is stale, not today's
+      // workout, and a stale unfinished session (just closed above) is never
+      // resumed either — isResumableSession already returns false for it, so
+      // this falls into the same clearLocalSession() branch. Anything with
+      // logged work AND started recently enough always resumes (non-
+      // negotiable 22) — including a real in-flight session when the athlete
+      // taps the sample link. Discarding here (the local mirror's second
+      // clear site) is safe precisely because the discarded record is a
+      // sample, has nothing logged, or was already synced above.
       let resolved: WorkoutSessionRecord | null = null;
       if (local && local.status === "active") {
-        if (!isResumableSession(local, getLocalDateString(now))) {
+        if (!isResumableSession(local, today, now.getTime())) {
           clearLocalSession();
         } else if (source === "program" && isSampleSession(local)) {
           clearLocalSession();
@@ -172,7 +202,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       }
 
       if (!resolved) {
-        const remote = await fetchActiveSessionForToday(getLocalDateString(now));
+        const remote = await fetchActiveSessionForToday(today);
         if (remote.ok && remote.data && !(source === "program" && isSampleSession(remote.data))) {
           resolved = remote.data;
         }
@@ -223,12 +253,20 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         stashPendingSession(local);
       }
 
+      // Same guarantee for a stale unfinished session that was just closed
+      // above: its sync retry failed, so stash the CLOSED (Modified) record
+      // — never the raw local one — so it is never lost even though the
+      // local mirror is about to move on to today's session.
+      if (closedStaleLocal && localStaleCloseFailed) {
+        stashPendingSession(closedStaleLocal);
+      }
+
       saveLocalSession(resolved);
       sessionRef.current = resolved;
       if (cancelled) return;
       setSession(resolved);
 
-      const prev = await fetchPreviousPerformance(resolved.workoutTemplateId, resolved.sessionDate);
+      const prev = await fetchPreviousPerformance(Object.keys(resolved.performance.exercisesSnapshot), resolved.sessionDate);
       if (!cancelled && prev.ok) setPreviousPerformance(prev.data);
 
       // Fire-and-forget: retry any previously stashed finished-but-unsynced
@@ -286,15 +324,23 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       const prev = sessionRef.current;
       if (!prev) return;
       const updatedSlot: ExerciseSlotLog = { ...prev.performance.slots[slotKey], status };
-      const next = nextSlotKey(templateSlots, slotKey);
+      // Skip past anything already finished (owner: "if I finish an
+      // exercise that isn't next up and click next, it should skip the one
+      // I already finished"); once nothing remains AHEAD, land on the
+      // overview instead of the completion screen so the athlete sees
+      // what's left rather than being funneled straight to Finish (owner:
+      // "after the last exercise it should go to the overview").
+      const { next, remainingElsewhere } = nextUnfinishedSlotKey(templateSlots, prev.performance.slots, slotKey);
+      const nextCurrentSlotKey = next ?? remainingElsewhere[0] ?? null;
       persist({
         ...prev,
         performance: {
           ...prev.performance,
           slots: { ...prev.performance.slots, [slotKey]: updatedSlot },
-          currentSlotKey: next,
+          currentSlotKey: nextCurrentSlotKey,
         },
       });
+      if (!next && remainingElsewhere.length > 0) setOverviewOpen(true);
     },
     [persist, templateSlots]
   );
@@ -326,18 +372,18 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     [updateSlot]
   );
 
-  const handleRemoveLastSet = useCallback(
-    (slotKey: string) =>
-      updateSlot(slotKey, (slot) => ({
-        ...slot,
-        sets: slot.sets.slice(0, -1),
-        extraSets: slot.extraSets && slot.extraSets > 0 ? slot.extraSets - 1 : slot.extraSets,
-      })),
+  const handleRemoveCurrentSet = useCallback(
+    (slotKey: string) => updateSlot(slotKey, removeCurrentSet),
+    [updateSlot]
+  );
+
+  const handleDeleteSet = useCallback(
+    (slotKey: string, setNumber: number) => updateSlot(slotKey, (slot) => deleteLoggedSet(slot, setNumber)),
     [updateSlot]
   );
 
   const handleAddExtraSet = useCallback(
-    (slotKey: string) => updateSlot(slotKey, (slot) => ({ ...slot, extraSets: (slot.extraSets ?? 0) + 1 })),
+    (slotKey: string) => updateSlot(slotKey, addExtraSet),
     [updateSlot]
   );
 
@@ -355,15 +401,17 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         qualitativeCompleted: true,
         status: "completed",
       };
-      const next = nextSlotKey(templateSlots, slotKey);
+      const { next, remainingElsewhere } = nextUnfinishedSlotKey(templateSlots, prev.performance.slots, slotKey);
+      const nextCurrentSlotKey = next ?? remainingElsewhere[0] ?? null;
       persist({
         ...prev,
         performance: {
           ...prev.performance,
           slots: { ...prev.performance.slots, [slotKey]: updatedSlot },
-          currentSlotKey: next,
+          currentSlotKey: nextCurrentSlotKey,
         },
       });
+      if (!next && remainingElsewhere.length > 0) setOverviewOpen(true);
     },
     [persist, templateSlots]
   );
@@ -428,8 +476,23 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
           modifications: { ...prev.performance.modifications, substitutions: nextSubs },
         },
       });
+
+      // A swapped-in exercise the athlete has never logged before this
+      // session has no entry in `previousPerformance` yet (it was only ever
+      // fetched for the ORIGINAL template's exercises at Start Workout) —
+      // fetch its own prior exposure now so "Previous" still shows up after
+      // a swap, same as PRODUCT_SPEC §7 promises for every other exercise.
+      // Fire-and-forget: the entry card renders fine with no previous data
+      // in the meantime.
+      if (previousPerformance[exercise.id] === undefined) {
+        fetchPreviousPerformance([exercise.id], prev.sessionDate).then((result) => {
+          if (result.ok) {
+            setPreviousPerformance((current) => ({ ...current, ...result.data }));
+          }
+        });
+      }
     },
-    [persist]
+    [persist, previousPerformance]
   );
 
   const handleRevertSwap = useCallback(
@@ -494,6 +557,20 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     },
     [persist]
   );
+
+  // Lets the athlete finish from the overview at any time, whether or not
+  // anything is left upcoming (owner: "at which point I can choose to
+  // either finish a workout or go to an exercise that I haven't done").
+  // Unlike handleEndWorkoutEarly this never touches slot statuses or
+  // records a modification reason — it's just navigation to the completion
+  // screen; whether the session ends up Completed or Modified is still
+  // decided the normal way at Finish, from whatever the slots actually say.
+  const handleGoToFinish = useCallback(() => {
+    const prev = sessionRef.current;
+    if (!prev) return;
+    persist({ ...prev, performance: { ...prev.performance, currentSlotKey: null } });
+    setOverviewOpen(false);
+  }, [persist]);
 
   const handleSetDifficulty = useCallback(
     (value: number | undefined) => {
@@ -622,6 +699,18 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
   const currentTemplateSlot = currentSlotKey ? templateSlots.find((s) => s.slotKey === currentSlotKey) ?? null : null;
   const currentSlotLog = currentSlotKey ? session.performance.slots[currentSlotKey] : null;
+  // A cardio block runs its own clock from the moment the athlete taps
+  // Start (cardio-entry-card.tsx); the header's time-on-exercise counter
+  // would read as "it started on its own", which is exactly what the owner
+  // asked not to happen, so it is hidden for those slots.
+  const isCurrentSlotCardio =
+    currentTemplateSlot !== null && currentSlotLog !== null
+      ? isCardioSlot(
+          currentTemplateSlot.section,
+          currentSlotLog.chosenExerciseId ? exercises[currentSlotLog.chosenExerciseId] : undefined,
+          currentTemplateSlot.exercise.prescription
+        )
+      : false;
 
   const liveStats = computeCompletionStats(session.performance, templateSlots);
   // Recomputed on every render, same as liveStats above — cheap over a
@@ -642,8 +731,11 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     <div className="flex flex-col gap-5">
       <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-line-hairline bg-surface-0/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
-          <SessionTimer startedAt={session.startedAt} />
-          {currentSlotKey && !overviewOpen && slotEnteredAtMs !== null ? (
+          <SessionTimer
+            startedAt={session.startedAt}
+            endedAt={finishState !== "idle" ? session.completedAt : null}
+          />
+          {currentSlotKey && !overviewOpen && !isCurrentSlotCardio && slotEnteredAtMs !== null ? (
             <>
               <span className="text-ink-tertiary" aria-hidden="true">
                 &middot;
@@ -653,7 +745,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
           ) : null}
           <SyncStatusBadge synced={synced} />
         </div>
-        {currentSlotKey ? (
+        {finishState === "idle" ? (
           <button
             type="button"
             onClick={() => setOverviewOpen((prev) => !prev)}
@@ -682,6 +774,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             recoveryMode={recoveryMode}
             onToggleRecoveryMode={handleToggleRecoveryMode}
             onEndWorkoutEarly={handleEndWorkoutEarly}
+            onGoToFinish={handleGoToFinish}
           />
         ) : currentTemplateSlot && currentSlotLog ? (
           <ExerciseSlotView
@@ -691,7 +784,8 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             exercises={exercises}
             onChoose={(exerciseId) => handleChoose(currentTemplateSlot.slotKey, exerciseId)}
             onLogSet={(set) => handleLogSet(currentTemplateSlot.slotKey, set)}
-            onRemoveLastSet={() => handleRemoveLastSet(currentTemplateSlot.slotKey)}
+            onRemoveCurrentSet={() => handleRemoveCurrentSet(currentTemplateSlot.slotKey)}
+            onDeleteSet={(setNumber) => handleDeleteSet(currentTemplateSlot.slotKey, setNumber)}
             onAddExtraSet={() => handleAddExtraSet(currentTemplateSlot.slotKey)}
             onAdvance={() => advanceFrom(currentTemplateSlot.slotKey, "completed")}
             onSkip={() => advanceFrom(currentTemplateSlot.slotKey, "skipped")}
@@ -723,12 +817,6 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
           />
         )}
       </div>
-
-      {finishState !== "idle" ? (
-        <Link href="/" className="text-center text-sm font-medium text-accent-strong underline underline-offset-4">
-          Back to Today
-        </Link>
-      ) : null}
     </div>
   );
 }

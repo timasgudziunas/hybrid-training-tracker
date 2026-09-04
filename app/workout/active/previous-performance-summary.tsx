@@ -1,21 +1,13 @@
 import type { Prescription } from "@/lib/program/program-types";
 import type { SetLog } from "@/lib/workout-session/workout-session-types";
-
-function formatSetLine(set: SetLog, prescriptionType: Prescription["type"]): string | null {
-  if (prescriptionType === "repetitions" && set.weight !== undefined && set.reps !== undefined) {
-    return `${set.weight} x ${set.reps}`;
-  }
-  if ((prescriptionType === "hold" || prescriptionType === "duration") && set.seconds !== undefined) {
-    return `${set.seconds}s`;
-  }
-  if (prescriptionType === "distance") {
-    return set.timeSeconds !== undefined ? `${set.timeSeconds}s` : "done";
-  }
-  return null;
-}
+import { formatLoggedSet } from "@/lib/workout-session/format-logged-set";
 
 /** "LAST TIME" (PRODUCT_SPEC §7): always visible while lifting so the
- * athlete almost never needs to search history mid-session. */
+ * athlete almost never needs to search history mid-session. Cardio slots
+ * (app/workout/active/cardio-entry-card.tsx) can be authored as either a
+ * qualitative or a duration prescription, so `qualitative` no longer
+ * unconditionally hides the panel: it still renders when previous cardio
+ * sets exist, giving the athlete a concrete number (watts, speed) to beat. */
 export default function PreviousPerformanceSummary({
   previousSets,
   prescriptionType,
@@ -23,7 +15,7 @@ export default function PreviousPerformanceSummary({
   previousSets: SetLog[] | undefined;
   prescriptionType: Prescription["type"];
 }) {
-  if (prescriptionType === "qualitative") {
+  if (prescriptionType === "qualitative" && (!previousSets || previousSets.length === 0)) {
     return null;
   }
 
@@ -31,7 +23,7 @@ export default function PreviousPerformanceSummary({
     return <p className="text-xs text-ink-tertiary">First time, no history yet</p>;
   }
 
-  const lines = previousSets.map((set) => formatSetLine(set, prescriptionType)).filter(Boolean);
+  const lines = previousSets.map((set) => formatLoggedSet(set, prescriptionType)).filter((line) => line.length > 0);
 
   if (lines.length === 0) {
     return <p className="text-xs text-ink-tertiary">First time, no history yet</p>;

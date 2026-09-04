@@ -74,10 +74,15 @@ export function detectSessionDeviations(
         });
       }
     }
-    deviations.push({
-      kind: 'ended-early',
-      label: `Ended early, ${notDoneCount} exercise${notDoneCount === 1 ? '' : 's'} not done`,
-    });
+    // 'unfinished' is never chosen by the athlete (see EndedEarlyReason) —
+    // it means this session was auto-closed because it was left active from
+    // an earlier day, so the folded label reads as a fact rather than a
+    // choice the athlete made mid-workout.
+    const label =
+      modifications?.endedEarlyReason === 'unfinished'
+        ? `Left unfinished, ${notDoneCount} exercise${notDoneCount === 1 ? '' : 's'} not done`
+        : `Ended early, ${notDoneCount} exercise${notDoneCount === 1 ? '' : 's'} not done`;
+    deviations.push({ kind: 'ended-early', label });
   } else {
     for (const templateSlot of templateSlots) {
       if (templateSlot.section.optional) continue;

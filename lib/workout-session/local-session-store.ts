@@ -43,10 +43,10 @@ export function clearLocalSession(): void {
 
 /** Synchronous check used by the Today screen to decide between "Start
  * workout" and "Resume workout". Only a real program session that is
- * genuinely resumable counts — a sample session or an untouched leftover
- * from a previous day must never hold Today in "Resume" mode (see
- * resumable-session.ts). */
-export function hasResumableLocalProgramSession(todaysDate: string): boolean {
+ * genuinely resumable counts — a sample session, an untouched leftover from
+ * a previous day, or a stale unfinished one (see resumable-session.ts) must
+ * never hold Today in "Resume" mode. */
+export function hasResumableLocalProgramSession(todaysDate: string, nowMs: number): boolean {
   const record = loadLocalSession();
-  return record !== null && !isSampleSession(record) && isResumableSession(record, todaysDate);
+  return record !== null && !isSampleSession(record) && isResumableSession(record, todaysDate, nowMs);
 }

@@ -6,13 +6,16 @@ import type {
   PreviousPerformanceByExercise,
   SetLog,
 } from "@/lib/workout-session/workout-session-types";
+import { isCardioSlot } from "@/lib/workout-session/cardio-slot";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
+import CardioEntryCard from "./cardio-entry-card";
 import ExerciseChoiceCard from "./exercise-choice-card";
 import ExerciseEntryCard from "./exercise-entry-card";
 import QualitativeEntryCard from "./qualitative-entry-card";
 import ExerciseGuidanceDisclosure from "./exercise-guidance-disclosure";
 import ExerciseNoteField from "./exercise-note-field";
 import ExerciseSwapPicker from "./exercise-swap-picker";
+import PreviousPerformanceSummary from "./previous-performance-summary";
 
 /**
  * One card in the linear flow: the "or" choice screen when the slot hasn't
@@ -29,7 +32,8 @@ export default function ExerciseSlotView({
   exercises,
   onChoose,
   onLogSet,
-  onRemoveLastSet,
+  onRemoveCurrentSet,
+  onDeleteSet,
   onAddExtraSet,
   onAdvance,
   onSkip,
@@ -48,7 +52,8 @@ export default function ExerciseSlotView({
   exercises: Record<string, Exercise>;
   onChoose: (exerciseId: string) => void;
   onLogSet: (set: SetLog) => void;
-  onRemoveLastSet: () => void;
+  onRemoveCurrentSet: () => void;
+  onDeleteSet: (setNumber: number) => void;
   onAddExtraSet: () => void;
   onAdvance: () => void;
   onSkip: () => void;
@@ -116,15 +121,39 @@ export default function ExerciseSlotView({
 
       {chosenExercise ? <ExerciseGuidanceDisclosure exercise={chosenExercise} /> : null}
 
-      {prescribed.prescription.type === "qualitative" ? (
+      {(prescribed.prescription.type === "qualitative" || prescribed.prescription.type === "duration") &&
+      isCardioSlot(templateSlot.section, chosenExercise, prescribed.prescription) ? (
+        // Cardio blocks (cycling, rowing, ...) never start on their own:
+        // resistance first, then Start, Stop, readouts (owner request
+        // 2026-09-04). The "Last time" panel sits above the card, exactly
+        // where ExerciseEntryCard renders its own, so the number to beat
+        // is visible before the ride starts.
+        <div className="flex flex-col gap-5">
+          <PreviousPerformanceSummary
+            previousSets={previousPerformance[slotLog.chosenExerciseId]}
+            prescriptionType={prescribed.prescription.type}
+          />
+          <CardioEntryCard
+            slotLog={slotLog}
+            prescription={prescribed.prescription}
+            exerciseName={name}
+            previousSets={previousPerformance[slotLog.chosenExerciseId]}
+            onDraftChange={onDraftChange}
+            onLogSet={onLogSet}
+            onAdvance={onAdvance}
+          />
+        </div>
+      ) : prescribed.prescription.type === "qualitative" ? (
         <QualitativeEntryCard prescription={prescribed.prescription} onComplete={onQualitativeComplete} />
       ) : (
         <ExerciseEntryCard
           slotLog={slotLog}
           prescription={prescribed.prescription}
           previousSets={previousPerformance[slotLog.chosenExerciseId]}
+          exercise={chosenExercise}
           onLogSet={onLogSet}
-          onRemoveLastSet={onRemoveLastSet}
+          onRemoveCurrentSet={onRemoveCurrentSet}
+          onDeleteSet={onDeleteSet}
           onAddExtraSet={onAddExtraSet}
           onAdvance={onAdvance}
           onDraftChange={onDraftChange}
@@ -149,7 +178,7 @@ export default function ExerciseSlotView({
             </button>
             <ExerciseSwapPicker
               sectionType={templateSlot.section.type}
-              currentChosenExerciseId={slotLog.chosenExerciseId}
+              currentExercise={chosenExercise}
               prescribedName={prescribedName}
               hasSubstitution={hasSubstitution}
               onPick={onSwap}

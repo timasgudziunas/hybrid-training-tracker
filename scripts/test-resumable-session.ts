@@ -11,9 +11,13 @@
  * Exits non-zero on any failure.
  */
 
+import { closeUnfinishedSession } from '../lib/workout-session/close-unfinished-session';
+import { flattenTemplateSlots } from '../lib/workout-session/flatten-template-slots';
 import {
   isResumableSession,
   isSampleSession,
+  isStaleUnfinishedSession,
+  RESUME_ACROSS_MIDNIGHT_HOURS,
   sessionHasLoggedWork,
 } from '../lib/workout-session/resumable-session';
 import type {
@@ -23,6 +27,8 @@ import type {
 
 const TODAY = '2026-08-26';
 const YESTERDAY = '2026-08-25';
+const NOW_MS = Date.parse(`${TODAY}T18:00:00.000Z`);
+const HOUR_MS = 3600_000;
 
 function makeSlot(overrides: Partial<ExerciseSlotLog> = {}): ExerciseSlotLog {
   return {
@@ -42,13 +48,14 @@ function makeSession(overrides: {
   slots?: Record<string, ExerciseSlotLog>;
   sessionNote?: string;
   sessionDifficulty?: number;
+  startedAt?: string;
 }): WorkoutSessionRecord {
   return {
     id: 'test-id',
     sessionDate: overrides.sessionDate ?? TODAY,
     weekday: 'wednesday',
     workoutTemplateId: overrides.workoutTemplateId ?? 'wednesday',
-    startedAt: `${overrides.sessionDate ?? TODAY}T10:00:00.000Z`,
+    startedAt: overrides.startedAt ?? `${overrides.sessionDate ?? TODAY}T10:00:00.000Z`,
     completedAt: null,
     status: overrides.status ?? 'active',
     durationSeconds: null,
@@ -75,12 +82,13 @@ function makeSession(overrides: {
 let passed = 0;
 let failed = 0;
 
-function check(name: string, actual: boolean, expected: boolean): void {
-  if (actual === expected) {
+function check(name: string, actual: unknown, expected: unknown): void {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  if (ok) {
     passed += 1;
   } else {
     failed += 1;
-    console.log(`FAIL: ${name} (expected ${expected}, got ${actual})`);
+    console.log(`FAIL: ${name} (expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)})`);
   }
 }
 
@@ -100,25 +108,108 @@ check('session note counts as work', sessionHasLoggedWork(makeSession({ sessionN
 check('session difficulty counts as work', sessionHasLoggedWork(makeSession({ sessionDifficulty: 3 })), true);
 
 // --- isResumableSession ---
-check('untouched session from today is resumable', isResumableSession(makeSession({}), TODAY), true);
-check('untouched session from yesterday is stale', isResumableSession(makeSession({ sessionDate: YESTERDAY }), TODAY), false);
+check('untouched session from today is resumable', isResumableSession(makeSession({}), TODAY, NOW_MS), true);
+check('untouched session from yesterday is stale', isResumableSession(makeSession({ sessionDate: YESTERDAY }), TODAY, NOW_MS), false);
 check(
-  'yesterday session WITH logged work survives midnight rollover',
-  isResumableSession(makeSession({ sessionDate: YESTERDAY, slots: { 'slot-1': makeSlot({ status: 'completed' }) } }), TODAY),
+  // 2026-09-04 fix: "survives midnight rollover" is now bounded by
+  // RESUME_ACROSS_MIDNIGHT_HOURS, not unconditional — started at 11pm the
+  // night before, checked at 1am (2h later, well within the window).
+  'yesterday session WITH logged work survives midnight rollover, within the window',
+  isResumableSession(
+    makeSession({
+      sessionDate: YESTERDAY,
+      startedAt: `${YESTERDAY}T23:00:00.000Z`,
+      slots: { 'slot-1': makeSlot({ status: 'completed' }) },
+    }),
+    TODAY,
+    Date.parse(`${TODAY}T01:00:00.000Z`)
+  ),
   true
 );
-check('completed session is never resumable', isResumableSession(makeSession({ status: 'completed' }), TODAY), false);
-check('missed session is never resumable', isResumableSession(makeSession({ status: 'missed' }), TODAY), false);
+check('completed session is never resumable', isResumableSession(makeSession({ status: 'completed' }), TODAY, NOW_MS), false);
+check('missed session is never resumable', isResumableSession(makeSession({ status: 'missed' }), TODAY, NOW_MS), false);
 // Phase 5 semantics change (2026-08-26): 'modified' is now a TERMINAL status
 // assigned only at Finish, the same moment 'completed' is — a session is
 // never "modified" mid-workout, so it must never be resumed, exactly like
 // 'completed'.
-check('modified session from today is NOT resumable (terminal status, Phase 5)', isResumableSession(makeSession({ status: 'modified' }), TODAY), false);
+check('modified session from today is NOT resumable (terminal status, Phase 5)', isResumableSession(makeSession({ status: 'modified' }), TODAY, NOW_MS), false);
 check(
   'untouched sample session from today is resumable AS a sample (Today-button exclusion is isSampleSession, tested above)',
-  isResumableSession(makeSession({ workoutTemplateId: 'sample-monday' }), TODAY),
+  isResumableSession(makeSession({ workoutTemplateId: 'sample-monday' }), TODAY, NOW_MS),
   true
 );
+
+// --- 2026-09-04 fix: a stale unfinished session (previous day, logged
+// work, but started too long ago) must never hijack the next day. ---
+const startedThreeHoursAgo = new Date(NOW_MS - 3 * HOUR_MS).toISOString();
+const startedTenHoursAgo = new Date(NOW_MS - 10 * HOUR_MS).toISOString();
+const yesterdayWithWork = (startedAt: string) =>
+  makeSession({ sessionDate: YESTERDAY, startedAt, slots: { 'slot-1': makeSlot({ status: 'completed' }) } });
+
+check(
+  `yesterday session with logged work started 3h ago is resumable (within ${RESUME_ACROSS_MIDNIGHT_HOURS}h window)`,
+  isResumableSession(yesterdayWithWork(startedThreeHoursAgo), TODAY, NOW_MS),
+  true
+);
+check(
+  'yesterday session with logged work started 3h ago is NOT stale',
+  isStaleUnfinishedSession(yesterdayWithWork(startedThreeHoursAgo), TODAY, NOW_MS),
+  false
+);
+check(
+  `yesterday session with logged work started 10h ago is NOT resumable (beyond the ${RESUME_ACROSS_MIDNIGHT_HOURS}h window)`,
+  isResumableSession(yesterdayWithWork(startedTenHoursAgo), TODAY, NOW_MS),
+  false
+);
+check(
+  'yesterday session with logged work started 10h ago IS stale',
+  isStaleUnfinishedSession(yesterdayWithWork(startedTenHoursAgo), TODAY, NOW_MS),
+  true
+);
+check(
+  'an untouched previous-day session is neither resumable nor stale (resumable)',
+  isResumableSession(makeSession({ sessionDate: YESTERDAY }), TODAY, NOW_MS),
+  false
+);
+check(
+  'an untouched previous-day session is neither resumable nor stale (stale)',
+  isStaleUnfinishedSession(makeSession({ sessionDate: YESTERDAY }), TODAY, NOW_MS),
+  false
+);
+check("today's session is always resumable, regardless of nowMs", isResumableSession(makeSession({}), TODAY, NOW_MS + 100 * HOUR_MS), true);
+check('a completed session is never stale (terminal, not active)', isStaleUnfinishedSession(makeSession({ status: 'completed' }), TODAY, NOW_MS), false);
+
+// --- closeUnfinishedSession ---
+{
+  const loggedSet: ExerciseSlotLog = {
+    slotKey: 'slot-1',
+    prescribedExerciseId: 'hack-squat',
+    chosenExerciseId: 'hack-squat',
+    status: 'completed',
+    sets: [{ setNumber: 1, completed: true, weight: 100, reps: 8, rir: 2 }],
+    draft: { weight: '105', reps: '' },
+  };
+  const untouchedSlot: ExerciseSlotLog = makeSlot({ slotKey: 'slot-2', status: 'upcoming' });
+  const record = makeSession({
+    sessionDate: YESTERDAY,
+    startedAt: startedTenHoursAgo,
+    slots: { 'slot-1': loggedSet, 'slot-2': untouchedSlot },
+  });
+  const templateSlots = flattenTemplateSlots(record.performance.templateSnapshot);
+  const closed = closeUnfinishedSession(record, templateSlots);
+
+  check('closeUnfinishedSession: status is modified', closed.status, 'modified');
+  check('closeUnfinishedSession: upcoming slot becomes skipped', closed.performance.slots['slot-2'].status, 'skipped');
+  check('closeUnfinishedSession: currentSlotKey is null', closed.performance.currentSlotKey, null);
+  check('closeUnfinishedSession: endedEarlyReason is unfinished', closed.performance.modifications?.endedEarlyReason, 'unfinished');
+  check('closeUnfinishedSession: endedEarly is true', closed.performance.modifications?.endedEarly, true);
+  check('closeUnfinishedSession: completedAt stays null', closed.completedAt, null);
+  check('closeUnfinishedSession: durationSeconds stays null', closed.durationSeconds, null);
+  check('closeUnfinishedSession: logged slot status untouched', closed.performance.slots['slot-1'].status, 'completed');
+  check('closeUnfinishedSession: logged sets untouched', closed.performance.slots['slot-1'].sets, loggedSet.sets);
+  check('closeUnfinishedSession: logged slot draft cleared', closed.performance.slots['slot-1'].draft, undefined);
+  check('closeUnfinishedSession: untouched slot draft cleared', closed.performance.slots['slot-2'].draft, undefined);
+}
 
 console.log('');
 console.log(`${passed} passed, ${failed} failed`);

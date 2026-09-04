@@ -2,6 +2,7 @@ import { fetchActiveProgram, fetchProgramHistory } from "./actions";
 import SiteHeader from "@/app/site-header";
 import ProgramPasteForm from "./program-paste-form";
 import ProgramHistoryList from "./program-history-list";
+import DeactivateProgramButton from "./deactivate-program-button";
 
 export default async function ProgramPage() {
   const [activeResult, historyResult] = await Promise.all([fetchActiveProgram(), fetchProgramHistory()]);
@@ -28,6 +29,7 @@ export default async function ProgramPage() {
               </p>
               <p className="font-display text-2xl font-bold text-ink-primary">{active.name}</p>
               <p className="text-xs text-ink-tertiary">Saved {new Date(active.createdAt).toLocaleString()}</p>
+              <DeactivateProgramButton activeName={active.name} />
             </>
           ) : (
             <p className="text-sm text-ink-secondary">

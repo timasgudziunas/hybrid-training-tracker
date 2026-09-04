@@ -40,6 +40,25 @@ export interface SetLog {
   distanceCompleted?: boolean;
   /** Distance prescriptions: optional timed-sprint time. */
   timeSeconds?: number;
+  /** Jump exercises with a box (per lib/program/set-entry-fields.ts):
+   * box height used for this set. */
+  boxHeightInches?: number;
+  /** Horizontal jump exercises (per lib/program/set-entry-fields.ts):
+   * distance covered on this set. */
+  jumpDistanceInches?: number;
+  /**
+   * Cardio blocks (see lib/workout-session/cardio-slot.ts) log ONE set for
+   * the whole ride/row/run: `seconds` holds the elapsed time, and these
+   * carry the machine readouts the athlete enters at the end. `resistance`
+   * is free text (a level, a gear, "L8") since machines label it
+   * differently. Shown back as "Last time" the next time the same exercise
+   * comes up so there is a concrete number to beat.
+   */
+  resistance?: string;
+  averageWatts?: number;
+  /** Miles per hour. */
+  averageSpeedMph?: number;
+  distanceMiles?: number;
 }
 
 export type ExerciseSlotStatus = 'upcoming' | 'completed' | 'skipped';
@@ -61,6 +80,12 @@ export interface ExerciseSlotLog {
   /** Sets added beyond the program's prescribed count via "+ Add set".
    * Persisted (not local UI state) so it survives a refresh mid-exercise. */
   extraSets?: number;
+  /** Sets removed from the program's prescribed count via "Remove this set"
+   * on a not-yet-logged set (2026-09-04 rework: removing the CURRENT set
+   * shrinks the target; it never deletes an earlier logged set). Target set
+   * count = prescribed + extraSets - removedSets, never below the number of
+   * sets already logged. */
+  removedSets?: number;
   /** Qualitative prescriptions (warm-ups, mobility, Zone 2, L-sit practice)
    * have no sets — a single mark-complete tap. */
   qualitativeCompleted?: boolean;
@@ -69,7 +94,30 @@ export interface ExerciseSlotLog {
    * persisted so nothing typed is ever lost when leaving the exercise or
    * refreshing (the parent remounts ExerciseEntryCard on every commit,
    * which would otherwise reset component-local input state to blank). */
-  draft?: { weight?: string; reps?: string; rir?: number; seconds?: string; timeSeconds?: string };
+  draft?: SetDraft;
+}
+
+/** Uncommitted input values for the set currently being entered (see
+ * ExerciseSlotLog.draft). All string-typed except rir so the inputs can
+ * round-trip partial typing ("12.", "") without coercion. The cardio*
+ * fields drive the cardio card's three states (setup, running, results):
+ * `cardioStartedAt` is set when the athlete taps Start, `cardioEndedAt`
+ * when they tap Stop, and both are cleared once the ride is logged as a
+ * SetLog. ISO timestamps so the running timer survives a refresh. */
+export interface SetDraft {
+  weight?: string;
+  reps?: string;
+  rir?: number;
+  seconds?: string;
+  timeSeconds?: string;
+  boxHeightInches?: string;
+  jumpDistanceInches?: string;
+  resistance?: string;
+  averageWatts?: string;
+  averageSpeedMph?: string;
+  distanceMiles?: string;
+  cardioStartedAt?: string;
+  cardioEndedAt?: string;
 }
 
 /** One catalog substitution recorded against a slot (Phase 5, "Swap"):
@@ -81,7 +129,10 @@ export interface SlotSubstitution {
   toExerciseId: string;
 }
 
-export type EndedEarlyReason = 'time' | 'fatigue' | 'discomfort' | 'other';
+/** 'unfinished' is never chosen by the athlete: it is assigned when a
+ * session left active from a previous day is closed automatically so it can
+ * never hijack the next day's workout (lib/workout-session/resumable-session.ts). */
+export type EndedEarlyReason = 'time' | 'fatigue' | 'discomfort' | 'other' | 'unfinished';
 
 /** Explicit modify-don't-fail inputs (PRODUCT_SPEC §14, PLAN Phase 5).
  * Deviations shown to the athlete are DERIVED from this plus the slot logs
@@ -102,6 +153,9 @@ export interface CompletionStats {
   exercisesCompleted: number;
   exercisesSkipped: number;
   setsCompleted: number;
+  /** Total elapsed cardio time across cardio-slot sets (see SetLog cardio
+   * fields). Optional so older stored stats blobs still type-check. */
+  totalCardioSeconds?: number;
 }
 
 /** The full in-progress/completed state. Exactly the jsonb shape. */

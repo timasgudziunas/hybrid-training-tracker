@@ -1,5 +1,5 @@
 import type { Exercise } from "@/lib/program/program-types";
-import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
+import { isSlotNotDone, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import type { EndedEarlyReason, ExerciseSlotLog } from "@/lib/workout-session/workout-session-types";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
 import EndWorkoutEarlyControl from "./end-workout-early-control";
@@ -22,6 +22,7 @@ export default function WorkoutOverview({
   recoveryMode,
   onToggleRecoveryMode,
   onEndWorkoutEarly,
+  onGoToFinish,
 }: {
   templateSlots: TemplateSlot[];
   slotLogs: Record<string, ExerciseSlotLog>;
@@ -32,6 +33,7 @@ export default function WorkoutOverview({
   recoveryMode: boolean;
   onToggleRecoveryMode: () => void;
   onEndWorkoutEarly: (reason?: EndedEarlyReason) => void;
+  onGoToFinish: () => void;
 }) {
   const sections = new Map<string, TemplateSlot[]>();
   for (const slot of templateSlots) {
@@ -39,6 +41,11 @@ export default function WorkoutOverview({
     existing.push(slot);
     sections.set(slot.section.id, existing);
   }
+
+  // Same "not done" rule as nextUnfinishedSlotKey: upcoming, or skipped
+  // with nothing logged, so a skipped-because-busy exercise is still
+  // counted (and reachable) here before the athlete finishes.
+  const upcomingCount = templateSlots.filter((slot) => isSlotNotDone(slotLogs[slot.slotKey])).length;
 
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
@@ -52,6 +59,21 @@ export default function WorkoutOverview({
           Close
         </button>
       </div>
+
+      {upcomingCount > 0 ? (
+        <p className="text-sm text-ink-secondary">
+          {upcomingCount} exercise{upcomingCount === 1 ? "" : "s"} not done yet. Tap one to go there, or finish the
+          workout.
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onGoToFinish}
+        className="h-12 rounded-xl bg-accent text-sm font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
+      >
+        Finish workout
+      </button>
 
       <div className="flex flex-col gap-5 overflow-y-auto">
         {[...sections.entries()].map(([sectionId, slots]) => (

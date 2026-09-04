@@ -285,6 +285,20 @@ function kinds(deviations: SessionDeviation[]): string[] {
   check('endedEarly: status modified', resolveFinishStatus(deviations), 'modified');
 }
 
+// --- endedEarlyReason 'unfinished' folds to "Left unfinished, ..." (2026-09-04, closeUnfinishedSession) ---
+{
+  const slots: Record<string, ExerciseSlotLog> = {
+    'strength:1': makeSlot('strength:1', { status: 'skipped' }),
+    'calisthenics:1': makeSlot('calisthenics:1', { status: 'skipped' }),
+    'cardio:1': makeSlot('cardio:1', { status: 'upcoming' }), // optional, excluded entirely
+  };
+  const performance = makePerformance({ slots, modifications: { endedEarly: true, endedEarlyReason: 'unfinished' } });
+  const deviations = detectSessionDeviations(performance, TEMPLATE_SLOTS);
+  const endedEarly = deviations.find((d) => d.kind === 'ended-early')!;
+  check('unfinished: label reads "Left unfinished" not "Ended early"', endedEarly.label, 'Left unfinished, 2 exercises not done');
+  check('unfinished: status modified', resolveFinishStatus(deviations), 'modified');
+}
+
 // --- Optional-section slot with fewer sets than prescribed: not a deviation ---
 {
   // Same rule as optional-section skips: doing less of something the program
