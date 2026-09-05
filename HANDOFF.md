@@ -1,10 +1,10 @@
-# HANDOFF.md — Session Handoff (updated 2026-09-05 ~03:15 UTC, supersedes all 2026-09-05 ~02:30 UTC and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-09-05 ~04:00 UTC, supersedes all 2026-09-05 ~03:15 UTC and earlier versions)
 
 > To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables; the "What this project is" and "Tech stack" sections now describe accounts), then `PLAN.md` (R10 is the newest completed block; R5 benchmarks are retired; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth; `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format.
 
-## Current state (as of 2026-09-05 ~03:15 UTC)
+## Current state (as of 2026-09-05 ~04:00 UTC)
 
-**Production (https://hybrid-training-tracker.vercel.app) still runs `ddd50c1` (R10, passphrase gate, single-user, Progress and Readiness pages still visible there).** This session's work is two LOCAL commits (`613bac2` accounts + benchmarks removal, then the readiness removal) deliberately NOT pushed: pushing deploys, and the deploy only works once the owner has run the new schema (see Next steps). The Supabase project (`woawbkhcoegvwrsfgbix`) is unchanged: no `user_id` columns, no RLS policies, `athlete_settings` still unapplied, `auth.users` empty (a throwaway e2e user was created and deleted this session).
+**Accounts are LIVE.** `deaf6a3` pushed and deployed (Vercel commit status: success; URL returns 307 to `/sign-in`). Owner completed every cutover step on 2026-09-05 ~03:45 UTC and confirmed "I signed in and I see all my data": Confirm email is OFF in Supabase Auth (verified via the public settings endpoint), `schema.sql` applied, backfill run. `auth.users` has exactly 1 account (the owner). `check-db-state.ts`: body_checkins 9, training_programs 1, workout_sessions 8, ultimate_practice_days 0, athlete_settings 1, all with `0 without user_id`.
 
 - **No program is active** (unchanged). `training_programs` row `aea8db93` (Block 1) is `is_active=false`.
 - **Verification state (this tree):** `npm run build` green with zero static-render fallbacks; `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 14 test suites green (4,629 assertions) plus `validate-program.ts`. Headless Edge drive of the auth flow against a local production build (`next start -p 3100`, throwaway confirmed user via the admin API): **12/12** (gate redirect with redirect param, wrong password error, sign-in lands on the requested page, Today renders for a fresh account, no Progress nav item, Settings shows the signed-in email, toggle measures 48 x 28, sign-out returns to sign-in and the gate is back, invite field shown when `APP_PASSPHRASE` is set, wrong invite rejected). Data reads/writes under RLS could NOT be verified: the policies do not exist in Supabase yet.
@@ -18,21 +18,19 @@
 
 ## In progress / where it stopped
 
-Nothing mid-flight. Local commit made; push pending on the owner's schema steps below.
+Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 
-## Next steps (priority order, owner actions, in THIS order)
+## Next steps (priority order)
 
-1. **Supabase Auth settings** (dashboard: Authentication > Sign In / Providers > Email): turn **Confirm email OFF**. Reason: Supabase's built-in mailer only delivers to project team members, so other athletes would never get a confirmation link; sign-up is already gated by the invite passphrase. (Alternative: configure custom SMTP, e.g. Resend, and keep confirmation on; then also add `https://hybrid-training-tracker.vercel.app/auth/callback` under Authentication > URL Configuration > Redirect URLs.) Checked this session via the public settings endpoint: confirmation is currently ON.
-2. **Run `supabase/schema.sql`** in the SQL editor (idempotent: adds `user_id`, swaps the per-date unique constraints to per-user, creates the `own rows` policies, creates `athlete_settings` with a `(user_id, key)` key).
-3. **`git push`** (deploys). Confirm with `gh api repos/timasgudziunas/hybrid-training-tracker/commits/<sha>/status`.
-4. **Sign up** in the app with your own email (the invite passphrase is the old `APP_PASSPHRASE` value already in Vercel env).
-5. **Run `supabase/migrations/2026-09-05-backfill-owner-user-id.sql`** after replacing `OWNER_EMAIL_HERE` with the email you signed up with. It assigns every pre-accounts row (8 real sessions, check-ins, readiness, Ultimate days, Block 1 program) to your account. Verify with `npx tsx --env-file=.env scripts/check-db-state.ts` (every table should show `0 without user_id`).
-6. Until step 5 is done your history looks empty in the app. That is expected, nothing is lost.
-7. Then the standing items: paste the new program on /program; gym verification of R10; in-app program builder as the next build block (PLAN.md R10, CLAUDE.md non-negotiable 23).
+1. **Owner: paste the new program** on /program (Block 1 `aea8db93` stays deactivated until then; Today shows the waiting state).
+2. **Owner: gym verification of R10** on the next real session: no keyboard on arrival / Next set / Add set; Log set then Next exercise; swipe a set to delete; overview progress bar; add an exercise; swap to a different set type and revert. Also confirm the RIR toggle saves now that `athlete_settings` exists.
+3. **Inviting other athletes:** give them the URL and the invite passphrase (`APP_PASSPHRASE` in Vercel). They sign up at /sign-up and start with an empty account (no program, no history). Rotate `APP_PASSPHRASE` in Vercel + redeploy to stop new sign-ups.
+4. **Next build block: the in-app program builder** (owner: "put it off for now, but make sure it isn't forgotten"). Scope it as its own PLAN.md block before starting.
+5. Optional cosmetic: pre-existing dashes in a few in-workout strings (`lib/program/rest-guidance.ts`, `exercise-entry-card.tsx`, `app/today/format-prescription.ts`).
+6. Optional hygiene: delete stray active Saturday 2026-08-29 row `52b05e65`; repair 2026-08-26's null completed_at.
 
 ## Open decisions / blockers
 
-- Between steps 2 and 3 the live (old) code's body check-in upsert would fail because its conflict target `checkin_date` no longer has a unique constraint. Do the two steps back to back.
 - Old progress photos stay at bucket root (`<date>.<ext>`); new ones go under `<userId>/`. Signing works for both because the server signs whatever path the owner's own row holds. No object move needed.
 - `getAthleteContext()` calls `supabase.auth.getUser()` (a network round-trip) once per server action or page fetch. Fine at this scale; switch to `getClaims()` if it ever shows up in latency.
 - If `APP_PASSPHRASE` is ever removed from Vercel env, sign-up becomes open to anyone.
@@ -86,4 +84,4 @@ git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" status --shor
 npx tsx --env-file=.env "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\check-db-state.ts"
 curl.exe -s -o NUL -w "%{http_code}" https://hybrid-training-tracker.vercel.app
 ```
-Healthy after the owner's steps ≈ clean tree, accounts commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`. Before those steps, `check-db-state.ts` errors on the `user_id` filter (column not there yet): expected.
+Healthy ≈ clean tree, confirmation commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`. `check-db-state.ts` counts on `user_id` (athlete_settings has no `id` column).

@@ -15,7 +15,8 @@ if (!url || !key) {
 const headers = { apikey: key, Authorization: `Bearer ${key}`, Prefer: "count=exact" };
 
 async function countRows(table: string, query = ""): Promise<string> {
-  const res = await fetch(`${url}/rest/v1/${table}?select=id&limit=1${query}`, { headers });
+  // athlete_settings has no `id` column (its key is user_id + key); count on user_id, which every table has.
+  const res = await fetch(`${url}/rest/v1/${table}?select=user_id&limit=1${query}`, { headers });
   if (!res.ok) return `ERROR ${res.status}: ${await res.text()}`;
   const range = res.headers.get("content-range");
   return range?.split("/")[1] ?? "?";
