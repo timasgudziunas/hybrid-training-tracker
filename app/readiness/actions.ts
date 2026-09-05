@@ -9,7 +9,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 
 const TABLE = "readiness_entries";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -102,19 +102,16 @@ export async function saveReadinessEntry(input: SaveReadinessInput): Promise<Act
 
   const notes = input.notes && input.notes.trim().length > 0 ? input.notes.trim().slice(0, 2000) : null;
 
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[readiness/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase, userId } = context.data;
 
   try {
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(
         {
+          user_id: userId,
           entry_date: input.date,
           sleep_hours: input.sleepHours,
           energy: input.energy,
@@ -123,7 +120,7 @@ export async function saveReadinessEntry(input: SaveReadinessInput): Promise<Act
           readiness: input.readiness,
           notes,
         },
-        { onConflict: "entry_date" }
+        { onConflict: "user_id,entry_date" }
       )
       .select("*")
       .single();
@@ -154,13 +151,9 @@ export async function getReadinessEntry(date: string): Promise<ActionResult<Read
     return { ok: false, reason: "Invalid date." };
   }
 
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[readiness/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(TABLE).select("*").eq("entry_date", date).maybeSingle();
@@ -187,13 +180,9 @@ const RECENT_DAYS_DEFAULT = 14;
 export async function getRecentReadinessEntries(
   days: number = RECENT_DAYS_DEFAULT
 ): Promise<ActionResult<ReadinessEntry[]>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[readiness/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase

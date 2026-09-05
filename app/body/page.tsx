@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import SiteHeader from "@/app/site-header";
 import TodayCheckinSection from "./today-checkin-section";
 import CheckinHistory from "./checkin-history";
@@ -20,13 +21,9 @@ type CheckinRow = {
 };
 
 async function loadHistory(): Promise<{ rows: CheckinRow[]; error: string | null }> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[body/page] Supabase client init failed:", err);
-    return { rows: [], error: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return { rows: [], error: context.reason };
+  const { supabase } = context.data;
 
   const { data, error } = await supabase
     .from("body_checkins")
@@ -43,6 +40,10 @@ async function loadHistory(): Promise<{ rows: CheckinRow[]; error: string | null
 }
 
 async function signPhotoUrls(rows: CheckinRow[]): Promise<Map<string, string>> {
+  // Service-role client on purpose: these paths only ever came from the
+  // signed-in athlete's own rows (loadHistory is RLS-scoped), and
+  // pre-accounts rows still have root-level paths like "2026-08-30.jpg"
+  // with no user id prefix, so they must keep signing without a format check.
   const paths = rows.map((row) => row.photo_path).filter((path): path is string => Boolean(path));
   if (paths.length === 0) return new Map();
 

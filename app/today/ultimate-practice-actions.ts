@@ -9,7 +9,7 @@
  * throwing.
  */
 
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 
@@ -17,13 +17,9 @@ const TABLE = "ultimate_practice_days";
 
 /** Whether the given device-local "yyyy-mm-dd" date has an attendance row. */
 export async function getUltimatePracticeDay(date: string): Promise<ActionResult<boolean>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[today/ultimate-practice-actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(TABLE).select("id").eq("practice_date", date).limit(1);
@@ -47,19 +43,18 @@ export async function getUltimatePracticeDay(date: string): Promise<ActionResult
  * (unchecking deletes, per the schema comment).
  */
 export async function setUltimatePracticeAttended(date: string, attended: boolean): Promise<ActionResult<boolean>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[today/ultimate-practice-actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase, userId } = context.data;
 
   try {
     if (attended) {
       const { error } = await supabase
         .from(TABLE)
-        .upsert({ practice_date: date }, { onConflict: "practice_date", ignoreDuplicates: true });
+        .upsert(
+          { user_id: userId, practice_date: date },
+          { onConflict: "user_id,practice_date", ignoreDuplicates: true }
+        );
 
       if (error) {
         console.error("[today/ultimate-practice-actions] Ultimate practice day upsert failed:", error);
@@ -90,13 +85,9 @@ export async function setUltimatePracticeAttended(date: string, attended: boolea
  * History and Review render without this table existing yet.
  */
 export async function fetchUltimatePracticeDates(startDate?: string, endDate?: string): Promise<ActionResult<string[]>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[today/ultimate-practice-actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     let query = supabase.from(TABLE).select("practice_date");

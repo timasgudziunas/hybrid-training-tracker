@@ -11,7 +11,7 @@
  * swallowed into the default settings.
  */
 
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import {
   DEFAULT_ATHLETE_SETTINGS,
   resolveAthleteSettings,
@@ -35,13 +35,13 @@ function isMissingTableError(error: { code?: string; message?: string } | null):
  * workout screen, which must never be blocked by settings).
  */
 export async function fetchAthleteSettings(): Promise<ActionResult<AthleteSettings>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[settings/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
+  const context = await getAthleteContext();
+  if (!context.ok) {
+    // Never block the workout screen on settings: signed out or Supabase not
+    // configured both just mean "use the defaults."
+    return { ok: true, data: DEFAULT_ATHLETE_SETTINGS };
   }
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(TABLE).select("key, value");
@@ -71,23 +71,19 @@ export async function fetchAthleteSettings(): Promise<ActionResult<AthleteSettin
  * athlete just tried to change a setting and it did not save.
  */
 export async function updateAthleteSettings(patch: Partial<AthleteSettings>): Promise<ActionResult<AthleteSettings>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[settings/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase, userId } = context.data;
 
   const now = new Date().toISOString();
-  const rows = Object.entries(patch).map(([key, value]) => ({ key, value, updated_at: now }));
+  const rows = Object.entries(patch).map(([key, value]) => ({ user_id: userId, key, value, updated_at: now }));
 
   if (rows.length === 0) {
     return fetchAthleteSettings();
   }
 
   try {
-    const { error } = await supabase.from(TABLE).upsert(rows, { onConflict: "key" });
+    const { error } = await supabase.from(TABLE).upsert(rows, { onConflict: "user_id,key" });
 
     if (error) {
       console.error("[settings/actions] updateAthleteSettings failed:", error);

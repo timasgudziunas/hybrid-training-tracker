@@ -14,8 +14,8 @@ if (!url || !key) {
 
 const headers = { apikey: key, Authorization: `Bearer ${key}`, Prefer: "count=exact" };
 
-async function countRows(table: string): Promise<string> {
-  const res = await fetch(`${url}/rest/v1/${table}?select=id&limit=1`, { headers });
+async function countRows(table: string, query = ""): Promise<string> {
+  const res = await fetch(`${url}/rest/v1/${table}?select=id&limit=1${query}`, { headers });
   if (!res.ok) return `ERROR ${res.status}: ${await res.text()}`;
   const range = res.headers.get("content-range");
   return range?.split("/")[1] ?? "?";
@@ -26,12 +26,13 @@ async function main() {
     "body_checkins",
     "training_programs",
     "workout_sessions",
-    "athletic_benchmarks",
     "readiness_entries",
     "ultimate_practice_days",
     "athlete_settings",
   ]) {
-    console.log(`${table}: ${await countRows(table)} rows`);
+    const total = await countRows(table);
+    const nullCount = await countRows(table, "&user_id=is.null");
+    console.log(`${table}: ${total} rows (${nullCount} without user_id)`);
   }
 
   const res = await fetch(

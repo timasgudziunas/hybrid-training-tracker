@@ -11,6 +11,10 @@ const SAVED_MESSAGE_MS = 1500;
  * (CLAUDE.md non-negotiable 14: reduce decisions, keep the UI simple) so a
  * new setting is a one-line addition to SettingsForm below, not a new
  * component.
+ *
+ * The switch is drawn at phone-native size (about 48 x 28) so it does not
+ * dominate a narrow screen; the whole row is the tap target, so nothing is
+ * lost in reachability.
  */
 function SettingToggleRow({
   label,
@@ -31,29 +35,31 @@ function SettingToggleRow({
 }) {
   return (
     <div className="flex flex-col gap-1.5 px-5 py-4">
-      <div className="flex items-center justify-between gap-4">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={pending}
+        onClick={() => onChange(!checked)}
+        className="flex w-full items-center justify-between gap-4 text-left disabled:opacity-50"
+      >
         <span className="flex flex-col gap-0.5">
           <span className="text-sm font-medium text-ink-primary">{label}</span>
           <span className="text-xs text-ink-tertiary">{description}</span>
         </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={label}
-          disabled={pending}
-          onClick={() => onChange(!checked)}
-          className={`flex h-11 w-[52px] shrink-0 items-center rounded-full border transition-colors disabled:opacity-50 ${
+        <span
+          aria-hidden="true"
+          className={`flex h-7 w-12 shrink-0 items-center rounded-full border transition-colors ${
             checked ? "border-accent bg-accent" : "border-line-default bg-surface-2"
           }`}
         >
           <span
-            className={`h-8 w-8 rounded-full bg-white shadow-card transition-transform ${
+            className={`h-5 w-5 rounded-full bg-white shadow-card transition-transform ${
               checked ? "translate-x-[22px]" : "translate-x-1"
             }`}
           />
-        </button>
-      </div>
+        </span>
+      </button>
       {error ? <p className="text-xs text-danger">{error}</p> : null}
       {!error && saved ? <p className="text-xs text-ink-tertiary">Saved</p> : null}
     </div>

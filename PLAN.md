@@ -23,7 +23,7 @@ Owner-requested 2026-08-25. Independent of the program/workout engine, so it shi
 - [x] Late entry: a skipped check-in can be filled in later that day from the body tracking area. Card shows on `/body` only when today is unlogged; any history row is editable inline.
 - [x] History view: browsable timeline of dated weights and photos (tap photo to enlarge), plus a weight trend chart (this becomes the data source for Phase 7's bodyweight trend).
 
-Also shipped in this phase: passphrase access gate (owner decision 2026-08-25 — env `APP_PASSPHRASE`, HMAC cookie, `proxy.ts`) since the deployed app is public and photos are private; photos upload browser→Supabase via signed upload URLs because Vercel's ~4.5 MB function payload cap rejects photo bytes routed through a server action (hit in testing).
+Also shipped in this phase (replaced by Supabase Auth accounts on 2026-09-05; `APP_PASSPHRASE` now only gates sign-up): passphrase access gate (owner decision 2026-08-25 — env `APP_PASSPHRASE`, HMAC cookie, `proxy.ts`) since the deployed app is public and photos are private; photos upload browser→Supabase via signed upload URLs because Vercel's ~4.5 MB function payload cap rejects photo bytes routed through a server action (hit in testing).
 
 **Done when:** opening the deployed app on a new day prompts once, a weight + photo entry saves to Supabase from the phone, and past entries with photos are browsable on both phone and desktop.
 
@@ -72,7 +72,7 @@ Owner decisions: (1) the seeded TRAINING_SYSTEM.md program is deleted from the a
 - [x] **R2. Design system + restyle:** elevated dark performance system (tokens in `globals.css`, Big Shoulders display numerals + IBM Plex Sans, surface/line/ink/accent palette, refined motion), applied across every screen.
 - [x] **R3. Progression engine:** deterministic double progression (`lib/progression/`, 34-assertion pre-registered test suite) surfaced on workout cards with a Why disclosure and explicit Use chips, never auto-applied.
 - [x] **R4. History:** month calendar with day states, drill-down rendered from session snapshots, 28-day adherence percent; sample sessions excluded.
-- [x] **R5. Benchmarks + progress dashboards:** 9 benchmark definitions as config, quick-log, SVG trends, planche level track, athleticism vs bodyweight with causation caveat, no composite score.
+- [x] **R5. Benchmarks + progress dashboards:** 9 benchmark definitions as config, quick-log, SVG trends, planche level track, athleticism vs bodyweight with causation caveat, no composite score. Retired from the app 2026-09-05 (owner: remove all athletic benchmarks for now); table kept, code removed.
 - [x] **R6. Exercise library:** index + per-exercise pages merging the 58-entry catalog with active-program exercises.
 - [x] **R7. Readiness:** few-seconds check-in (sleep, energy, soreness, groin 0-5, readiness) with restrained groin messaging per non-negotiable 19.
 - [x] **R8. Reviews + integration polish:** weekly/monthly reviews (conservative, windows labeled, honest empty states), app-wide nav (3 primary + More on mobile, all inline desktop), home readiness strip, integrated build + full-route headless drive green.
@@ -137,6 +137,8 @@ Owner decisions (asked and answered 2026-09-04): remove everything on foot from 
 **Done when:** any past day can be inspected from the calendar and an adherence percentage is shown.
 
 ## Phase 7: Athletic benchmarks + progress dashboards
+
+Removed from the app on 2026-09-05 for now (owner decision). Kept here for when benchmarks return.
 
 - [ ] Benchmark tracking: 10 m sprint, 20 m sprint, 30 m sprint, standing broad jump, vertical jump, strict pull-ups, strict dips.
 - [ ] Calisthenics progression tracking: L-sit progression, planche progression.

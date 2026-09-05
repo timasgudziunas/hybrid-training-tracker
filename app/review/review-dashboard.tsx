@@ -7,7 +7,7 @@ import { groupSessionsByDate } from "@/lib/history/session-filtering";
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
 import { fetchActiveProgram } from "@/app/program/actions";
 import { getRecentReadinessEntries, type ReadinessEntry } from "@/app/readiness/actions";
-import { fetchBenchmarkEntries, fetchBodyweightSeries, type BenchmarkEntry, type BodyweightPoint } from "@/app/progress/actions";
+import { fetchBodyweightSeries, type BodyweightPoint } from "@/app/body/bodyweight-series-actions";
 import { fetchUltimatePracticeDates } from "@/app/today/ultimate-practice-actions";
 import { fetchSessionRecordsInRange } from "./actions";
 import type { WorkoutSessionRecord } from "@/lib/workout-session/workout-session-types";
@@ -31,7 +31,6 @@ type LoadState =
       sessionByDate: Map<string, WorkoutSessionRecord>;
       readinessEntries: ReadinessEntry[];
       bodyweightSeries: BodyweightPoint[];
-      benchmarkEntries: Record<string, BenchmarkEntry[]>;
       ultimatePracticeDates: string[];
     };
 
@@ -58,13 +57,12 @@ export default function ReviewDashboard() {
     const monthStart = addDays(today, -(MONTH_WINDOW_DAYS - 1));
 
     async function load() {
-      const [programResult, sessionsResult, readinessResult, bodyweightResult, benchmarkResult, ultimatePracticeResult] =
+      const [programResult, sessionsResult, readinessResult, bodyweightResult, ultimatePracticeResult] =
         await Promise.all([
           fetchActiveProgram(),
           fetchSessionRecordsInRange(monthStart, today),
           getRecentReadinessEntries(MONTH_WINDOW_DAYS),
           fetchBodyweightSeries(),
-          fetchBenchmarkEntries(),
           fetchUltimatePracticeDates(monthStart, today),
         ]);
 
@@ -93,7 +91,6 @@ export default function ReviewDashboard() {
         sessionByDate: groupSessionsByDate(sessions),
         readinessEntries: readinessResult.ok ? readinessResult.data : [],
         bodyweightSeries: bodyweightResult.ok ? bodyweightResult.data : [],
-        benchmarkEntries: benchmarkResult.ok ? benchmarkResult.data.entries : {},
         ultimatePracticeDates: ultimatePracticeResult.ok ? ultimatePracticeResult.data : [],
       });
     }
@@ -142,7 +139,6 @@ export default function ReviewDashboard() {
           sessionByDate={state.sessionByDate}
           readinessEntries={state.readinessEntries}
           bodyweightSeries={state.bodyweightSeries}
-          benchmarkEntries={state.benchmarkEntries}
         />
       )}
     </div>

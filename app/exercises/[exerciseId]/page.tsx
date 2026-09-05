@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EXERCISE_CATALOG } from "@/lib/program/exercise-catalog";
 import { fetchActiveProgram } from "@/app/program/actions";
 import { fetchAthleteSettings } from "@/app/settings/actions";
 import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS } from "@/lib/program/muscle-group-copy";
@@ -19,15 +18,10 @@ import ProgressionChainLevels from "./progression-chain-levels";
 const DOUBLE_PROGRESSION_SENTENCE =
   "This exercise progresses through double progression: work every set within the prescribed rep range, and once every set reaches the top of that range with good technique, add weight and drop back toward the bottom of the range.";
 
-/**
- * Prerenders every catalog exercise at build time (PLAN.md R6: "static
- * friendly"). Program-only ids (dynamicParams defaults to true) are still
- * served, resolved at request time against the active program's own
- * exercises map in the page below.
- */
-export function generateStaticParams() {
-  return EXERCISE_CATALOG.map((exercise) => ({ exerciseId: exercise.id }));
-}
+// Rendered per request (accounts, 2026-09-05): the page merges in the
+// signed-in athlete's own program exercises and RIR setting, both read
+// through the session cookie, so it can no longer be prerendered at build.
+export const dynamic = "force-dynamic";
 
 export default async function ExerciseDetailPage({
   params,

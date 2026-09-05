@@ -9,7 +9,7 @@
  * crashing. Read-only: this file never writes to Supabase.
  */
 
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import { groupSessionsByDate } from "@/lib/history/session-filtering";
 import type { WorkoutSessionRecord, WorkoutSessionStatus } from "@/lib/workout-session/workout-session-types";
 
@@ -92,13 +92,9 @@ export async function fetchSessionSummaries(
   startDate?: string,
   endDate?: string
 ): Promise<ActionResult<SessionSummary[]>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[history/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     let query = supabase
@@ -132,13 +128,9 @@ export async function fetchSessionSummaries(
  * ever logged that day (not a failure).
  */
 export async function fetchSessionForDate(sessionDate: string): Promise<ActionResult<WorkoutSessionRecord | null>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[history/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(SESSIONS_TABLE).select("*").eq("session_date", sessionDate);
@@ -174,13 +166,9 @@ export async function fetchSessionForDate(sessionDate: string): Promise<ActionRe
  * indicator. `data: []` (not a failure) when the table doesn't exist yet or
  * nothing has been logged. */
 export async function fetchBodyCheckinDates(): Promise<ActionResult<string[]>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[history/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(CHECKINS_TABLE).select("checkin_date");

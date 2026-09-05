@@ -9,7 +9,7 @@
  * isn't there yet.
  */
 
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import { parseProgramText } from "@/lib/program/parse-program-text";
 import type { ResolvedProgram } from "@/lib/program/program-types";
 
@@ -77,13 +77,9 @@ export async function saveProgram(
     return { ok: false, reason: `Could not save: ${errors.join(" ")}` };
   }
 
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[program/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase, userId } = context.data;
 
   try {
     // Insert first, inactive, so a failure partway through never leaves the
@@ -92,6 +88,7 @@ export async function saveProgram(
     const { data, error: insertError } = await supabase
       .from(TABLE)
       .insert({
+        user_id: userId,
         name: program.name,
         source_text: sourceText,
         parsed: program,
@@ -141,13 +138,9 @@ export async function saveProgram(
 /** The single active program, or `data: null` when none has ever been
  * activated (not a failure — the Today screen falls back to the sample). */
 export async function fetchActiveProgram(): Promise<ActionResult<ProgramRecord | null>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[program/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(TABLE).select("*").eq("is_active", true).limit(1);
@@ -170,13 +163,9 @@ export async function fetchActiveProgram(): Promise<ActionResult<ProgramRecord |
 
 /** Every program ever saved, newest first, for the history list + re-activate. */
 export async function fetchProgramHistory(): Promise<ActionResult<ProgramRecord[]>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[program/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase.from(TABLE).select("*").order("created_at", { ascending: false });
@@ -205,13 +194,9 @@ export async function fetchProgramHistory(): Promise<ActionResult<ProgramRecord[
  * to. With no active program, the Today screen falls back to its
  * waiting-for-program state (same as before any program was ever pasted). */
 export async function deactivateActiveProgram(): Promise<ActionResult<null>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[program/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { error } = await supabase.from(TABLE).update({ is_active: false }).eq("is_active", true);
@@ -231,13 +216,9 @@ export async function deactivateActiveProgram(): Promise<ActionResult<null>> {
  * every other row, activates this one. The row's already-parsed content is
  * reused as-is; it is not re-parsed. */
 export async function activateProgram(id: string): Promise<ActionResult<null>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[program/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { error: deactivateError } = await supabase.from(TABLE).update({ is_active: false }).eq("is_active", true);

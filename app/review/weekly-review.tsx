@@ -1,7 +1,7 @@
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
 import type { WorkoutSessionRecord } from "@/lib/workout-session/workout-session-types";
 import type { ReadinessEntry } from "@/app/readiness/actions";
-import type { BodyweightPoint } from "@/app/progress/actions";
+import type { BodyweightPoint } from "@/app/body/bodyweight-series-actions";
 import { addDays, weekdayOfDateString } from "@/lib/history/calendar-grid";
 import { computeAdherence } from "@/lib/history/adherence";
 import { countSectionTypeExposures, countUltimatePracticeDays, dateRange } from "./training-window-metrics";

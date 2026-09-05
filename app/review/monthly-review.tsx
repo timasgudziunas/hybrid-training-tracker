@@ -1,8 +1,7 @@
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
 import type { WorkoutSessionRecord } from "@/lib/workout-session/workout-session-types";
 import type { ReadinessEntry } from "@/app/readiness/actions";
-import type { BenchmarkEntry, BodyweightPoint } from "@/app/progress/actions";
-import { BENCHMARK_DEFINITIONS } from "@/lib/benchmarks/benchmark-definitions";
+import type { BodyweightPoint } from "@/app/body/bodyweight-series-actions";
 import { addDays, weekdayOfDateString } from "@/lib/history/calendar-grid";
 import { computeAdherence } from "@/lib/history/adherence";
 import { topStrengthHighlights } from "./exercise-progression";
@@ -23,7 +22,6 @@ export default function MonthlyReview({
   sessionByDate,
   readinessEntries,
   bodyweightSeries,
-  benchmarkEntries,
 }: {
   today: string;
   program: ActiveProgramWeek | null;
@@ -31,7 +29,6 @@ export default function MonthlyReview({
   sessionByDate: Map<string, WorkoutSessionRecord>;
   readinessEntries: ReadinessEntry[];
   bodyweightSeries: BodyweightPoint[];
-  benchmarkEntries: Record<string, BenchmarkEntry[]>;
 }) {
   const monthStart = addDays(today, -(MONTH_WINDOW_DAYS - 1));
 
@@ -51,25 +48,6 @@ export default function MonthlyReview({
 
   const bodyweightInWindow = bodyweightSeries.filter((p) => p.date >= monthStart && p.date <= today);
   const weightChange = bodyweightChange(bodyweightInWindow);
-
-  const allBenchmarksInWindow = Object.values(benchmarkEntries)
-    .flat()
-    .filter((entry) => entry.measuredOn >= monthStart && entry.measuredOn <= today)
-    .sort((a, b) => b.measuredOn.localeCompare(a.measuredOn));
-
-  const lSitEntriesInWindow = (benchmarkEntries.l_sit_hold ?? []).filter(
-    (e) => e.measuredOn >= monthStart && e.measuredOn <= today
-  );
-  const bestLSit = lSitEntriesInWindow.length > 0 ? Math.max(...lSitEntriesInWindow.map((e) => e.value)) : null;
-
-  const plancheDefinition = BENCHMARK_DEFINITIONS.find((d) => d.type === "planche_level");
-  const plancheLevels = plancheDefinition?.input.kind === "ordinal-level" ? plancheDefinition.input.levels : [];
-  const plancheEntriesInWindow = (benchmarkEntries.planche_level ?? [])
-    .filter((e) => e.measuredOn >= monthStart && e.measuredOn <= today)
-    .sort((a, b) => a.measuredOn.localeCompare(b.measuredOn));
-  const plancheFirst = plancheEntriesInWindow[0] ?? null;
-  const plancheLast = plancheEntriesInWindow[plancheEntriesInWindow.length - 1] ?? null;
-  const plancheChanged = Boolean(plancheFirst && plancheLast && plancheFirst.value !== plancheLast.value);
 
   const readinessInWindow = readinessEntries.filter((e) => e.date >= monthStart && e.date <= today);
   const avgSleep = average(readinessInWindow.map((e) => e.sleepHours).filter((v): v is number => v !== null));
@@ -137,55 +115,6 @@ export default function MonthlyReview({
         ) : (
           <p className="text-sm text-ink-tertiary">Not enough check-ins yet in this window to show a trend.</p>
         )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
-          Athletic benchmarks logged
-        </h2>
-        {allBenchmarksInWindow.length > 0 ? (
-          <div className="flex flex-col divide-y divide-line-hairline rounded-2xl border border-line-hairline bg-surface-1 px-4">
-            {allBenchmarksInWindow.map((entry) => {
-              const definition = BENCHMARK_DEFINITIONS.find((d) => d.type === entry.type);
-              return (
-                <div key={entry.id} className="flex items-center justify-between gap-3 py-3">
-                  <span className="text-sm text-ink-primary">{definition?.label ?? entry.type}</span>
-                  <span className="font-display text-sm tabular-nums text-ink-secondary">
-                    {entry.value} {entry.unit} &middot; {entry.measuredOn}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-ink-tertiary">No benchmark measurements logged in this window.</p>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">Calisthenics</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <ReviewStatTile
-            label="Best L-sit hold"
-            value={bestLSit !== null ? `${bestLSit} s` : "—"}
-            sub={bestLSit === null ? "Not enough data yet" : "Best single hold this window"}
-          />
-          <ReviewStatTile
-            label="Planche progression"
-            value={
-              plancheLast
-                ? (plancheLevels.find((l) => l.order === plancheLast.value)?.name ?? `Level ${plancheLast.value}`)
-                : "—"
-            }
-            sub={
-              !plancheLast
-                ? "Not enough data yet"
-                : plancheChanged && plancheFirst
-                  ? `Advanced from ${plancheLevels.find((l) => l.order === plancheFirst.value)?.name ?? plancheFirst.value}`
-                  : "No change this window"
-            }
-          />
-        </div>
       </section>
 
       <section className="flex flex-col gap-3">

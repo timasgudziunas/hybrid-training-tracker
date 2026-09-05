@@ -47,3 +47,14 @@ export function removePendingSession(id: string): void {
     // gets retried (harmlessly, saveWorkoutSession is an idempotent upsert).
   }
 }
+
+/** Drops every stashed session. Only for an account change on this browser
+ * (sign-in / sign-out): a stash left by another athlete must never be
+ * retried under the next account. */
+export function clearPendingSessions(): void {
+  try {
+    window.localStorage.removeItem(PENDING_SYNC_KEY);
+  } catch {
+    // Nothing to do.
+  }
+}

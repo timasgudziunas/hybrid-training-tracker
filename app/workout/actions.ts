@@ -10,7 +10,7 @@
  * workout because the DB isn't ready.
  */
 
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import { extractPreviousPerformance } from "@/lib/workout-session/previous-performance";
 import type {
   ExerciseSlotLog,
@@ -29,6 +29,7 @@ const PREVIOUS_PERFORMANCE_SESSION_SCAN_LIMIT = 60;
 
 type WorkoutSessionDbRow = {
   id: string;
+  user_id: string;
   session_date: string;
   weekday: string;
   workout_template_id: string;
@@ -41,9 +42,10 @@ type WorkoutSessionDbRow = {
   performance: WorkoutSessionRecord["performance"];
 };
 
-function toDbRow(record: WorkoutSessionRecord): WorkoutSessionDbRow {
+function toDbRow(record: WorkoutSessionRecord, userId: string): WorkoutSessionDbRow {
   return {
     id: record.id,
+    user_id: userId,
     session_date: record.sessionDate,
     weekday: record.weekday,
     workout_template_id: record.workoutTemplateId,
@@ -77,16 +79,15 @@ function fromDbRow(row: WorkoutSessionDbRow): WorkoutSessionRecord {
  * Finish all call this with the full current record — a single idempotent
  * upsert by id). */
 export async function saveWorkoutSession(record: WorkoutSessionRecord): Promise<ActionResult<null>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[workout/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
+  const context = await getAthleteContext();
+  if (!context.ok) {
+    console.error("[workout/actions] Athlete context unavailable for save:", context.reason);
+    return { ok: false, reason: "Not synced yet." };
   }
+  const { supabase, userId } = context.data;
 
   try {
-    const { error } = await supabase.from(TABLE).upsert(toDbRow(record), { onConflict: "id" });
+    const { error } = await supabase.from(TABLE).upsert(toDbRow(record, userId), { onConflict: "id" });
     if (error) {
       console.error("[workout/actions] Session upsert failed:", error);
       return { ok: false, reason: "Not synced yet." };
@@ -104,13 +105,9 @@ export async function saveWorkoutSession(record: WorkoutSessionRecord): Promise<
  * session, never one to resume (see resumable-session.ts). Returns
  * `data: null` (not a failure) when there simply isn't one yet. */
 export async function fetchActiveSessionForToday(sessionDate: string): Promise<ActionResult<WorkoutSessionRecord | null>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[workout/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase
@@ -146,13 +143,9 @@ export async function fetchLatestSessionSummaryForDate(
 ): Promise<
   ActionResult<{ status: WorkoutSessionStatus; durationSeconds: number | null; workoutTemplateId: string } | null>
 > {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[workout/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase
@@ -200,13 +193,9 @@ export async function fetchPreviousPerformance(
     return { ok: true, data: {} };
   }
 
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[workout/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     // `performance->slots` (no alias) resolves to a top-level `slots` key in

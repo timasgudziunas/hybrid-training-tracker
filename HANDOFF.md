@@ -1,104 +1,88 @@
-# HANDOFF.md — Session Handoff (updated 2026-09-05 ~00:00 UTC, supersedes all 2026-09-04 21:30 UTC and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-09-05 ~02:30 UTC, supersedes all 2026-09-05 ~00:00 UTC and earlier versions)
 
-> To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables; 23 and 24 are new), then `PLAN.md` (R10 is the newest completed block; the "Rework plan" section reflects current reality; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth (§6 "Flow polish, settings, and adding exercises" and §12 "Built-in library" are the settled R10 behavior); `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format.
+> To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables; the "What this project is" and "Tech stack" sections now describe accounts), then `PLAN.md` (R10 is the newest completed block; R5 benchmarks are retired; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth; `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format.
 
-## Current state (as of 2026-09-05 ~00:00 UTC)
+## Current state (as of 2026-09-05 ~02:30 UTC)
 
-**The app is live and in real use** at **https://hybrid-training-tracker.vercel.app** behind the passphrase gate. Head is `ddd50c1` (R10 complete), pushed 2026-09-05 ~00:00 UTC; **production deploy confirmed** (Vercel commit status on GitHub: success at ~00:02 UTC; URL returns 307 to the gate).
+**Production (https://hybrid-training-tracker.vercel.app) still runs `ddd50c1` (R10, passphrase gate, single-user).** This session's work is committed LOCALLY and deliberately NOT pushed: pushing deploys, and the deploy only works once the owner has run the new schema (see Next steps). The Supabase project (`woawbkhcoegvwrsfgbix`) is unchanged: no `user_id` columns, no RLS policies, `athlete_settings` still unapplied, `auth.users` empty (a throwaway e2e user was created and deleted this session).
 
-- **No program is active** (owner request 2026-09-04, "I will be changing it up"). `training_programs` row `aea8db93` (Athletic Muscle Base — Block 1) is `is_active=false`, kept for one-tap reactivation. Today shows the waiting-for-program state. Repo copy of the program: `programs/block-1-athletic-muscle-base.md`.
-- **Supabase** (ref `woawbkhcoegvwrsfgbix`, service-role only, RLS no-policies by design). **One schema change is NOT applied yet:** the new `athlete_settings` table (bottom of `supabase/schema.sql`). Until the owner runs it in the SQL editor, /settings shows defaults (RIR hidden) and toggling fails with an explicit "table has not been applied yet" message; nothing else is affected. Row counts unchanged from the previous handoff otherwise (`workout_sessions` 8 real rows through 2026-09-02, plus the stray active Saturday 2026-08-29 row `52b05e65`).
-- **Verification state (this session's tree, pre-commit):** `npm run build` green (281 exercise pages prerendered); `npx tsc --noEmit` clean; `npx eslint app lib scripts` clean; 15 test suites, 4,629 assertions green (new: exercise-catalog 4,378, exercise-filters 19, add-exercise 26); `validate-program.ts` passes. Headless Edge drive of the sample workout against a local production build: **39/39 checks** (library chips/filters/detail preset, settings page, no autofocus on arrival/after Next set/after delete/in Swap and Add pickers, Next set → Log set labels, no auto-advance after the last set, swipe-left Delete via touch events, progress bar 2 / 10 and 20%, add Barbell Curl mid-workout → 3 / 11, swap Face Pull → Dead Hang adopts a hold input, revert restores reps, completion lists Added today, Finish saves). Sample rows deleted after.
+- **No program is active** (unchanged). `training_programs` row `aea8db93` (Block 1) is `is_active=false`.
+- **Verification state (this tree):** `npm run build` green with zero static-render fallbacks; `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 14 test suites green (4,629 assertions) plus `validate-program.ts`. Headless Edge drive of the auth flow against a local production build (`next start -p 3100`, throwaway confirmed user via the admin API): **12/12** (gate redirect with redirect param, wrong password error, sign-in lands on the requested page, Today renders for a fresh account, no Progress nav item, Settings shows the signed-in email, toggle measures 48 x 28, sign-out returns to sign-in and the gate is back, invite field shown when `APP_PASSPHRASE` is set, wrong invite rejected). Data reads/writes under RLS could NOT be verified: the policies do not exist in Supabase yet.
 
-## Just completed (this session, 2026-09-04): R10
+## Just completed (this session, 2026-09-05): three owner requests
 
-Owner asked for a large built-in library plus a list of workout-flow fixes. Four clarifying answers were obtained first and are SETTLED (do not re-litigate): remove everything on foot from the library (sprints and accelerations included); about 250 exercises; build "add exercise mid-workout" and "presets feed Swap" now; settings synced in Supabase; **the in-app program builder is deferred but must not be forgotten** (PLAN.md R10, CLAUDE.md non-negotiable 23).
-
-1. **Catalog** rebuilt as one file per muscle group in `lib/program/catalog/` (281 `CatalogExercise` entries), aggregated by `lib/program/exercise-catalog.ts` (throws on duplicate ids). Every entry: `muscleGroup`, `equipment`, `defaultPrescription` (logging preset), where to feel it, cues, common mistakes. **Ids are always `slugifyExerciseName(name)`** (`lib/program/slugify-exercise-name.ts`, also used by the parser), so catalog ids and pasted-program ids always agree. `scripts/test-exercise-catalog.ts` asserts all rules including guidance coverage of every Block 1 name except the removed sprint lines. Renamed on purpose: "Pogos" → "Pogo Jump", "Hanging Knee/Leg Raise" → "Hanging Knee Raise" (both now match the owner's program text). Removed: 10 m / 20 m Acceleration, 30 m Sprint. Sample program's sprint slot became "Farmer Carry: 3 x 30m" so the distance card type is still demonstrated.
-2. **Library** (/exercises): search (never autofocused), muscle-group chips with counts, category + equipment selects, sort by muscle group / name / category (`lib/program/exercise-filters.ts`, pure, tested). Detail page: muscle group badge, equipment line, substitutions as links, and a subdued "Logging preset" card at the bottom (respects the RIR setting). Program-only exercises group under "Other".
-3. **Settings** (/settings, in the More nav): `athlete_settings` key/value table, `app/settings/actions.ts` (`fetchAthleteSettings` always degrades to defaults; `updateAthleteSettings` surfaces a missing table), `lib/settings/athlete-settings.ts` (types, `showRir` default **false**: owner takes every set to failure).
-4. **Workout flow** (`app/workout/active/`): every `autoFocus` removed. Set button reads "Next set" until the final set, then "Log set". Logging the final set does NOT advance: the slot is marked completed right there (in `handleLogSet`, so the progress bar and Finish agree even if the athlete jumps away) and the card shows the logged sets with one prominent advance button labeled "Next exercise" / "Session overview" / "Session summary" (computed from `nextUnfinishedSlotKey`). Swipe-left on a logged set reveals Delete (`swipeable-set-row.tsx`, pointer events, `touch-action: pan-y`, pointercancel never opens the edit form); tap still opens the edit form. Session overview opens with `session-progress-bar.tsx` ("9 / 10", percent, one segment per slot; skipped = warning tint). `exercise-picker-list.tsx` is shared by Swap and the new "+ Add exercise" (`add-exercise-picker.tsx`, on the overview and the completion screen).
-5. **Add exercise mid-workout** (`lib/workout-session/add-exercise.ts`, pure, tested): appended to the session's own `templateSnapshot` in an optional "Added today" section (`ADDED_SECTION_ID`), preset prescription, slot key `added:N`, recorded in `modifications.addedSlotKeys`, current slot jumps to it. Never a deviation, never flips the session to Modified; listed on the completion screen as "Added today".
-6. **Presets feed Swap** (`lib/workout-session/swap-prescription.ts`, pure, tested): same set type keeps the program's prescription; different type adopts the substitute's preset with the program's set count; the true program original is stored on `SlotSubstitution.originalPrescription` (survives double swaps) and restored on revert, including the "pick the prescribed exercise again" revert path.
-
-Prior sessions' settled items still standing: R9 mechanics (cardio card, set removal, navigation, stale-session close, cross-day last time), Ultimate attendance opt-in, `modified` is TERMINAL with derived deviations, serialized save queue.
+1. **Athletic benchmarks removed "for now."** `app/progress/` and `lib/benchmarks/` deleted; Progress nav item gone (mobile nav is now Today, History, More); monthly review lost its "Athletic benchmarks logged" and "Calisthenics" sections; `fetchBodyweightSeries` moved to `app/body/bodyweight-series-actions.ts`. The `athletic_benchmarks` table is intentionally NOT dropped (no code path, no policies). Docs note the pause (PLAN R5 / Phase 7, PRODUCT_SPEC screens table and benchmark section, CLAUDE.md non-negotiable 23).
+2. **Accounts (Supabase Auth, email + password).** `@supabase/ssr` added. `proxy.ts` now requires a signed-in user on every route except `/sign-in`, `/sign-up`, `/auth/*`. New: `app/sign-in/`, `app/sign-up/`, `app/auth/actions.ts` (sign in / sign up / sign out), `app/auth/callback/route.ts` (email confirmation landing), `lib/supabase/user-client.ts` (anon key + session cookies), `lib/auth/athlete-context.ts` (`getAthleteContext()` returns `{ supabase, userId, email }` or `{ ok: false, reason }`). Every data-access file now goes through the athlete context; upserts include `user_id` and conflict on `(user_id, <date|key>)`. Service-role client is reserved for progress-photo signing (upload path is now `<userId>/<date>.<ext>`) and admin scripts. `APP_PASSPHRASE` is reused as an optional invite passphrase for sign-up only. Settings page gained an Account card (email + Sign out). Local workout mirrors are cleared on the sign-in / sign-up screens and on sign-out (`app/auth/clear-local-athlete-data.ts`) so a shared device never resumes another athlete's session. Today, Program, and both Library pages are now `force-dynamic` (they read per-account data). The old passphrase gate (`app/unlock/`, `lib/auth/passphrase-cookie.ts`) is deleted.
+3. **RIR toggle** on /settings redrawn at 48 x 28 (was 52 x 44); the whole row is the switch.
 
 ## In progress / where it stopped
 
-Nothing mid-flight. Session closed cleanly with this handoff's confirmation commit.
+Nothing mid-flight. Local commit made; push pending on the owner's schema steps below.
 
-## Next steps (priority order)
+## Next steps (priority order, owner actions, in THIS order)
 
-1. **Owner: run the `athlete_settings` DDL** (last block of `supabase/schema.sql`) in the Supabase SQL editor, then confirm the toggle on /settings saves. Optional: `npx tsx --env-file=.env scripts/check-db-state.ts` now lists `athlete_settings` and `ultimate_practice_days`.
-2. **Owner: paste the new program** on /program (Block 1 stays deactivated until then).
-3. **Owner: gym verification of R10** on the next real session: no keyboard popping up on arrival / Next set / Add set; Log set then Next exercise; swipe a set to delete; overview progress bar; add an exercise; swap to a different set type and revert.
-4. **Next build block: the in-app program builder** (owner: "put it off for now, but make sure it isn't forgotten"). Presets on every catalog entry exist for it. Scope it as its own PLAN.md block before starting.
-5. Optional cosmetic: pre-existing dashes in a few in-workout strings ("Rest: Approximately 2-3 minutes" from `lib/program/rest-guidance.ts`, "Target: 8-12 reps" ranges in `exercise-entry-card.tsx`, `app/today/format-prescription.ts`). The owner's NO DASHES rule would prefer "2 to 3"; untouched this session to keep scope tight.
-6. Optional hygiene (unchanged): delete stray active Saturday 2026-08-29 row `52b05e65`; repair 2026-08-26's null completed_at.
+1. **Supabase Auth settings** (dashboard: Authentication > Sign In / Providers > Email): turn **Confirm email OFF**. Reason: Supabase's built-in mailer only delivers to project team members, so other athletes would never get a confirmation link; sign-up is already gated by the invite passphrase. (Alternative: configure custom SMTP, e.g. Resend, and keep confirmation on; then also add `https://hybrid-training-tracker.vercel.app/auth/callback` under Authentication > URL Configuration > Redirect URLs.) Checked this session via the public settings endpoint: confirmation is currently ON.
+2. **Run `supabase/schema.sql`** in the SQL editor (idempotent: adds `user_id`, swaps the per-date unique constraints to per-user, creates the `own rows` policies, creates `athlete_settings` with a `(user_id, key)` key).
+3. **`git push`** (deploys). Confirm with `gh api repos/timasgudziunas/hybrid-training-tracker/commits/<sha>/status`.
+4. **Sign up** in the app with your own email (the invite passphrase is the old `APP_PASSPHRASE` value already in Vercel env).
+5. **Run `supabase/migrations/2026-09-05-backfill-owner-user-id.sql`** after replacing `OWNER_EMAIL_HERE` with the email you signed up with. It assigns every pre-accounts row (8 real sessions, check-ins, readiness, Ultimate days, Block 1 program) to your account. Verify with `npx tsx --env-file=.env scripts/check-db-state.ts` (every table should show `0 without user_id`).
+6. Until step 5 is done your history looks empty in the app. That is expected, nothing is lost.
+7. Then the standing items: paste the new program on /program; gym verification of R10; in-app program builder as the next build block (PLAN.md R10, CLAUDE.md non-negotiable 23).
 
 ## Open decisions / blockers
 
-- `athlete_settings` not applied (see Next steps 1). Not a bug; the app defaults safely.
-- A same-type swap keeps the program's sets and reps; a different-type swap keeps only the set count. If the owner wants swapped-in exercises to ALWAYS take their preset reps, change `prescriptionForSwap` (one function) and its tests.
-- Logged sets survive a swap that changes the set type (e.g. two reps sets logged, then swapped to a hold): they stay in the slot and format by the new type. Edge case; revert restores everything.
-- An exercise is marked completed the moment its final target set is logged. "+ Add set" afterwards grows the target but leaves the status completed; if the athlete then leaves without logging the extra set, no deviation is recorded (prescribed count was met). Deliberate.
-- /exercises and /exercises/[id] are prerendered at build time (pre-existing "static friendly" choice), so program-only entries and the preset card's RIR chip reflect build-time data until the next deploy. Cosmetic.
-- Skipped slots are stepped over by Next and only offered again via the overview (unchanged R9 decision).
+- Between steps 2 and 3 the live (old) code's body check-in upsert would fail because its conflict target `checkin_date` no longer has a unique constraint. Do the two steps back to back.
+- Old progress photos stay at bucket root (`<date>.<ext>`); new ones go under `<userId>/`. Signing works for both because the server signs whatever path the owner's own row holds. No object move needed.
+- `getAthleteContext()` calls `supabase.auth.getUser()` (a network round-trip) once per server action or page fetch. Fine at this scale; switch to `getClaims()` if it ever shows up in latency.
+- If `APP_PASSPHRASE` is ever removed from Vercel env, sign-up becomes open to anyone.
+- Benchmarks may return later: the table and PRODUCT_SPEC section are retained.
 
 ## Where everything lives
 
 | Path | What it is |
 |---|---|
-| `lib/program/catalog/*.ts` | The 281-entry library, one file per muscle group (chest, back, shoulders, arms, quads, posterior-chain, calves, core, calisthenics, power, mobility-prehab, cardio) |
-| `lib/program/exercise-catalog.ts` · `slugify-exercise-name.ts` · `muscle-group-copy.ts` · `exercise-filters.ts` | Aggregator (+`findExerciseById`), the one id rule, filter labels/order, pure library filtering |
-| `lib/program/set-entry-fields.ts` | Per-exercise set inputs (config) + **`loggingFieldLabels`** / **`formatPrescriptionPreset`** for library and pickers |
-| `lib/program/program-types.ts` | `Exercise` gained `muscleGroup`, `equipment`, `defaultPrescription`; `CatalogExercise` = all required |
-| `lib/settings/athlete-settings.ts` · `app/settings/` | Settings types/defaults; page, form, server actions |
-| `lib/workout-session/add-exercise.ts` · `swap-prescription.ts` | Pure reducers for add-mid-workout and preset-driven swap prescriptions |
-| `lib/workout-session/workout-session-types.ts` | `SlotSubstitution.originalPrescription`, `SessionModificationState.addedSlotKeys` |
-| `app/workout/active/` | `active-workout-screen.tsx` (settings fetch, advanceLabel, completion-on-final-set, add/swap wiring), `exercise-entry-card.tsx`, **`swipeable-set-row.tsx`**, **`session-progress-bar.tsx`**, **`exercise-picker-list.tsx`**, **`add-exercise-picker.tsx`**, `exercise-swap-picker.tsx`, `workout-overview.tsx`, `completion-summary.tsx` |
-| `app/exercises/` | Library index (`exercise-library-browser.tsx`), `merge-exercise-sources.ts`, detail page |
-| `supabase/schema.sql` | Idempotent schema; **`athlete_settings` block at the bottom is new and unapplied** |
-| `scripts/test-*.ts` (15) · `validate-program.ts` | Pre-registered suites, 4,629 assertions; new: `test-exercise-catalog.ts`, `test-exercise-filters.ts`, `test-add-exercise.ts` |
-| `programs/` | Owner's real programs verbatim (Block 1, inactive) |
+| `proxy.ts` | Auth gate (session refresh + redirect to /sign-in) |
+| `lib/supabase/user-client.ts` · `lib/auth/athlete-context.ts` · `lib/auth/safe-redirect-path.ts` | Per-user client, the one entry point for athlete data, redirect sanitizer |
+| `lib/supabase/server-client.ts` | Service-role client: photo signing + admin scripts only |
+| `app/auth/` · `app/sign-in/` · `app/sign-up/` | Auth actions, callback route, shared shell/styles, local-data clearing, the two screens |
+| `app/settings/account-card.tsx` | Signed-in email + Sign out |
+| `app/body/bodyweight-series-actions.ts` | Bodyweight series for Review (moved from the deleted progress actions) |
+| `supabase/schema.sql` | Idempotent multi-user schema with RLS policies |
+| `supabase/migrations/2026-09-05-backfill-owner-user-id.sql` | One-time owner backfill (edit the email placeholder first) |
+| `lib/program/catalog/*.ts` · `lib/program/exercise-catalog.ts` | The 281-entry library (unchanged) |
+| `app/workout/active/` | Active workout screen (unchanged this session) |
+| `scripts/test-*.ts` (14) · `check-db-state.ts` | Test suites; DB state now reports rows missing `user_id` |
 
 ## Operational landmines
 
-1. UI renders from the ACTIVE PASTED PROGRAM (or sample) only — never hardcode workout content (non-negotiable 16). The catalog is a knowledge base and picker source, never a workout.
-2. Sunday always rest; parser coerces pasted Sunday workouts to rest with a warning. Any weekday can be rest — never hardcode "Sunday" in rest-day copy.
-3. Progress photos: private bucket, signed URLs only; `SUPABASE_SERVICE_ROLE_KEY` server-only. Photo bytes never through server actions (~4.5 MB cap).
-4. ALL session saves go through the mount's `createSessionSaveQueue` instance — never call `saveWorkoutSession` directly for the active session (pending-sync retries of OTHER ids are the exception). Never capture a session record in a delayed closure; read `sessionRef.current` at fire time. `clearLocalSession()` only after a queue-confirmed ok save at Finish/retry, or when the init discards a NON-RESUMABLE leftover.
-5. Next 16: `proxy.ts` not `middleware.ts`; new routes are gated automatically (/settings needed nothing).
-6. Vercel MCP plugin unreliable; CLI not installed. **Reliable deploy verification:** `gh api repos/timasgudziunas/hybrid-training-tracker/commits/<sha>/status`.
-7. No `ANTHROPIC_API_KEY` in any env (root CLAUDE.md rule).
-8. RLS has no policies BY DESIGN (service-role only) on ALL tables, `athlete_settings` included. Don't add anon policies.
-9. Owner's NO DASHES rule applies to user-facing UI strings and owner-facing docs; `scripts/test-exercise-catalog.ts` enforces it on every catalog string. CSS uppercases many labels: **headless text checks must be case-insensitive** (bit this session four times: "Added today", "Targets the same muscles", "Seconds achieved", "Session complete").
-10. Coaching/guidance text lives ONLY in `lib/program/catalog/*.ts` — never hardcoded in components.
-11. Session template ids stay bare weekday slugs; exercise ids are ALWAYS `slugifyExerciseName(name)` (catalog and parser alike), so the same name anywhere shares history. Renaming a catalog entry changes its id and orphans history logged under the old name.
-12. `next dev`/`next build` flip-flop `next-env.d.ts` — leave that churn uncommitted.
-13. Sample sessions (`workout_template_id` prefix `sample-`) stay excluded from adherence, history, reviews, previous performance, Today, and the Completed-today panel.
-14. React StrictMode in `next dev` can double-fire the active-workout init effect; production builds don't. Clean up dev-created rows.
-15. Scratchpad scripts can't resolve the project's `node_modules`; runnable checks go in `scripts/`. Never read/print `.env`. New `scripts/` files without imports need a trailing `export {}`.
-16. ESLint runs React Compiler-era rules: no ref reads or `Date.now()` during render outside a useState initializer; setState in effects nested inside an inner function.
-17. `modified` is TERMINAL. Deviations are derived via `detectSessionDeviations`, never persisted. Added exercises are NOT deviations (optional section).
-18. End-to-end UI verification: `puppeteer-core` in the session scratchpad + system Edge against `npx next start -p 3100` (port 3000 is often the `blurbs` dev server; never kill it). Drive the SAMPLE workout; delete sample rows before and after via REST; load env with `node --env-file=.env`. **Swipe gestures need `page.touchscreen` (mouse events read as a tap under mobile emulation).** Recreate the drive script per session.
-19. Ultimate practice attendance is NEVER inferred from the program flag; only an `ultimate_practice_days` row means attended.
-20. Cardio card state is persisted `draft` data, never component state; the ride is one `SetLog` (`setNumber: 1`).
-21. `isResumableSession`/`hasResumableLocalProgramSession` take `nowMs`; the 6-hour window is `RESUME_ACROSS_MIDNIGHT_HOURS`. Never reintroduce "any logged work resumes forever".
-22. Set-entry inputs come from `lib/program/set-entry-fields.ts`; never branch on an exercise name inside `exercise-entry-card.tsx`.
-23. Parallel agents with exclusive file ownership work well here; the orchestrator writes shared types/config/pure reducers FIRST (this session: types, catalog aggregator + stubs, settings types, add-exercise, swap-prescription) so agents code against a fixed contract.
-24. **(new)** Never add `autoFocus` (or programmatic focus on mount) anywhere under `app/workout/active/` or the library search. The owner explicitly does not want to be dropped into a text box.
-25. **(new)** Logging the final target set marks the slot completed in `handleLogSet`; the advance button is navigation only. Do not reintroduce auto-advance, and do not move completion back onto the advance tap (it would reopen the "logged everything but shows Not done" hole).
-26. **(new)** Catalog edits must keep `npx tsx scripts/test-exercise-catalog.ts` green: unique ids/names, id = slug(name), all metadata + guidance present, no running words, no dashes, substitutions resolve, Block 1 names covered.
+1. UI renders from the ACTIVE PASTED PROGRAM (or sample) only — never hardcode workout content (non-negotiable 16).
+2. Sunday always rest; any weekday can be rest — never hardcode "Sunday" in rest-day copy.
+3. Progress photos: private bucket, signed URLs only; `SUPABASE_SERVICE_ROLE_KEY` server-only. Photo bytes never through server actions (~4.5 MB cap). Upload path prefix comes from the server's `userId`, never from the client.
+4. ALL session saves go through the mount's `createSessionSaveQueue` instance; read `sessionRef.current` at fire time; `clearLocalSession()` only after a queue-confirmed ok save or a non-resumable leftover.
+5. Next 16: `proxy.ts` not `middleware.ts`. New routes are gated automatically; add public routes to the matcher's exclusion list only.
+6. Vercel MCP plugin unreliable; CLI not installed. Deploy verification: `gh api repos/timasgudziunas/hybrid-training-tracker/commits/<sha>/status`.
+7. No `ANTHROPIC_API_KEY` in any env.
+8. **(changed)** RLS now HAS policies (`own rows`, `user_id = auth.uid()`) on every athlete table, and athlete data must go through `getAthleteContext()`. `createServerSupabaseClient` (service role) may only appear in `app/body/actions.ts` (upload URL) and `app/body/page.tsx` (photo signing); `grep -rn createServerSupabaseClient app lib` should show exactly those.
+9. **(new)** `getAthleteContext()` must rethrow Next's `DYNAMIC_SERVER_USAGE` error; any page that calls it needs `export const dynamic = "force-dynamic"` (Today, Program, Library index and detail, Body, Readiness, Settings all have it).
+10. **(new)** Server-action redirects are soft navigations: headless checks must wait on `location.href`, not `waitForNavigation`. Reload the sign-in page between a failed and a successful attempt in a drive script.
+11. Owner's NO DASHES rule applies to UI strings and docs; `scripts/test-exercise-catalog.ts` enforces it on catalog strings. CSS uppercases labels: headless text checks must be case-insensitive.
+12. Coaching text lives ONLY in `lib/program/catalog/*.ts`.
+13. Exercise ids are ALWAYS `slugifyExerciseName(name)`; renaming a catalog entry orphans history.
+14. `next dev`/`next build` flip-flop `next-env.d.ts`; stale `.next/dev/types` can fail `next build`'s type check after routes are deleted: `rm -rf .next/dev` then rebuild.
+15. Sample sessions (`workout_template_id` prefix `sample-`) stay excluded everywhere.
+16. Never add `autoFocus` under `app/workout/active/` or the library search.
+17. Logging the final target set marks the slot completed in `handleLogSet`; the advance button is navigation only.
+18. `modified` is TERMINAL; deviations are derived, never persisted; added exercises are not deviations.
+19. Catalog edits must keep `npx tsx scripts/test-exercise-catalog.ts` green.
+20. End-to-end UI verification: `puppeteer-core` in the session scratchpad + system Edge (forward-slash path) against `npx next start -p 3100`; port 3000 is often the `blurbs` dev server. Throwaway auth users via `POST /auth/v1/admin/users` with `email_confirm: true`; delete after.
+21. Parallel agents with exclusive file ownership work well here; the orchestrator writes shared types/config/contracts FIRST.
 
 ## Quick health check
 
 ```powershell
 git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" log --oneline -3
 git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" status --short
-npx tsx "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\test-exercise-catalog.ts"
-npx tsx "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\test-add-exercise.ts"
 npx tsx --env-file=.env "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\check-db-state.ts"
 curl.exe -s -o NUL -w "%{http_code}" https://hybrid-training-tracker.vercel.app
 ```
-Healthy ≈ clean tree (only `next-env.d.ts` churn) with `ddd50c1`+ at head, 4378 and 26 passed, `training_programs` 1 row, no `sample-` sessions, `athlete_settings` listed (a "does not exist" there means the DDL is still unapplied), URL returns 307 (gate working). In-app: /exercises shows muscle-group chips with counts and no running entries; /settings shows the RIR toggle; /workout/active?source=sample never focuses an input on arrival.
+Healthy after the owner's steps ≈ clean tree, accounts commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`. Before those steps, `check-db-state.ts` errors on the `user_id` filter (column not there yet): expected.

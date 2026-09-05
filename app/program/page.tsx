@@ -4,6 +4,9 @@ import ProgramPasteForm from "./program-paste-form";
 import ProgramHistoryList from "./program-history-list";
 import DeactivateProgramButton from "./deactivate-program-button";
 
+// Per-account data read through the session cookie: never prerender.
+export const dynamic = "force-dynamic";
+
 export default async function ProgramPage() {
   const [activeResult, historyResult] = await Promise.all([fetchActiveProgram(), fetchProgramHistory()]);
   const active = activeResult.ok ? activeResult.data : null;

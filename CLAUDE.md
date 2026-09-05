@@ -2,7 +2,7 @@
 
 ## What this project is
 
-This is a personal athletic training web application built for one athlete: the owner. It is not a generic workout logger, not a bodybuilding tracker, and not (yet) a HYROX training app. It is a personal athlete operating system: a tool that tells the athlete what to do today, captures what he actually did, and uses that history to inform tomorrow's prescription.
+This is a personal athletic training web application, originally built for one athlete (the owner) and multi-account since 2026-09-05: anyone with an account (Supabase Auth, email + password, optional invite passphrase) trains from their own data, and every row is scoped to its `user_id` by RLS. It is not a generic workout logger, not a bodybuilding tracker, and not (yet) a HYROX training app. It is a personal athlete operating system: a tool that tells the athlete what to do today, captures what he actually did, and uses that history to inform tomorrow's prescription.
 
 The central philosophy governs every product and programming decision:
 
@@ -40,6 +40,7 @@ Code layout will be added here once the stack is chosen (Phase 0 of `PLAN.md`).
 
 The repo is empty of code.
 
+- **Accounts: Supabase Auth (owner decision 2026-09-05).** Sign-in and sign-up at `/sign-in` and `/sign-up`; sessions in cookies via `@supabase/ssr`; `proxy.ts` gates every other route. Athlete data goes through `lib/supabase/user-client.ts` (anon key + session, RLS enforced). The service-role client is reserved for progress-photo signing and admin scripts. Sign-up requires `APP_PASSPHRASE` as an invite passphrase when that env var is set.
 - **Storage: Supabase (decided by the owner 2026-08-25).** Chosen over local-first specifically because daily progress photos are large binaries that must sync between phone (logging) and desktop (review) and survive browser data clearing. Photos go in a private Supabase Storage bucket.
 - Web framework: Next.js + Tailwind v4, deployed on Vercel, remains the proposed default per the owner's standing conventions. Reconfirm at Phase 0 before scaffolding.
 
@@ -67,7 +68,7 @@ The repo is empty of code.
 20. Sunday always renders REST DAY. Never manufacture a workout for it.
 21. A modified session is distinct from both completed and missed ("modify, don't fail").
 22. Active workout state must survive a browser refresh or accidental close.
-23. Deferred, do not build yet: AI analysis of training trends, automated program adjustments, a HYROX training phase, wearable integration, nutrition/body-composition integration, advanced fatigue modeling, video technique analysis. Deferred but PLANNED (owner 2026-09-04, "put it off for now, but make sure it isn't forgotten"): the in-app program builder that assembles a weekly program from the exercise library instead of pasting text; tracked in `PLAN.md` R10.
+23. Deferred, do not build yet: AI analysis of training trends, automated program adjustments, a HYROX training phase, wearable integration, nutrition/body-composition integration, advanced fatigue modeling, video technique analysis, athletic benchmark tracking (removed from the app 2026-09-05 for now; the `athletic_benchmarks` table is kept but has no code path). Deferred but PLANNED (owner 2026-09-04, "put it off for now, but make sure it isn't forgotten"): the in-app program builder that assembles a weekly program from the exercise library instead of pasting text; tracked in `PLAN.md` R10.
 24. The exercise library contains nothing on foot: no running, jogging, sprints, accelerations, treadmill, or walking entries (owner decision 2026-09-04). Pasted programs may still contain such lines (the `distance` prescription type is unchanged); they simply have no library entry.
 
 ## Domain model

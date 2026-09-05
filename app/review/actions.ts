@@ -15,7 +15,7 @@
  * file's shape for one other caller.
  */
 
-import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import { isSampleSession } from "@/lib/history/session-filtering";
 import type { WorkoutSessionRecord, WorkoutSessionStatus } from "@/lib/workout-session/workout-session-types";
 
@@ -63,13 +63,9 @@ export async function fetchSessionRecordsInRange(
   startDate: string,
   endDate: string
 ): Promise<ActionResult<WorkoutSessionRecord[]>> {
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[review/actions] Supabase client init failed:", err);
-    return { ok: false, reason: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
 
   try {
     const { data, error } = await supabase

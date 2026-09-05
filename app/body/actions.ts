@@ -1,7 +1,15 @@
 "use server";
 
+// Body check-ins (weight + optional progress photo) for the signed-in
+// athlete (accounts, 2026-09-05). Row reads/writes go through
+// getAthleteContext()'s user-scoped client so RLS limits them to that
+// athlete; the photo bucket has no storage policies, so signing an upload
+// URL still uses the service-role client, with the path namespaced by
+// user id so athletes can never collide or read each other's photos.
+
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server-client";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 
 const PHOTO_BUCKET = "progress-photos";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -28,6 +36,13 @@ export async function createPhotoUploadTarget(date: string, extension: string): 
     return { error: "Invalid photo upload request." };
   }
 
+  const context = await getAthleteContext();
+  if (!context.ok) return { error: context.reason };
+  const { userId } = context.data;
+
+  // The bucket has no storage policies, so the signed upload URL still comes
+  // from the service-role client; the server controls the path (namespaced
+  // by user id) rather than relying on RLS here.
   let supabase;
   try {
     supabase = createServerSupabaseClient();
@@ -36,7 +51,7 @@ export async function createPhotoUploadTarget(date: string, extension: string): 
     return { error: "Storage is not configured." };
   }
 
-  const path = `${date}.${extension}`;
+  const path = `${userId}/${date}.${extension}`;
   const { data, error } = await supabase.storage
     .from(PHOTO_BUCKET)
     .createSignedUploadUrl(path, { upsert: true });
@@ -54,13 +69,9 @@ export async function getCheckinByDate(date: string): Promise<CheckinLookup> {
     return { exists: false, weightLbs: null, hasPhoto: false, error: "Invalid date." };
   }
 
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[body/actions] Supabase client init failed:", err);
-    return { exists: false, weightLbs: null, hasPhoto: false, error: "Storage is not configured." };
-  }
+  const context = await getAthleteContext();
+  if (!context.ok) return { exists: false, weightLbs: null, hasPhoto: false, error: context.reason };
+  const { supabase } = context.data;
 
   const { data, error } = await supabase
     .from("body_checkins")
@@ -97,25 +108,22 @@ export async function saveCheckin(
     return { success: false, error: "Enter a valid bodyweight." };
   }
 
+  const context = await getAthleteContext();
+  if (!context.ok) return { success: false, error: context.reason };
+  const { supabase, userId } = context.data;
+
   // photo_path is set by the client only after a successful direct upload to
-  // the bucket; it must be exactly this date's file, nothing else.
+  // the bucket; it must be exactly this user's file for this date, nothing else.
   let photoPath: string | null = null;
   if (typeof photoPathRaw === "string" && photoPathRaw.length > 0) {
-    if (!new RegExp(`^${date}\\.[a-z0-9]{1,8}$`).test(photoPathRaw)) {
+    if (!new RegExp(`^${userId}/${date}\\.[a-z0-9]{1,8}$`).test(photoPathRaw)) {
       return { success: false, error: "Invalid photo reference." };
     }
     photoPath = photoPathRaw;
   }
 
-  let supabase;
-  try {
-    supabase = createServerSupabaseClient();
-  } catch (err) {
-    console.error("[body/actions] Supabase client init failed:", err);
-    return { success: false, error: "Storage is not configured." };
-  }
-
-  const upsertPayload: { checkin_date: string; weight_lbs: number; photo_path?: string } = {
+  const upsertPayload: { user_id: string; checkin_date: string; weight_lbs: number; photo_path?: string } = {
+    user_id: userId,
     checkin_date: date,
     weight_lbs: weight,
   };
@@ -125,7 +133,7 @@ export async function saveCheckin(
 
   const { error: upsertError } = await supabase
     .from("body_checkins")
-    .upsert(upsertPayload, { onConflict: "checkin_date" });
+    .upsert(upsertPayload, { onConflict: "user_id,checkin_date" });
 
   if (upsertError) {
     console.error("[body/actions] Check-in save failed:", upsertError);

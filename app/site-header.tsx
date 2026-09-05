@@ -5,11 +5,11 @@ import { useState } from "react";
 
 /**
  * App-wide navigation (R8 integration pass). Every destination — Today,
- * History, Progress, Library, Program, Body, Readiness, Review, Settings — is reachable
+ * History, Library, Program, Body, Readiness, Review, Settings — is reachable
  * from every page within two taps, without cluttering the gym-time
- * experience: mobile keeps only the three most-used items inline (Today,
- * History, Progress) plus a "More" disclosure for the rest; desktop shows
- * everything inline, since there's room and no gym-time urgency.
+ * experience: mobile keeps only the two most-used items inline (Today,
+ * History) plus a "More" disclosure for the rest; desktop shows everything
+ * inline, since there's room and no gym-time urgency.
  *
  * Deliberately not rendered on /workout/active (the active workout stays
  * immersive) or /unlock.
@@ -17,7 +17,6 @@ import { useState } from "react";
 const PRIMARY_ITEMS = [
   { href: "/", label: "Today", key: "today" },
   { href: "/history", label: "History", key: "history" },
-  { href: "/progress", label: "Progress", key: "progress" },
 ] as const;
 
 const MORE_ITEMS = [

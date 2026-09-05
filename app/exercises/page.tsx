@@ -14,6 +14,9 @@ import SiteHeader from "@/app/site-header";
  * Wired into app/site-header.tsx's nav (as "Library") as of the R8
  * integration pass.
  */
+// Per-account program merge read through the session cookie: never prerender.
+export const dynamic = "force-dynamic";
+
 export default async function ExerciseLibraryPage() {
   const activeProgramResult = await fetchActiveProgram();
   const programExercises = activeProgramResult.ok

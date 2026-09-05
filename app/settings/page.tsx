@@ -1,6 +1,8 @@
 import SiteHeader from "@/app/site-header";
 import SettingsForm from "./settings-form";
+import AccountCard from "./account-card";
 import { fetchAthleteSettings } from "./actions";
+import { getAthleteContext } from "@/lib/auth/athlete-context";
 import { DEFAULT_ATHLETE_SETTINGS } from "@/lib/settings/athlete-settings";
 
 // Live Supabase data, read fresh on every request (same posture as
@@ -8,8 +10,9 @@ import { DEFAULT_ATHLETE_SETTINGS } from "@/lib/settings/athlete-settings";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const result = await fetchAthleteSettings();
+  const [contextResult, result] = await Promise.all([getAthleteContext(), fetchAthleteSettings()]);
   const settings = result.ok ? result.data : DEFAULT_ATHLETE_SETTINGS;
+  const email = contextResult.ok ? contextResult.data.email : null;
 
   return (
     <div className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
@@ -31,6 +34,11 @@ export default async function SettingsPage() {
         ) : null}
 
         <SettingsForm initial={settings} />
+
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">Account</h2>
+          <AccountCard email={email} />
+        </section>
       </div>
     </div>
   );

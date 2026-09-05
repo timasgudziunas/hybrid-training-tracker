@@ -30,7 +30,7 @@ The primary experience is execution, not analysis. Opening the app in the gym sh
 
 ## 3. User Context
 
-The initial application is being built for one athlete.
+The initial application was built for one athlete; since 2026-09-05 it supports accounts (each athlete signs in and sees only their own data). The training context below describes the owner.
 
 **Training availability.** Weekday mornings: 75 minutes available every morning. Saturday: available for training. Sunday: complete rest day.
 
@@ -54,7 +54,7 @@ Primary navigation should remain simple. Do not overload the application with un
 |---|---|
 | Today | Today's prescribed workout. The application's most important screen. |
 | Plan | Complete weekly training program and individual sessions. |
-| Progress | Strength, physique, calisthenics, speed, power, and athletic benchmarks. |
+| Progress | Removed 2026-09-05 (benchmarks paused). Bodyweight lives under Body; strength trends under Review. |
 | History | Calendar and historical workouts. |
 | Exercises | Exercise library, technique guidance, and progression information. |
 | Review | Weekly and monthly training summaries. |
@@ -177,6 +177,8 @@ Default hypertrophy effort: approximately 1-3 RIR. The system should generally f
 ## 9. Athletic Performance
 
 The application must explicitly measure athleticism. This is a fundamental product requirement.
+
+Paused 2026-09-05: benchmark tracking was removed from the app for now (owner decision). The spec below is retained for when it returns.
 
 | Benchmark area | Measures |
 |---|---|
