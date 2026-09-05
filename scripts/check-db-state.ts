@@ -26,7 +26,6 @@ async function main() {
     "body_checkins",
     "training_programs",
     "workout_sessions",
-    "readiness_entries",
     "ultimate_practice_days",
     "athlete_settings",
   ]) {

@@ -6,7 +6,7 @@ import { getAthleteContext } from "@/lib/auth/athlete-context";
 import { DEFAULT_ATHLETE_SETTINGS } from "@/lib/settings/athlete-settings";
 
 // Live Supabase data, read fresh on every request (same posture as
-// app/body/page.tsx and app/readiness/page.tsx).
+// app/body/page.tsx).
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {

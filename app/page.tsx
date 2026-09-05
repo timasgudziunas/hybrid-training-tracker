@@ -1,7 +1,6 @@
 import DailyCheckinPrompt from "./daily-checkin-prompt";
 import TodayWorkout from "./today/today-workout";
 import SiteHeader from "./site-header";
-import ReadinessCheckinStrip from "./readiness-checkin-strip";
 
 // Per-account data read through the session cookie: never prerender.
 export const dynamic = "force-dynamic";
@@ -13,7 +12,6 @@ export default function Home() {
         <SiteHeader active="today" />
         <DailyCheckinPrompt />
         <TodayWorkout />
-        <ReadinessCheckinStrip />
       </div>
     </div>
   );

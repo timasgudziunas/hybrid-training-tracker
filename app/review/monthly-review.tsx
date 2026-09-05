@@ -1,15 +1,13 @@
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
 import type { WorkoutSessionRecord } from "@/lib/workout-session/workout-session-types";
-import type { ReadinessEntry } from "@/app/readiness/actions";
 import type { BodyweightPoint } from "@/app/body/bodyweight-series-actions";
 import { addDays, weekdayOfDateString } from "@/lib/history/calendar-grid";
 import { computeAdherence } from "@/lib/history/adherence";
 import { topStrengthHighlights } from "./exercise-progression";
-import { average, bodyweightChange, groinTrendDirection } from "./recovery-metrics";
+import { bodyweightChange } from "./bodyweight-change";
 import ReviewStatTile from "./review-stat-tile";
 
 const MONTH_WINDOW_DAYS = 28;
-const GROIN_TREND_LABEL: Record<string, string> = { rising: "Rising", falling: "Falling", stable: "Stable" };
 
 /** Monthly review (PRODUCT_SPEC §17). All numbers over a trailing 28-day
  * window ending today (device-local). Emphasizes trends over single-point
@@ -20,14 +18,12 @@ export default function MonthlyReview({
   program,
   sessions,
   sessionByDate,
-  readinessEntries,
   bodyweightSeries,
 }: {
   today: string;
   program: ActiveProgramWeek | null;
   sessions: WorkoutSessionRecord[];
   sessionByDate: Map<string, WorkoutSessionRecord>;
-  readinessEntries: ReadinessEntry[];
   bodyweightSeries: BodyweightPoint[];
 }) {
   const monthStart = addDays(today, -(MONTH_WINDOW_DAYS - 1));
@@ -48,12 +44,6 @@ export default function MonthlyReview({
 
   const bodyweightInWindow = bodyweightSeries.filter((p) => p.date >= monthStart && p.date <= today);
   const weightChange = bodyweightChange(bodyweightInWindow);
-
-  const readinessInWindow = readinessEntries.filter((e) => e.date >= monthStart && e.date <= today);
-  const avgSleep = average(readinessInWindow.map((e) => e.sleepHours).filter((v): v is number => v !== null));
-  const avgEnergy = average(readinessInWindow.map((e) => e.energy).filter((v): v is number => v !== null));
-  const avgSoreness = average(readinessInWindow.map((e) => e.soreness).filter((v): v is number => v !== null));
-  const groinTrend = groinTrendDirection(readinessInWindow.map((e) => ({ date: e.date, groinStatus: e.groinStatus })));
 
   return (
     <div className="flex flex-col gap-6">
@@ -115,20 +105,6 @@ export default function MonthlyReview({
         ) : (
           <p className="text-sm text-ink-tertiary">Not enough check-ins yet in this window to show a trend.</p>
         )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">Recovery</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ReviewStatTile label="Avg sleep" value={avgSleep !== null ? `${avgSleep.toFixed(1)}h` : "—"} />
-          <ReviewStatTile label="Avg energy" value={avgEnergy !== null ? `${avgEnergy.toFixed(1)}/5` : "—"} />
-          <ReviewStatTile label="Avg soreness" value={avgSoreness !== null ? `${avgSoreness.toFixed(1)}/5` : "—"} />
-          <ReviewStatTile
-            label="Groin trend"
-            value={groinTrend ? GROIN_TREND_LABEL[groinTrend] : "—"}
-            sub="Not a diagnosis"
-          />
-        </div>
       </section>
     </div>
   );

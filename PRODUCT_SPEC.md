@@ -242,6 +242,8 @@ The exercise library is particularly important because the athlete is still deve
 
 ## 13. Readiness
 
+Paused 2026-09-05: the readiness check-in was removed from the app for now (owner decision). The spec below is retained for when it returns.
+
 Readiness tracking should remain intentionally lightweight. Optional morning check-in:
 
 | Input | Scale |

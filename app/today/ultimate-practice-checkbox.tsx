@@ -10,7 +10,7 @@ type LoadState = "loading" | "ready" | "error";
  * Today screen's explicit Ultimate practice attendance check-in (2026-08-26).
  * The program flag only means practice is SCHEDULED that day; this row is
  * where the athlete records that it actually happened. Follows the
- * cancelled-flag effect pattern from app/readiness-checkin-strip.tsx.
+ * cancelled-flag effect pattern from app/daily-checkin-prompt.tsx.
  */
 export default function UltimatePracticeCheckbox({ scheduled }: { scheduled: boolean }) {
   const [today] = useState(() => getLocalDateString(new Date()));

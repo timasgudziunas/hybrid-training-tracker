@@ -4,7 +4,7 @@ const TONE_CLASS: Record<string, string> = {
 };
 
 /** One small labeled stat, matching the tile treatment used throughout the
- * app (e.g. app/readiness/readiness-summary.tsx, app/history/[date]/
+ * app (e.g. app/history/[date]/
  * session-detail.tsx) rather than inventing a new card style for Review. */
 export default function ReviewStatTile({
   label,

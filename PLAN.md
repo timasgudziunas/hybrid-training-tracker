@@ -74,7 +74,7 @@ Owner decisions: (1) the seeded TRAINING_SYSTEM.md program is deleted from the a
 - [x] **R4. History:** month calendar with day states, drill-down rendered from session snapshots, 28-day adherence percent; sample sessions excluded.
 - [x] **R5. Benchmarks + progress dashboards:** 9 benchmark definitions as config, quick-log, SVG trends, planche level track, athleticism vs bodyweight with causation caveat, no composite score. Retired from the app 2026-09-05 (owner: remove all athletic benchmarks for now); table kept, code removed.
 - [x] **R6. Exercise library:** index + per-exercise pages merging the 58-entry catalog with active-program exercises.
-- [x] **R7. Readiness:** few-seconds check-in (sleep, energy, soreness, groin 0-5, readiness) with restrained groin messaging per non-negotiable 19.
+- [x] **R7. Readiness:** few-seconds check-in (sleep, energy, soreness, groin 0-5, readiness) with restrained groin messaging per non-negotiable 19. Retired from the app 2026-09-05 (owner: get rid of the readiness page for now); table kept, code removed, Recovery tiles dropped from Review.
 - [x] **R8. Reviews + integration polish:** weekly/monthly reviews (conservative, windows labeled, honest empty states), app-wide nav (3 primary + More on mobile, all inline desktop), home readiness strip, integrated build + full-route headless drive green.
 
 **Done when:** every screen exists, looks and feels premium, and the only missing ingredient is the owner's real program paste.
@@ -156,6 +156,8 @@ Removed from the app on 2026-09-05 for now (owner decision). Kept here for when 
 **Done when:** every seeded exercise has a library entry and is linkable from the workout UI.
 
 ## Phase 9: Readiness
+
+Removed from the app on 2026-09-05 for now (owner decision). Kept here for when readiness returns.
 
 - [ ] Optional quick morning check-in: sleep hours, energy (1-5), soreness (1-5), groin status (0-5), overall readiness (green/yellow/red).
 - [ ] Restrained messaging when groin symptoms are elevated or worsening: recommend professional sports medicine or physical therapy assessment, never a diagnosis or automatic rehab protocol.

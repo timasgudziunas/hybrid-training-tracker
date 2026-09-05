@@ -119,33 +119,9 @@ create policy "own rows" on training_programs
 -- dropped here so any logged measurements survive until benchmarks return;
 -- it simply has no code path and no policies.
 
--- Morning readiness check-ins. groin_status uses the 0-5 scale from
--- PRODUCT_SPEC §13; the app must never diagnose (CLAUDE.md non-negotiable 19).
-create table if not exists readiness_entries (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users (id) on delete cascade default auth.uid(),
-  entry_date date not null,
-  sleep_hours numeric(3,1),
-  energy smallint,
-  soreness smallint,
-  groin_status smallint,
-  readiness text,
-  notes text,
-  created_at timestamptz not null default now(),
-  unique (user_id, entry_date)
-);
-
-alter table readiness_entries
-  add column if not exists user_id uuid references auth.users (id) on delete cascade default auth.uid();
-alter table readiness_entries drop constraint if exists readiness_entries_entry_date_key;
-create unique index if not exists readiness_entries_user_date_key on readiness_entries (user_id, entry_date);
-
-alter table readiness_entries enable row level security;
-drop policy if exists "own rows" on readiness_entries;
-create policy "own rows" on readiness_entries
-  for all to authenticated
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
+-- readiness_entries (R7) was retired from the app on 2026-09-05 alongside
+-- athletic_benchmarks (owner: get rid of the readiness page for now). The
+-- table is intentionally NOT dropped; it has no code path and no policies.
 
 -- Ultimate practice attendance (2026-08-26): the program flag only means
 -- practice is SCHEDULED that day; this table records days the athlete

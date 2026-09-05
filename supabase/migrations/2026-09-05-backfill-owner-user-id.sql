@@ -20,7 +20,6 @@ begin
   update body_checkins set user_id = owner_id where user_id is null;
   update workout_sessions set user_id = owner_id where user_id is null;
   update training_programs set user_id = owner_id where user_id is null;
-  update readiness_entries set user_id = owner_id where user_id is null;
   update ultimate_practice_days set user_id = owner_id where user_id is null;
   update athlete_settings set user_id = owner_id where user_id is null;
 end $$;
@@ -29,7 +28,6 @@ end $$;
 select 'body_checkins' as t, count(*) from body_checkins where user_id is null
 union all select 'workout_sessions', count(*) from workout_sessions where user_id is null
 union all select 'training_programs', count(*) from training_programs where user_id is null
-union all select 'readiness_entries', count(*) from readiness_entries where user_id is null
 union all select 'ultimate_practice_days', count(*) from ultimate_practice_days where user_id is null
 union all select 'athlete_settings', count(*) from athlete_settings where user_id is null;
 
