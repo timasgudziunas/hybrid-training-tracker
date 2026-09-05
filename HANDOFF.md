@@ -50,7 +50,7 @@ Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 | `supabase/migrations/2026-09-05-backfill-owner-user-id.sql` | One-time owner backfill (edit the email placeholder first) |
 | `lib/program/catalog/*.ts` · `lib/program/exercise-catalog.ts` | The 281-entry library (unchanged) |
 | `app/workout/active/` | Active workout screen (unchanged this session) |
-| `scripts/test-*.ts` (14) · `check-db-state.ts` | Test suites; DB state now reports rows missing `user_id` |
+| `scripts/test-*.ts` (14) · `check-db-state.ts` · `generate-program-format-library.ts` | Test suites; DB state reports rows missing `user_id`; regenerates the library-name list in `PROGRAM_FORMAT.md` (run after any catalog change) |
 
 ## Operational landmines
 
@@ -72,7 +72,7 @@ Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 16. Never add `autoFocus` under `app/workout/active/` or the library search.
 17. Logging the final target set marks the slot completed in `handleLogSet`; the advance button is navigation only.
 18. `modified` is TERMINAL; deviations are derived, never persisted; added exercises are not deviations.
-19. Catalog edits must keep `npx tsx scripts/test-exercise-catalog.ts` green.
+19. Catalog edits must keep `npx tsx scripts/test-exercise-catalog.ts` green, then rerun `npx tsx scripts/generate-program-format-library.ts` so `PROGRAM_FORMAT.md` lists the current names.
 20. End-to-end UI verification: `puppeteer-core` in the session scratchpad + system Edge (forward-slash path) against `npx next start -p 3100`; port 3000 is often the `blurbs` dev server. Throwaway auth users via `POST /auth/v1/admin/users` with `email_confirm: true`; delete after.
 21. Parallel agents with exclusive file ownership work well here; the orchestrator writes shared types/config/contracts FIRST.
 
