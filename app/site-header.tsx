@@ -5,7 +5,7 @@ import { useState } from "react";
 
 /**
  * App-wide navigation (R8 integration pass). Every destination — Today,
- * History, Progress, Library, Program, Body, Readiness, Review — is reachable
+ * History, Progress, Library, Program, Body, Readiness, Review, Settings — is reachable
  * from every page within two taps, without cluttering the gym-time
  * experience: mobile keeps only the three most-used items inline (Today,
  * History, Progress) plus a "More" disclosure for the rest; desktop shows
@@ -26,6 +26,7 @@ const MORE_ITEMS = [
   { href: "/body", label: "Body", key: "body" },
   { href: "/readiness", label: "Readiness", key: "readiness" },
   { href: "/review", label: "Review", key: "review" },
+  { href: "/settings", label: "Settings", key: "settings" },
 ] as const;
 
 const ALL_ITEMS = [...PRIMARY_ITEMS, ...MORE_ITEMS];

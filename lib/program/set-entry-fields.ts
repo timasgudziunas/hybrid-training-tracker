@@ -18,7 +18,7 @@
  * config.
  */
 
-import type { Exercise, ExerciseCategory } from './program-types';
+import type { Exercise, ExerciseCategory, Prescription } from './program-types';
 
 export type RepetitionSetFieldKey = 'weight' | 'reps' | 'rir' | 'boxHeightInches' | 'jumpDistanceInches';
 
@@ -78,4 +78,70 @@ export function resolveRepetitionSetFields(exercise: Exercise | undefined): Repe
 
 export function hasRepetitionSetField(fields: RepetitionSetFieldSpec[], key: RepetitionSetFieldKey): boolean {
   return fields.some((field) => field.key === key);
+}
+
+/** Readouts the cardio card asks for at the end of a ride/row
+ * (app/workout/active/cardio-entry-card.tsx), as library-facing labels. */
+export const CARDIO_LOGGING_FIELD_LABELS = ['Time', 'Resistance', 'Avg watts', 'Avg speed', 'Distance'];
+
+/**
+ * Human labels for what gets logged per set for an exercise under a given
+ * prescription (R10: the library shows "Logs: weight, reps, RIR" style
+ * chips; the picker shows the same before an exercise is added). Mirrors
+ * exactly what the entry cards render: repetitions come from
+ * resolveRepetitionSetFields, holds/durations log seconds, cardio blocks
+ * log the cardio readouts, distance reps log an optional time, and plain
+ * qualitative blocks are a single mark-complete tap. `showRir` false drops
+ * the RIR label (the athlete's RIR display setting, lib/settings).
+ */
+export function loggingFieldLabels(exercise: Exercise | undefined, prescription: Prescription, showRir = true): string[] {
+  const isCardio = exercise?.category === 'cardio';
+  switch (prescription.type) {
+    case 'repetitions':
+      return resolveRepetitionSetFields(exercise)
+        .filter((field) => showRir || field.key !== 'rir')
+        .map((field) => field.label);
+    case 'hold':
+      return ['Seconds held'];
+    case 'duration':
+      return isCardio ? CARDIO_LOGGING_FIELD_LABELS : ['Seconds'];
+    case 'distance':
+      return ['Time (optional)'];
+    case 'qualitative':
+      return isCardio ? CARDIO_LOGGING_FIELD_LABELS : ['Mark complete'];
+  }
+}
+
+function formatRangeWords(min: number, max: number): string {
+  return min === max ? `${min}` : `${min} to ${max}`;
+}
+
+/**
+ * One-line preset summary for the library and pickers, e.g.
+ * "3 sets of 8 to 12 reps", "3 holds of 20 to 40 sec", "10 to 20 min".
+ * User-facing copy: ranges read "8 to 12", never "8-12" (NO DASHES rule).
+ */
+export function formatPrescriptionPreset(prescription: Prescription): string {
+  switch (prescription.type) {
+    case 'repetitions': {
+      const perSide = prescription.perSide ? ' each side' : '';
+      return `${prescription.sets} sets of ${formatRangeWords(prescription.minReps, prescription.maxReps)} reps${perSide}`;
+    }
+    case 'hold': {
+      const perSide = prescription.perSide ? ' each side' : '';
+      return `${prescription.sets} holds of ${formatRangeWords(prescription.minSeconds, prescription.maxSeconds)} sec${perSide}`;
+    }
+    case 'duration': {
+      const perSide = prescription.perSide ? ' each side' : '';
+      return `${prescription.sets} x ${formatRangeWords(prescription.minSeconds, prescription.maxSeconds)} sec${perSide}`;
+    }
+    case 'distance':
+      return `${prescription.sets} x ${prescription.meters} m`;
+    case 'qualitative': {
+      const { approxMinMinutes: min, approxMaxMinutes: max } = prescription;
+      if (min !== undefined && max !== undefined) return `${formatRangeWords(min, max)} min`;
+      const only = min ?? max;
+      return only !== undefined ? `${only} min` : prescription.description;
+    }
+  }
 }

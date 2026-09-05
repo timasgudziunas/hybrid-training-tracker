@@ -28,6 +28,8 @@ async function main() {
     "workout_sessions",
     "athletic_benchmarks",
     "readiness_entries",
+    "ultimate_practice_days",
+    "athlete_settings",
   ]) {
     console.log(`${table}: ${await countRows(table)} rows`);
   }

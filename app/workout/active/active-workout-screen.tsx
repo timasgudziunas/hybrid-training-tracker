@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getLocalDateString } from "@/lib/date/local-date-string";
 import { getLocalWeekday } from "@/lib/date/weekday-from-date";
-import type { Exercise } from "@/lib/program/program-types";
+import type { Prescription, TrainingDayTemplate, Exercise } from "@/lib/program/program-types";
 import { getWorkoutForWeekday, exercisesForTemplate } from "@/lib/program/resolved-program";
 import { SAMPLE_DEMO_WEEKDAY, SAMPLE_PROGRAM } from "@/lib/program/sample-program";
 import { closeUnfinishedSession } from "@/lib/workout-session/close-unfinished-session";
@@ -21,14 +21,19 @@ import { isResumableSession, isSampleSession, isStaleUnfinishedSession } from "@
 import { detectSessionDeviations, resolveFinishStatus } from "@/lib/workout-session/session-deviations";
 import { createSessionSaveQueue, type SessionSaveQueue } from "@/lib/workout-session/save-queue";
 import { isCardioSlot } from "@/lib/workout-session/cardio-slot";
-import { addExtraSet, deleteLoggedSet, removeCurrentSet } from "@/lib/workout-session/slot-set-edits";
+import { addExtraSet, deleteLoggedSet, removeCurrentSet, targetSetCount } from "@/lib/workout-session/slot-set-edits";
+import { addExerciseToSession } from "@/lib/workout-session/add-exercise";
+import { prescriptionForSwap, swapChangesPrescription } from "@/lib/workout-session/swap-prescription";
 import type {
   EndedEarlyReason,
   ExerciseSlotLog,
   PreviousPerformanceByExercise,
   SetLog,
+  SlotSubstitution,
   WorkoutSessionRecord,
 } from "@/lib/workout-session/workout-session-types";
+import { DEFAULT_ATHLETE_SETTINGS, type AthleteSettings } from "@/lib/settings/athlete-settings";
+import { fetchAthleteSettings } from "@/app/settings/actions";
 import { fetchActiveProgram } from "@/app/program/actions";
 import { fetchActiveSessionForToday, fetchPreviousPerformance, saveWorkoutSession } from "@/app/workout/actions";
 import SessionTimer from "./session-timer";
@@ -42,6 +47,32 @@ const SAVE_DEBOUNCE_MS = 2500;
 
 type Phase = "loading" | "rest-day" | "no-program" | "ready";
 
+/** Rewrites one slot's prescription inside the session's own templateSnapshot
+ * (R10, "presets feed Swap"). Slot keys are section id + order
+ * (flatten-template-slots.ts's slotKeyFor), so the write is addressed the
+ * same way rather than by parsing the key string. Pure; used by both
+ * handleSwap (adopting a substitute's own prescription) and
+ * handleRevertSwap (restoring what SlotSubstitution.originalPrescription
+ * recorded). */
+function withUpdatedPrescription(
+  template: TrainingDayTemplate,
+  sectionId: string,
+  order: number,
+  prescription: Prescription
+): TrainingDayTemplate {
+  return {
+    ...template,
+    sections: template.sections.map((section) =>
+      section.id !== sectionId
+        ? section
+        : {
+            ...section,
+            exercises: section.exercises.map((entry) => (entry.order !== order ? entry : { ...entry, prescription })),
+          }
+    ),
+  };
+}
+
 export default function ActiveWorkoutScreen({ source }: { source: "sample" | "program" }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [session, setSession] = useState<WorkoutSessionRecord | null>(null);
@@ -50,6 +81,11 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   // shown must come from the actual rest template, never a hardcoded name.
   const [restDayDescription, setRestDayDescription] = useState<string | null>(null);
   const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformanceByExercise>({});
+  // Athlete-level app settings (R10: RIR display toggle). Fetched once in
+  // init, in parallel with everything else there, and never blocks the
+  // workout on failure — a missing table or a read error just means the
+  // defaults (see fetchAthleteSettings's own degrade-gracefully contract).
+  const [athleteSettings, setAthleteSettings] = useState<AthleteSettings>(DEFAULT_ATHLETE_SETTINGS);
   const [synced, setSynced] = useState(true);
   const [overviewOpen, setOverviewOpen] = useState(false);
   // Replaces the old bare `finished` boolean (2026-08-26 save-queue rework)
@@ -140,6 +176,10 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     async function init() {
       const now = new Date();
       const today = getLocalDateString(now);
+      // Fired here, awaited only much later (right before "ready") — runs
+      // in parallel with the program/session resolution below rather than
+      // blocking it, and a failure just means the defaults win.
+      const settingsPromise = fetchAthleteSettings();
       const local = loadLocalSession();
       // A completed OR modified session lingering locally means its final
       // save never landed (e.g. the workout_sessions table wasn't applied
@@ -269,6 +309,9 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       const prev = await fetchPreviousPerformance(Object.keys(resolved.performance.exercisesSnapshot), resolved.sessionDate);
       if (!cancelled && prev.ok) setPreviousPerformance(prev.data);
 
+      const settingsResult = await settingsPromise;
+      if (!cancelled) setAthleteSettings(settingsResult.ok ? settingsResult.data : DEFAULT_ATHLETE_SETTINGS);
+
       // Fire-and-forget: retry any previously stashed finished-but-unsynced
       // sessions. These are different session ids than the one just
       // resolved above, so their upserts can never interleave with or be
@@ -362,9 +405,26 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         // survive that untouched.
         const isNewCurrentSet = set.setNumber > slot.sets.length;
         sets[set.setNumber - 1] = set;
-        return { ...slot, sets, draft: isNewCurrentSet ? undefined : slot.draft };
+        const nextSlot: ExerciseSlotLog = { ...slot, sets, draft: isNewCurrentSet ? undefined : slot.draft };
+        // R10: logging the final target set no longer advances (owner:
+        // "I want to see the exercise overview and then click Next
+        // exercise"), so completion is recorded HERE, the moment the last
+        // set lands. Otherwise an exercise with every set logged would still
+        // read as upcoming in the progress bar and, if the athlete jumped
+        // elsewhere without tapping Next exercise, as "Not done" at Finish.
+        // The advance button afterwards is navigation only.
+        const prescription = templateSlots.find((s) => s.slotKey === slotKey)?.exercise.prescription;
+        if (
+          prescription &&
+          prescription.type !== "qualitative" &&
+          nextSlot.status === "upcoming" &&
+          sets.length >= targetSetCount(prescription.sets, nextSlot)
+        ) {
+          nextSlot.status = "completed";
+        }
+        return nextSlot;
       }),
-    [updateSlot]
+    [updateSlot, templateSlots]
   );
 
   const handleDraftChange = useCallback(
@@ -456,21 +516,68 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       if (!prev) return;
       const slot = prev.performance.slots[slotKey];
       if (!slot) return;
+      const templateSlot = templateSlots.find((s) => s.slotKey === slotKey);
       const existingSubs = prev.performance.modifications?.substitutions ?? [];
-      // Picking the slot's own prescribed exercise from the picker (it
-      // reappears in the list once a substitution is active) is a revert,
-      // never a "Substituted X for X" record.
-      const nextSubs =
-        exercise.id === slot.prescribedExerciseId
-          ? existingSubs.filter((sub) => sub.slotKey !== slotKey)
-          : [
-              ...existingSubs.filter((sub) => sub.slotKey !== slotKey),
-              { slotKey, fromExerciseId: slot.prescribedExerciseId, toExerciseId: exercise.id },
-            ];
+      const existingSub = existingSubs.find((sub) => sub.slotKey === slotKey);
+
+      let templateSnapshot = prev.performance.templateSnapshot;
+      let nextSubs: SlotSubstitution[];
+
+      if (exercise.id === slot.prescribedExerciseId) {
+        // Picking the slot's own prescribed exercise from the picker (it
+        // reappears in the list once a substitution is active) is a
+        // revert, never a "Substituted X for X" record — restore whatever
+        // prescription the earlier swap changed, same as "Back to X".
+        if (existingSub?.originalPrescription && templateSlot) {
+          templateSnapshot = withUpdatedPrescription(
+            templateSnapshot,
+            templateSlot.section.id,
+            templateSlot.exercise.order,
+            existingSub.originalPrescription
+          );
+        }
+        nextSubs = existingSubs.filter((sub) => sub.slotKey !== slotKey);
+      } else {
+        // R10 "presets feed Swap": a substitute that logs a different kind
+        // of set than the slot it replaces adopts its own defaultPrescription
+        // (lib/workout-session/swap-prescription.ts), and the ORIGINAL
+        // (program) prescription is kept on the substitution so a revert can
+        // restore it. If a substitution already exists (swapping again
+        // without reverting first), its recorded originalPrescription is
+        // the true program original — the slot's CURRENT prescription at
+        // this point may already be an earlier swap's adopted preset, which
+        // must never be mistaken for "the original" or a second swap back
+        // to a same-type exercise would strand the wrong prescription.
+        const trueOriginalPrescription = existingSub?.originalPrescription ?? templateSlot?.exercise.prescription;
+        const changesPrescription =
+          trueOriginalPrescription !== undefined && swapChangesPrescription(trueOriginalPrescription, exercise);
+
+        if (trueOriginalPrescription !== undefined && templateSlot) {
+          const finalPrescription = prescriptionForSwap(trueOriginalPrescription, exercise);
+          templateSnapshot = withUpdatedPrescription(
+            templateSnapshot,
+            templateSlot.section.id,
+            templateSlot.exercise.order,
+            finalPrescription
+          );
+        }
+
+        nextSubs = [
+          ...existingSubs.filter((sub) => sub.slotKey !== slotKey),
+          {
+            slotKey,
+            fromExerciseId: slot.prescribedExerciseId,
+            toExerciseId: exercise.id,
+            ...(changesPrescription && trueOriginalPrescription !== undefined ? { originalPrescription: trueOriginalPrescription } : {}),
+          },
+        ];
+      }
+
       persist({
         ...prev,
         performance: {
           ...prev.performance,
+          templateSnapshot,
           slots: { ...prev.performance.slots, [slotKey]: { ...slot, chosenExerciseId: exercise.id } },
           exercisesSnapshot: { ...prev.performance.exercisesSnapshot, [exercise.id]: exercise },
           modifications: { ...prev.performance.modifications, substitutions: nextSubs },
@@ -492,7 +599,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         });
       }
     },
-    [persist, previousPerformance]
+    [persist, previousPerformance, templateSlots]
   );
 
   const handleRevertSwap = useCallback(
@@ -503,11 +610,24 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       if (!slot) return;
       const templateSlot = templateSlots.find((s) => s.slotKey === slotKey);
       const isChoiceSlot = Boolean(templateSlot?.exercise.alternativeExerciseIds?.length);
+      const substitution = (prev.performance.modifications?.substitutions ?? []).find((sub) => sub.slotKey === slotKey);
       const nextSubs = (prev.performance.modifications?.substitutions ?? []).filter((sub) => sub.slotKey !== slotKey);
+
+      const templateSnapshot =
+        substitution?.originalPrescription && templateSlot
+          ? withUpdatedPrescription(
+              prev.performance.templateSnapshot,
+              templateSlot.section.id,
+              templateSlot.exercise.order,
+              substitution.originalPrescription
+            )
+          : prev.performance.templateSnapshot;
+
       persist({
         ...prev,
         performance: {
           ...prev.performance,
+          templateSnapshot,
           slots: {
             ...prev.performance.slots,
             [slotKey]: { ...slot, chosenExerciseId: isChoiceSlot ? undefined : slot.prescribedExerciseId },
@@ -517,6 +637,28 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       });
     },
     [persist, templateSlots]
+  );
+
+  const handleAddExercise = useCallback(
+    (exercise: Exercise) => {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const { record } = addExerciseToSession(prev, exercise);
+      persist(record);
+      setOverviewOpen(false);
+
+      // Same rationale as handleSwap: a freshly added exercise has no
+      // previousPerformance entry yet since it was never part of this
+      // session's original exercisesSnapshot fetch at Start Workout.
+      if (previousPerformance[exercise.id] === undefined) {
+        fetchPreviousPerformance([exercise.id], prev.sessionDate).then((result) => {
+          if (result.ok) {
+            setPreviousPerformance((current) => ({ ...current, ...result.data }));
+          }
+        });
+      }
+    },
+    [persist, previousPerformance]
   );
 
   const handleToggleRecoveryMode = useCallback(() => {
@@ -721,10 +863,33 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   const recoveryMode = Boolean(session.performance.modifications?.recoveryMode);
   const substitutions = session.performance.modifications?.substitutions ?? [];
 
+  // Names of exercises added mid-workout, for the completion screen's
+  // "Added today" line (R10). Resolved the same way session-deviations.ts
+  // resolves a slot's display name: the session's own exercisesSnapshot,
+  // never the live catalog.
+  const addedExerciseNames = (session.performance.modifications?.addedSlotKeys ?? []).map((slotKey) => {
+    const slot = session.performance.slots[slotKey];
+    const exerciseId = slot?.chosenExerciseId ?? slot?.prescribedExerciseId;
+    return exerciseId ? (exercises[exerciseId]?.name ?? exerciseId) : slotKey;
+  });
+
+  // What the big advance button on the current exercise reads once it's
+  // fully logged (owner request 2026-09-04: never default straight past a
+  // finished exercise into the next one automatically — name what tapping
+  // it will actually do). Mirrors exactly what advanceFrom/
+  // handleQualitativeComplete will compute when that tap actually fires.
+  const advanceLabel = (() => {
+    if (!currentSlotKey) return "Next exercise";
+    const { next, remainingElsewhere } = nextUnfinishedSlotKey(templateSlots, session.performance.slots, currentSlotKey);
+    if (next) return "Next exercise";
+    if (remainingElsewhere.length > 0) return "Session overview";
+    return "Session summary";
+  })();
+
   const viewKey = overviewOpen
     ? "overview"
     : currentSlotKey
-      ? `${currentSlotKey}:${currentSlotLog?.chosenExerciseId ?? "choice"}:${currentSlotLog?.sets.length ?? 0}`
+      ? `${currentSlotKey}:${currentSlotLog?.chosenExerciseId ?? "choice"}:${currentSlotLog?.sets.length ?? 0}:${currentTemplateSlot?.exercise.prescription.type ?? "none"}`
       : "completion";
 
   return (
@@ -775,6 +940,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onToggleRecoveryMode={handleToggleRecoveryMode}
             onEndWorkoutEarly={handleEndWorkoutEarly}
             onGoToFinish={handleGoToFinish}
+            onAddExercise={handleAddExercise}
           />
         ) : currentTemplateSlot && currentSlotLog ? (
           <ExerciseSlotView
@@ -782,6 +948,8 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             slotLog={currentSlotLog}
             previousPerformance={previousPerformance}
             exercises={exercises}
+            showRir={athleteSettings.showRir}
+            advanceLabel={advanceLabel}
             onChoose={(exerciseId) => handleChoose(currentTemplateSlot.slotKey, exerciseId)}
             onLogSet={(set) => handleLogSet(currentTemplateSlot.slotKey, set)}
             onRemoveCurrentSet={() => handleRemoveCurrentSet(currentTemplateSlot.slotKey)}
@@ -814,6 +982,8 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onRetry={handleRetryFinish}
             deviations={liveDeviations}
             endedEarlyReason={session.performance.modifications?.endedEarlyReason}
+            addedExerciseNames={addedExerciseNames}
+            onAddExercise={handleAddExercise}
           />
         )}
       </div>

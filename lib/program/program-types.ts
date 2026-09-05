@@ -216,7 +216,53 @@ export interface RestDayTemplate {
 
 export type WorkoutTemplate = TrainingDayTemplate | RestDayTemplate;
 
-/** Exercise library entry. Instructional fields are Phase 8 content. */
+/**
+ * General muscle group an exercise is filed under in the exercise library
+ * (R10, owner request 2026-09-04: "sort the exercises by the general muscle
+ * groups that they target"). Coarser than `primaryMuscles` (free text such
+ * as "upper chest" or "rectus abdominis"), which stays the precise list.
+ * Labels and display order live in lib/program/muscle-group-copy.ts.
+ */
+export type MuscleGroup =
+  | 'chest'
+  | 'back'
+  | 'shoulders'
+  | 'biceps'
+  | 'triceps'
+  | 'forearms'
+  | 'quads'
+  | 'hamstrings'
+  | 'glutes'
+  | 'hips'
+  | 'calves'
+  | 'core'
+  | 'full-body'
+  | 'cardio';
+
+/** Equipment an exercise needs, for the library's equipment filter. An
+ * exercise may list several (e.g. a weighted dip: dip bars + a dumbbell). */
+export type Equipment =
+  | 'barbell'
+  | 'dumbbell'
+  | 'kettlebell'
+  | 'cable'
+  | 'machine'
+  | 'smith-machine'
+  | 'bodyweight'
+  | 'band'
+  | 'bench'
+  | 'pull-up-bar'
+  | 'dip-bars'
+  | 'parallettes'
+  | 'rings'
+  | 'box'
+  | 'medicine-ball'
+  | 'trap-bar'
+  | 'sled'
+  | 'cardio-machine'
+  | 'other';
+
+/** Exercise library entry. */
 export interface Exercise {
   id: string;
   name: string;
@@ -228,12 +274,35 @@ export interface Exercise {
   progressionChainId?: string;
   /** General substitution options, distinct from an in-program "or" choice. */
   substitutions?: string[];
-  // Phase 8 content — intentionally left unfilled for now:
+  /** Library filter group. Every catalog entry has one (see CatalogExercise);
+   * only parser-generated entries for names the catalog does not know
+   * leave it unset. */
+  muscleGroup?: MuscleGroup;
+  /** Equipment needed. Same optionality rule as `muscleGroup`. */
+  equipment?: Equipment[];
+  /**
+   * Preset used when this exercise enters a session outside the pasted
+   * program: "Add exercise" mid-workout uses it as the slot's prescription,
+   * and Swap adopts it when the substitute logs a different kind of set
+   * than the slot it replaces (lib/workout-session/swap-prescription.ts).
+   * Its `type` is also what decides which logging fields the library shows
+   * for the exercise (lib/program/set-entry-fields.ts loggingFieldLabels).
+   */
+  defaultPrescription?: Prescription;
   instructions?: string;
   cues?: string[];
   commonMistakes?: string[];
   intendedFeeling?: string;
 }
+
+/**
+ * The shape every entry in lib/program/catalog/*.ts must satisfy: a full
+ * library entry with filter metadata, a logging preset, and complete
+ * guidance. Enforced at type level here and again at runtime by
+ * scripts/test-exercise-catalog.ts.
+ */
+export type CatalogExercise = Exercise &
+  Required<Pick<Exercise, 'muscleGroup' | 'equipment' | 'defaultPrescription' | 'intendedFeeling' | 'cues' | 'commonMistakes'>>;
 
 /**
  * A fully resolved program (2026-08-25 rework, non-negotiable 16): exactly

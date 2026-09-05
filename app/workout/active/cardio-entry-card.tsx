@@ -55,6 +55,7 @@ export default function CardioEntryCard({
   prescription,
   exerciseName,
   previousSets,
+  advanceLabel,
   onDraftChange,
   onLogSet,
   onAdvance,
@@ -63,6 +64,11 @@ export default function CardioEntryCard({
   prescription: QualitativePrescription | DurationPrescription;
   exerciseName: string;
   previousSets: SetLog[] | undefined;
+  /** What the big advance button reads once the ride is logged: "Next
+   * exercise" when one is upcoming, "Session overview"/"Session summary"
+   * otherwise (active-workout-screen.tsx, owner request 2026-09-04: never
+   * default straight past the finished exercise). */
+  advanceLabel: string;
   onDraftChange: (draft: SetDraft) => void;
   onLogSet: (set: SetLog) => void;
   onAdvance: () => void;
@@ -77,6 +83,7 @@ export default function CardioEntryCard({
       <LoggedState
         loggedSet={loggedSet}
         prescriptionType={prescription.type}
+        advanceLabel={advanceLabel}
         onAdvance={onAdvance}
         onEdit={() => setEditing(true)}
       />
@@ -307,7 +314,6 @@ function ResultsState({
               emitDraft({ seconds: e.target.value });
             }}
             className={INPUT_CLASS}
-            autoFocus
           />
         </label>
         <label className="flex flex-col gap-1.5">
@@ -399,11 +405,13 @@ function ResultsState({
 function LoggedState({
   loggedSet,
   prescriptionType,
+  advanceLabel,
   onAdvance,
   onEdit,
 }: {
   loggedSet: SetLog;
   prescriptionType: Prescription["type"];
+  advanceLabel: string;
   onAdvance: () => void;
   onEdit: () => void;
 }) {
@@ -416,7 +424,7 @@ function LoggedState({
         </p>
       </div>
       <button type="button" onClick={onAdvance} className={PRIMARY_BUTTON_CLASS}>
-        Next exercise
+        {advanceLabel}
       </button>
       <button
         type="button"

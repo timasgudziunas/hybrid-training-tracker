@@ -2,7 +2,9 @@ import type { Exercise } from "@/lib/program/program-types";
 import { isSlotNotDone, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import type { EndedEarlyReason, ExerciseSlotLog } from "@/lib/workout-session/workout-session-types";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
+import AddExercisePicker from "./add-exercise-picker";
 import EndWorkoutEarlyControl from "./end-workout-early-control";
+import SessionProgressBar from "./session-progress-bar";
 
 const STATUS_LABEL: Record<ExerciseSlotLog["status"], string> = {
   completed: "Done",
@@ -23,6 +25,7 @@ export default function WorkoutOverview({
   onToggleRecoveryMode,
   onEndWorkoutEarly,
   onGoToFinish,
+  onAddExercise,
 }: {
   templateSlots: TemplateSlot[];
   slotLogs: Record<string, ExerciseSlotLog>;
@@ -34,6 +37,7 @@ export default function WorkoutOverview({
   onToggleRecoveryMode: () => void;
   onEndWorkoutEarly: (reason?: EndedEarlyReason) => void;
   onGoToFinish: () => void;
+  onAddExercise: (exercise: Exercise) => void;
 }) {
   const sections = new Map<string, TemplateSlot[]>();
   for (const slot of templateSlots) {
@@ -59,6 +63,13 @@ export default function WorkoutOverview({
           Close
         </button>
       </div>
+
+      <SessionProgressBar
+        templateSlots={templateSlots}
+        slotLogs={slotLogs}
+        currentSlotKey={currentSlotKey}
+        exercises={exercises}
+      />
 
       {upcomingCount > 0 ? (
         <p className="text-sm text-ink-secondary">
@@ -120,6 +131,8 @@ export default function WorkoutOverview({
           </div>
         ))}
       </div>
+
+      <AddExercisePicker onAdd={onAddExercise} />
 
       <div className="flex flex-col gap-3 border-t border-line-hairline pt-5">
         <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">

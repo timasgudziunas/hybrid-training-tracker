@@ -95,6 +95,20 @@ Owner ran Block 1 for a week (2026-08-26 to 2026-09-02) and listed what got in t
 
 **Done when:** verified headlessly end to end on the sample workout (34 checks) and by the owner in the gym on the next real session.
 
+## R10. Built-in exercise library + workout flow polish (owner requests, 2026-09-04)
+
+Owner decisions (asked and answered 2026-09-04): remove everything on foot from the library (sprints and accelerations included, not only steady running); about 250 exercises; "add exercise mid-workout" and "presets feed Swap" now; settings synced in Supabase. **The in-app program builder (build or edit a weekly program from the library instead of pasting text) is deliberately put off, but must not be forgotten: it is the next big piece after R10, and the logging preset on every catalog entry exists so it can be built without touching content again.**
+
+- [x] Catalog rebuilt as one file per muscle group under `lib/program/catalog/` (281 `CatalogExercise` entries: muscle group, equipment, logging preset, where to feel it, cues, common mistakes). Ids are always the slug of the name (`lib/program/slugify-exercise-name.ts`). No running, jogging, sprint, treadmill, or walking entries. Validated by `scripts/test-exercise-catalog.ts`, including full coverage of the owner's Block 1 names.
+- [x] Library at /exercises: search, muscle-group chips, category and equipment filters, sort by muscle group, name, or category; detail page shows the logging preset as a subdued bottom card, never the main attraction.
+- [x] Settings at /settings (`athlete_settings` table, key/value): show or hide RIR during set entry (default off, owner takes every set to failure).
+- [x] Active workout: no input is ever focused automatically (overview jumps, Add set, Next, Swap search). Set button reads "Next set" until the last set, then "Log set". Finishing the last set shows the exercise's logged sets with a prominent "Next exercise" button instead of auto-advancing. Swipe left on a logged set reveals Delete. Session overview opens with a segmented progress bar ("9 / 10 exercises complete").
+- [x] Add exercise mid-workout from the library (overview and completion screen): lands in an optional "Added today" section of the session's own template snapshot, uses the exercise's preset, never flips the session to Modified (`lib/workout-session/add-exercise.ts`).
+- [x] Presets feed Swap: a substitute that logs a different kind of set adopts its own preset, keeping the program's set count; revert restores the original (`lib/workout-session/swap-prescription.ts`).
+- [ ] Deferred, tracked: **in-app program builder** (see above).
+
+**Done when:** build, lint, and every test suite green; headless drive of the sample workout covers the new flow; owner confirms in the gym. *Shipped 2026-09-04: build, lint, 15 suites (4,592 assertions), and a 39-check headless drive all green; gym confirmation pending.*
+
 > The phases below predate the rework. Their FEATURE checklists remain the requirements source for R3-R8 above; their ordering and the assumption of a code-seeded program are superseded.
 
 ## Phase 4: Progression engine

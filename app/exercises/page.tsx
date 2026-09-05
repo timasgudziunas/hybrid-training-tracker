@@ -4,11 +4,12 @@ import ExerciseLibraryBrowser from "./exercise-library-browser";
 import SiteHeader from "@/app/site-header";
 
 /**
- * Exercise library index (PLAN.md R6 / old Phase 8, PRODUCT_SPEC.md §12).
- * Merges the code catalog (lib/program/exercise-catalog.ts, 58 entries)
- * with any exercise the athlete's active pasted program references that the
- * catalog has no match for, so the library always covers everything the
- * athlete actually trains, not just what shipped in code.
+ * Exercise library index (PLAN.md R6 / old Phase 8, PRODUCT_SPEC.md §12;
+ * expanded to a ~250 entry catalog under R10, 2026-09-04).
+ * Merges the code catalog (lib/program/exercise-catalog.ts) with any
+ * exercise the athlete's active pasted program references that the catalog
+ * has no match for, so the library always covers everything the athlete
+ * actually trains, not just what shipped in code.
  *
  * Wired into app/site-header.tsx's nav (as "Library") as of the R8
  * integration pass.
@@ -32,7 +33,7 @@ export default async function ExerciseLibraryPage() {
           </p>
           <h1 className="font-display text-4xl font-bold text-ink-primary sm:text-5xl">Exercise Library</h1>
           <p className="text-sm text-ink-secondary">
-            Purpose, cues, and progression for every exercise in the program.
+            Every exercise the app knows, with where to feel it, cues, common mistakes, and how it is logged.
           </p>
         </div>
 

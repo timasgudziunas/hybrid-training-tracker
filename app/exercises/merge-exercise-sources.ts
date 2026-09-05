@@ -1,5 +1,7 @@
 import { EXERCISE_CATALOG } from "@/lib/program/exercise-catalog";
-import type { Exercise, ExerciseCategory } from "@/lib/program/program-types";
+import type { Equipment, Exercise, ExerciseCategory, MuscleGroup, Prescription } from "@/lib/program/program-types";
+import { normalizeExerciseNameForMatch } from "@/lib/program/slugify-exercise-name";
+import { formatPrescriptionPreset, loggingFieldLabels } from "@/lib/program/set-entry-fields";
 import { hasFullGuidance } from "./has-full-guidance";
 
 /**
@@ -10,25 +12,47 @@ import { hasFullGuidance } from "./has-full-guidance";
  * name matches a catalog entry, the parser (lib/program/parse-program-text.ts,
  * resolveExerciseId) already copies the catalog's full instructional content
  * onto it, so it is represented once, as the catalog entry.
+ *
+ * `muscleGroup`, `equipment`, and `defaultPrescription` are unset for
+ * program-only entries the catalog has no match for (Exercise's own
+ * optionality rule, program-types.ts). The library groups those under an
+ * "Other" bucket when sorting by muscle group (lib/program/exercise-filters.ts).
  */
 export interface LibraryExerciseEntry {
   id: string;
   name: string;
   category: ExerciseCategory;
   primaryMuscles: string[];
+  secondaryMuscles: string[];
+  muscleGroup?: MuscleGroup;
+  equipment?: Equipment[];
+  defaultPrescription?: Prescription;
   hasFullGuidance: boolean;
   fromProgram: boolean;
+  /** One-line preset summary (e.g. "3 sets of 8 to 12 reps"), or null when
+   * this exercise has no defaultPrescription (program-only, unmatched). */
+  presetSummary: string | null;
+  /** What gets logged per set under that preset (e.g. ["Weight (lb)",
+   * "Reps", "RIR"]), or [] when there is no preset. */
+  loggingLabels: string[];
 }
 
-/**
- * Same normalization the parser uses to match a typed program exercise name
- * against the catalog (lib/program/parse-program-text.ts,
- * normalizeForCatalogMatch), duplicated here in miniature since that
- * function isn't exported from lib/program. Keep the two in sync if either
- * changes.
- */
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+function toLibraryEntry(exercise: Exercise, fromProgram: boolean): LibraryExerciseEntry {
+  const defaultPrescription = exercise.defaultPrescription;
+  return {
+    id: exercise.id,
+    name: exercise.name,
+    category: exercise.category,
+    primaryMuscles: exercise.primaryMuscles,
+    secondaryMuscles: exercise.secondaryMuscles,
+    muscleGroup: exercise.muscleGroup,
+    equipment: exercise.equipment,
+    defaultPrescription,
+    hasFullGuidance: hasFullGuidance(exercise),
+    fromProgram,
+    presetSummary: defaultPrescription ? formatPrescriptionPreset(defaultPrescription) : null,
+    loggingLabels: defaultPrescription ? loggingFieldLabels(exercise, defaultPrescription) : [],
+  };
 }
 
 /**
@@ -41,31 +65,17 @@ function normalizeName(name: string): string {
 export function mergeExerciseSources(
   programExercises: Record<string, Exercise> | null
 ): LibraryExerciseEntry[] {
-  const catalogNames = new Set(EXERCISE_CATALOG.map((exercise) => normalizeName(exercise.name)));
+  const catalogNames = new Set(EXERCISE_CATALOG.map((exercise) => normalizeExerciseNameForMatch(exercise.name)));
 
-  const catalogEntries: LibraryExerciseEntry[] = EXERCISE_CATALOG.map((exercise) => ({
-    id: exercise.id,
-    name: exercise.name,
-    category: exercise.category,
-    primaryMuscles: exercise.primaryMuscles,
-    hasFullGuidance: hasFullGuidance(exercise),
-    fromProgram: false,
-  }));
+  const catalogEntries: LibraryExerciseEntry[] = EXERCISE_CATALOG.map((exercise) => toLibraryEntry(exercise, false));
 
   const seenProgramNames = new Set<string>();
   const programOnlyEntries: LibraryExerciseEntry[] = [];
   for (const exercise of Object.values(programExercises ?? {})) {
-    const normalized = normalizeName(exercise.name);
+    const normalized = normalizeExerciseNameForMatch(exercise.name);
     if (catalogNames.has(normalized) || seenProgramNames.has(normalized)) continue;
     seenProgramNames.add(normalized);
-    programOnlyEntries.push({
-      id: exercise.id,
-      name: exercise.name,
-      category: exercise.category,
-      primaryMuscles: exercise.primaryMuscles,
-      hasFullGuidance: hasFullGuidance(exercise),
-      fromProgram: true,
-    });
+    programOnlyEntries.push(toLibraryEntry(exercise, true));
   }
 
   return [...catalogEntries, ...programOnlyEntries];

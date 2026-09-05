@@ -31,7 +31,6 @@ export default function ExerciseNoteField({
       value={note ?? ""}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Note"
-      autoFocus
       className="rounded-lg border border-line-default bg-surface-2 px-3 py-2 text-sm text-ink-primary focus:border-accent focus:outline-none"
     />
   );

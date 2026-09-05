@@ -67,7 +67,8 @@ The repo is empty of code.
 20. Sunday always renders REST DAY. Never manufacture a workout for it.
 21. A modified session is distinct from both completed and missed ("modify, don't fail").
 22. Active workout state must survive a browser refresh or accidental close.
-23. Deferred, do not build yet: AI analysis of training trends, automated program adjustments, a HYROX training phase, wearable integration, nutrition/body-composition integration, advanced fatigue modeling, video technique analysis.
+23. Deferred, do not build yet: AI analysis of training trends, automated program adjustments, a HYROX training phase, wearable integration, nutrition/body-composition integration, advanced fatigue modeling, video technique analysis. Deferred but PLANNED (owner 2026-09-04, "put it off for now, but make sure it isn't forgotten"): the in-app program builder that assembles a weekly program from the exercise library instead of pasting text; tracked in `PLAN.md` R10.
+24. The exercise library contains nothing on foot: no running, jogging, sprints, accelerations, treadmill, or walking entries (owner decision 2026-09-04). Pasted programs may still contain such lines (the `distance` prescription type is unchanged); they simply have no library entry.
 
 ## Domain model
 

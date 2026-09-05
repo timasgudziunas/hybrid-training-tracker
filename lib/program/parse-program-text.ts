@@ -21,6 +21,7 @@
  */
 
 import { EXERCISE_CATALOG } from './exercise-catalog';
+import { normalizeExerciseNameForMatch, slugifyExerciseName } from './slugify-exercise-name';
 import type {
   Exercise,
   PrescribedExercise,
@@ -103,19 +104,7 @@ const DEFAULT_REST_DESCRIPTION = 'No workout scheduled. Rest or easy movement on
 const SUNDAY_REST_DESCRIPTION =
   'No required workout. No guilt-driven conditioning. No requirement to close rings or maintain a streak. Walking and ordinary life activity are fine.';
 
-function slugifyExerciseName(name: string): string {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .replace(/['’]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug || 'exercise';
-}
-
-function normalizeForCatalogMatch(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-}
+const normalizeForCatalogMatch = normalizeExerciseNameForMatch;
 
 const CATALOG_BY_NORMALIZED_NAME = new Map<string, Exercise>();
 for (const exercise of EXERCISE_CATALOG) {

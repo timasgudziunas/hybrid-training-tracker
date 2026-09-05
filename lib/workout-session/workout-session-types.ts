@@ -14,7 +14,7 @@
  * session regardless of which "or" alternative the athlete picks.
  */
 
-import type { Exercise, TrainingDayTemplate, Weekday } from '@/lib/program/program-types';
+import type { Exercise, Prescription, TrainingDayTemplate, Weekday } from '@/lib/program/program-types';
 
 /** Mirrors CLAUDE.md's WorkoutSession.status. 'modified' is a TERMINAL
  * status (Phase 5, 2026-08-26 decision): assigned deterministically at
@@ -127,6 +127,11 @@ export interface SlotSubstitution {
   slotKey: string;
   fromExerciseId: string;
   toExerciseId: string;
+  /** The slot's prescription BEFORE the swap, kept only when the swap
+   * changed it (R10 "presets feed Swap": a substitute that logs a different
+   * kind of set adopts its own defaultPrescription, see
+   * lib/workout-session/swap-prescription.ts). Revert restores it. */
+  originalPrescription?: Prescription;
 }
 
 /** 'unfinished' is never chosen by the athlete: it is assigned when a
@@ -143,6 +148,13 @@ export interface SessionModificationState {
   recoveryMode?: boolean;
   reducedLoadSlotKeys?: string[];
   substitutions?: SlotSubstitution[];
+  /** Slot keys of exercises the athlete added mid-workout from the library
+   * (R10, lib/workout-session/add-exercise.ts). They live in the session's
+   * own templateSnapshot under the optional "Added" section, so skipping
+   * one is never a deviation and adding one never flips the session to
+   * Modified: doing extra is not failing the plan. Listed on the completion
+   * screen as information only. */
+  addedSlotKeys?: string[];
 }
 
 /** Fun, restrained completion stats (PRODUCT_SPEC §6 linear execution flow). */

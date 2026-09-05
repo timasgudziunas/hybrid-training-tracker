@@ -132,6 +132,16 @@ The active workout is primarily a linear, one-thing-at-a-time experience, like m
 - The swap picker lists exercises that target the same primary muscles first, with their muscles shown, then everything else.
 - Last time performance is looked up per exercise across every past session, not only the same weekday's template.
 
+### Flow polish, settings, and adding exercises (owner feedback, 2026-09-04)
+
+- No input is ever focused automatically during a workout: not after jumping from the overview, not after Add set, not after Next, not in the Swap search. The athlete taps into a field when they want it.
+- The set button reads "Next set" while sets remain and "Log set" on the final set. Logging the final set does not advance: the card shows the exercise's logged sets with one prominent "Next exercise" button (or "Session overview" / "Session summary" when nothing is ahead).
+- Any logged set can be deleted by swiping it left and tapping the revealed Delete; a plain tap still opens the edit form (which keeps its own Delete set).
+- The session overview opens with a segmented progress bar: "9 / 10 exercises complete", one segment per exercise, skipped segments visibly different from completed ones.
+- RIR entry can be turned off in Settings (synced across devices). The owner takes every set to failure, so the default is off. Logged RIR values still display in history.
+- An exercise can be added mid-workout from the library (overview and completion screen). It lands in an optional "Added today" section of that session, uses the exercise's preset, and never turns the session into Modified: doing extra is not failing the plan. Added exercises are listed on the completion screen as information.
+- Presets feed Swap: swapping in an exercise that logs a different kind of set (a hold for a reps exercise, a cardio block for a hold) adopts the substitute's preset while keeping the program's set count; reverting restores the original prescription. Same-kind swaps keep the program's sets and reps as written.
+
 ## 7. Previous Performance
 
 Previous performance should be highly visible. For every strength exercise, show "LAST TIME" with weight x reps for each set, for example:
@@ -220,6 +230,13 @@ Calisthenics progressions should be modeled differently from normal weight train
 Each exercise should have a dedicated entry including: exercise name, category (hypertrophy, strength, speed, power, mobility, calisthenics, rehabilitation/prehab), primary muscles, secondary muscles, why this exercise is in the program, setup, execution, technique cues, common mistakes, what the athlete should generally feel, progression method, and appropriate substitutions.
 
 The exercise library is particularly important because the athlete is still developing strong lifting technique and mind-muscle awareness. However, avoid suggesting that a muscle must produce a dramatic sensation for an exercise to be effective.
+
+### Built-in library (owner request, 2026-09-04)
+
+- The app ships with a large built-in library (about 250 exercises), every entry carrying where to feel it, cues, and common mistakes, so "Help me feel it" works on every exercise, not only the ones in the current program.
+- The library can be filtered by general muscle group (the primary way to browse), by category, and by equipment, and sorted by muscle group, name, or category. Search matches names and muscles. The search box is never focused automatically.
+- Every exercise carries a logging preset: what gets logged per set (weight, reps, RIR, seconds, resistance and time for cardio, distance for jumps) and a default sets and reps. It is visible on the exercise page as a subdued card at the bottom, never the main attraction. Presets are used when an exercise is added to a workout and, later, by the program builder.
+- Nothing on foot lives in the library (no running, jogging, sprints, accelerations, treadmill, or walking). Owner decision 2026-09-04.
 
 ## 13. Readiness
 

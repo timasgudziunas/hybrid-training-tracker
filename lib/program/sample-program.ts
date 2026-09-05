@@ -37,9 +37,9 @@ Target duration: 60 minutes
 - Bulgarian Split Squat: 2 x 8-12 each side | rest: moderate compound
 - Cable Woodchop: 3 x 10-12 | rest: isolation
 
-### Speed (speed)
-> Full recovery between reps. Quality over density, never chase fatigue.
-- 20 m Acceleration: 3 x 20m | rest: sprint
+### Carries (strength)
+> Walk tall, brace, and breathe. Set the weight down under control.
+- Farmer Carry: 3 x 30m | rest: moderate compound
 
 ### Calisthenics (calisthenics)
 - Wrist Preparation: 1 x 120-180s

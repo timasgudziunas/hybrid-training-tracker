@@ -13,6 +13,7 @@ import {
 import RirSelector from "./rir-selector";
 import PreviousPerformanceSummary from "./previous-performance-summary";
 import ProgressionSuggestion from "./progression-suggestion";
+import SwipeableSetRow from "./swipeable-set-row";
 
 function formatRange(min: number, max: number): string {
   return min === max ? `${min}` : `${min}-${max}`;
@@ -123,6 +124,8 @@ export default function ExerciseEntryCard({
   prescription,
   exercise,
   previousSets,
+  showRir,
+  advanceLabel,
   onLogSet,
   onRemoveCurrentSet,
   onDeleteSet,
@@ -134,6 +137,15 @@ export default function ExerciseEntryCard({
   prescription: Exclude<Prescription, { type: "qualitative" }>;
   exercise: Exercise | undefined;
   previousSets: SetLog[] | undefined;
+  /** Athlete setting (lib/settings/athlete-settings.ts): whether to ask for
+   * RIR at all. Owner, 2026-09-04: "I decided to take every exercise to
+   * failure" — off hides the input; sets logged before the setting was
+   * turned off still show their RIR in the committed-set summary below. */
+  showRir: boolean;
+  /** What the big button reads once every target set is logged: "Next
+   * exercise" when one is upcoming, "Session overview"/"Session summary"
+   * otherwise (active-workout-screen.tsx). */
+  advanceLabel: string;
   onLogSet: (set: SetLog) => void;
   onRemoveCurrentSet: () => void;
   onDeleteSet: (setNumber: number) => void;
@@ -146,6 +158,7 @@ export default function ExerciseEntryCard({
   const currentSetNumber = slotLog.sets.length + 1;
   const allSetsLogged = slotLog.sets.length >= targetSets;
   const perSideLabel = "perSide" in prescription && prescription.perSide ? " (each side)" : "";
+  const isFinalSet = currentSetNumber >= targetSets;
 
   const [draft, setDraft] = useState<SetDraft>(() => {
     if (slotLog.draft) return { ...slotLog.draft };
@@ -173,6 +186,10 @@ export default function ExerciseEntryCard({
   // so editing an earlier set can never clobber a draft in progress for the
   // set currently being entered.
   const [editingSetNumber, setEditingSetNumber] = useState<number | null>(null);
+  // Which committed set (if any) has its Delete button revealed via a
+  // swipe. Shared across every SwipeableSetRow below so opening one closes
+  // any other (owner request 2026-09-04: "only one open at a time").
+  const [openSetNumber, setOpenSetNumber] = useState<number | null>(null);
 
   function updateDraft<K extends keyof SetDraft>(key: K, value: SetDraft[K]) {
     setDraft((prev) => {
@@ -182,18 +199,21 @@ export default function ExerciseEntryCard({
     });
   }
 
-  function commitAndAdvance(set: SetLog) {
+  // Logs the set only — never advances to the next exercise (owner request
+  // 2026-09-04: "after finishing an exercise... I don't want to default to
+  // the next exercise automatically, I want to see the exercise overview
+  // and then click Next exercise"). Logging the final target set simply
+  // makes `allSetsLogged` true on the next render, which is exactly that
+  // overview: the logged-sets list plus a prominent advance button.
+  function commitSet(set: SetLog) {
     onLogSet(set);
-    if (currentSetNumber >= targetSets) {
-      onAdvance();
-    }
   }
 
   function buildRepetitionSet(): SetLog {
     const set: SetLog = { setNumber: currentSetNumber, completed: true };
     for (const field of fields) {
       if (field.key === "rir") {
-        set.rir = draft.rir;
+        if (showRir) set.rir = draft.rir;
         continue;
       }
       const raw = numericDraftValue(draft, field.key);
@@ -210,7 +230,7 @@ export default function ExerciseEntryCard({
         : `${prescription.meters} m`;
 
   const numericFields = numericFieldsOf(fields);
-  const showRir = hasRepetitionSetField(fields, "rir");
+  const showRirSelector = showRir && hasRepetitionSetField(fields, "rir");
   const showProgressionSuggestion = hasRepetitionSetField(fields, "weight") || prescription.type !== "repetitions";
 
   return (
@@ -229,15 +249,21 @@ export default function ExerciseEntryCard({
       {slotLog.sets.length > 0 ? (
         <div className="flex flex-col gap-1">
           {slotLog.sets.map((set) => (
-            <button
+            <SwipeableSetRow
               key={set.setNumber}
-              type="button"
-              onClick={() => setEditingSetNumber(set.setNumber)}
-              className="flex items-center justify-between rounded-lg px-2 py-2 text-left text-sm text-ink-secondary transition-colors active:bg-surface-2"
+              isOpen={openSetNumber === set.setNumber}
+              onOpenChange={(open) => setOpenSetNumber(open ? set.setNumber : null)}
+              onTap={() => setEditingSetNumber(set.setNumber)}
+              onDelete={() => {
+                onDeleteSet(set.setNumber);
+                setOpenSetNumber(null);
+              }}
             >
-              <span>{formatCommittedSetSummary(set, prescription)}</span>
-              <span className="text-xs font-medium text-ink-tertiary">Edit</span>
-            </button>
+              <div className="flex items-center justify-between px-2 py-2 text-left text-sm text-ink-secondary">
+                <span>{formatCommittedSetSummary(set, prescription)}</span>
+                <span className="text-xs font-medium text-ink-tertiary">Edit</span>
+              </div>
+            </SwipeableSetRow>
           ))}
         </div>
       ) : null}
@@ -247,6 +273,7 @@ export default function ExerciseEntryCard({
           key={editingSetNumber}
           prescription={prescription}
           fields={fields}
+          showRir={showRir}
           set={slotLog.sets[editingSetNumber - 1]}
           onSave={(set) => {
             onLogSet(set);
@@ -265,7 +292,7 @@ export default function ExerciseEntryCard({
             onClick={onAdvance}
             className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
           >
-            Next exercise
+            {advanceLabel}
           </button>
           <button
             type="button"
@@ -299,21 +326,20 @@ export default function ExerciseEntryCard({
                         onChange={(e) => updateDraft(field.key, e.target.value)}
                         className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
                         placeholder={field.key === "reps" ? formatRange(prescription.minReps, prescription.maxReps) : "0"}
-                        autoFocus={field.key === "reps"}
                       />
                     </label>
                   ))}
                 </div>
               ) : null}
-              {showRir ? (
+              {showRirSelector ? (
                 <RirSelector value={draft.rir} onChange={(value) => updateDraft("rir", value)} />
               ) : null}
               <button
                 type="button"
-                onClick={() => commitAndAdvance(buildRepetitionSet())}
+                onClick={() => commitSet(buildRepetitionSet())}
                 className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
               >
-                Next
+                {isFinalSet ? "Log set" : "Next set"}
               </button>
             </div>
           ) : null}
@@ -328,13 +354,12 @@ export default function ExerciseEntryCard({
                   value={draft.seconds ?? ""}
                   onChange={(e) => updateDraft("seconds", e.target.value)}
                   className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
-                  autoFocus
                 />
               </label>
               <button
                 type="button"
                 onClick={() =>
-                  commitAndAdvance({
+                  commitSet({
                     setNumber: currentSetNumber,
                     completed: true,
                     seconds: draft.seconds ? Number.parseInt(draft.seconds, 10) : undefined,
@@ -342,7 +367,7 @@ export default function ExerciseEntryCard({
                 }
                 className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
               >
-                Next
+                {isFinalSet ? "Log set" : "Next set"}
               </button>
             </div>
           ) : null}
@@ -364,7 +389,7 @@ export default function ExerciseEntryCard({
               <button
                 type="button"
                 onClick={() =>
-                  commitAndAdvance({
+                  commitSet({
                     setNumber: currentSetNumber,
                     completed: true,
                     distanceCompleted: true,
@@ -426,6 +451,7 @@ export default function ExerciseEntryCard({
 function EditSetForm({
   prescription,
   fields,
+  showRir,
   set,
   onSave,
   onDelete,
@@ -433,13 +459,18 @@ function EditSetForm({
 }: {
   prescription: Exclude<Prescription, { type: "qualitative" }>;
   fields: RepetitionSetFieldSpec[];
+  /** Athlete setting: whether to show the RIR selector at all (see the
+   * matching prop on ExerciseEntryCard). A set logged before the setting
+   * was turned off keeps its RIR value on save even with the selector
+   * hidden — only new input is blocked, never existing history. */
+  showRir: boolean;
   set: SetLog;
   onSave: (set: SetLog) => void;
   onDelete: () => void;
   onCancel: () => void;
 }) {
   const numericFields = numericFieldsOf(fields);
-  const showRir = hasRepetitionSetField(fields, "rir");
+  const showRirSelector = showRir && hasRepetitionSetField(fields, "rir");
 
   const [values, setValues] = useState<Record<NumericFieldKey, string>>(() => {
     const initial = {} as Record<NumericFieldKey, string>;
@@ -485,7 +516,7 @@ function EditSetForm({
               ))}
             </div>
           ) : null}
-          {showRir ? <RirSelector value={rir} onChange={setRir} /> : null}
+          {showRirSelector ? <RirSelector value={rir} onChange={setRir} /> : null}
         </div>
       ) : null}
 
@@ -524,7 +555,14 @@ function EditSetForm({
               const raw = values[field.key];
               if (raw) built[field.key] = parseFieldValue(field, raw);
             }
-            if (showRir) built.rir = rir;
+            if (showRirSelector) {
+              built.rir = rir;
+            } else if (set.rir !== undefined) {
+              // The selector is hidden (setting off), so there is no way to
+              // edit RIR here — preserve whatever was already logged rather
+              // than silently dropping it on save.
+              built.rir = set.rir;
+            }
           }
           if (prescription.type === "hold" || prescription.type === "duration") {
             built.seconds = seconds ? Number.parseInt(seconds, 10) : undefined;

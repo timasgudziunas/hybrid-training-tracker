@@ -113,3 +113,17 @@ create table if not exists ultimate_practice_days (
 
 -- Same RLS posture as every other table: service-role access only, no policies.
 alter table ultimate_practice_days enable row level security;
+
+-- Athlete app settings (R10, 2026-09-04): a key/value store for app
+-- preferences (e.g. whether the RIR selector shows during set entry), synced
+-- through Supabase so phone and desktop agree. One row per setting; `value`
+-- is that setting's JSON value. Shape of each value is owned by
+-- lib/settings/athlete-settings.ts, not by this table. Same RLS posture as
+-- every other table: service-role access only, no policies.
+create table if not exists athlete_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table athlete_settings enable row level security;

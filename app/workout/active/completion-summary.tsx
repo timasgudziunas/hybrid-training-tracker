@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import type { Exercise } from "@/lib/program/program-types";
 import type { SessionDeviation } from "@/lib/workout-session/session-deviations";
 import type { CompletionStats, EndedEarlyReason } from "@/lib/workout-session/workout-session-types";
+import AddExercisePicker from "./add-exercise-picker";
 
 const DIFFICULTY_OPTIONS = [1, 2, 3, 4, 5] as const;
 
@@ -34,6 +36,8 @@ export default function CompletionSummary({
   onRetry,
   deviations,
   endedEarlyReason,
+  addedExerciseNames,
+  onAddExercise,
 }: {
   startedAt: string;
   finalDurationSeconds: number | null;
@@ -47,6 +51,11 @@ export default function CompletionSummary({
   onRetry: () => void;
   deviations: SessionDeviation[];
   endedEarlyReason: EndedEarlyReason | undefined;
+  /** Names of exercises added mid-workout (performance.modifications.
+   * addedSlotKeys, resolved by active-workout-screen.tsx). Informational
+   * only, never a deviation: adding extra work is not failing the plan. */
+  addedExerciseNames: string[];
+  onAddExercise: (exercise: Exercise) => void;
 }) {
   // Frozen when this screen appears (the parent remounts it on view change)
   // so it doesn't tick while the athlete types a note; the exact stored
@@ -138,6 +147,17 @@ export default function CompletionSummary({
         />
       </label>
 
+      {addedExerciseNames.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-line-hairline bg-surface-2 p-4">
+          <p className="text-sm font-semibold text-ink-primary">Added today</p>
+          <ul className="flex flex-col gap-1 text-sm text-ink-secondary">
+            {addedExerciseNames.map((name, index) => (
+              <li key={`${name}-${index}`}>{name}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {deviations.length > 0 ? (
         <div className="flex flex-col gap-3 rounded-xl border border-line-hairline bg-surface-2 p-4">
           <p className="text-sm font-semibold text-ink-primary">Saving as Modified</p>
@@ -188,14 +208,17 @@ export default function CompletionSummary({
           </Link>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={onFinish}
-          disabled={isFinished}
-          className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong disabled:opacity-50"
-        >
-          {finishState === "saving" ? "Saving" : "Finish workout"}
-        </button>
+        <>
+          <AddExercisePicker onAdd={onAddExercise} />
+          <button
+            type="button"
+            onClick={onFinish}
+            disabled={isFinished}
+            className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong disabled:opacity-50"
+          >
+            {finishState === "saving" ? "Saving" : "Finish workout"}
+          </button>
+        </>
       )}
     </div>
   );

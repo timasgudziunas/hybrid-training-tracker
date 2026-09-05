@@ -30,6 +30,8 @@ export default function ExerciseSlotView({
   slotLog,
   previousPerformance,
   exercises,
+  showRir,
+  advanceLabel,
   onChoose,
   onLogSet,
   onRemoveCurrentSet,
@@ -50,6 +52,12 @@ export default function ExerciseSlotView({
   slotLog: ExerciseSlotLog;
   previousPerformance: PreviousPerformanceByExercise;
   exercises: Record<string, Exercise>;
+  /** Athlete setting: show the RIR selector during set entry (see
+   * lib/settings/athlete-settings.ts). */
+  showRir: boolean;
+  /** What the big advance button reads once this exercise's sets/ride are
+   * fully logged (active-workout-screen.tsx, derived from what's next). */
+  advanceLabel: string;
   onChoose: (exerciseId: string) => void;
   onLogSet: (set: SetLog) => void;
   onRemoveCurrentSet: () => void;
@@ -138,6 +146,7 @@ export default function ExerciseSlotView({
             prescription={prescribed.prescription}
             exerciseName={name}
             previousSets={previousPerformance[slotLog.chosenExerciseId]}
+            advanceLabel={advanceLabel}
             onDraftChange={onDraftChange}
             onLogSet={onLogSet}
             onAdvance={onAdvance}
@@ -151,6 +160,8 @@ export default function ExerciseSlotView({
           prescription={prescribed.prescription}
           previousSets={previousPerformance[slotLog.chosenExerciseId]}
           exercise={chosenExercise}
+          showRir={showRir}
+          advanceLabel={advanceLabel}
           onLogSet={onLogSet}
           onRemoveCurrentSet={onRemoveCurrentSet}
           onDeleteSet={onDeleteSet}
