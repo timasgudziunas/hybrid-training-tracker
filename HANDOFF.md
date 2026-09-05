@@ -4,7 +4,7 @@
 
 ## Current state (as of 2026-09-05 ~00:00 UTC)
 
-**The app is live and in real use** at **https://hybrid-training-tracker.vercel.app** behind the passphrase gate. R10 (built-in exercise library + workout flow polish) is complete locally and being committed as this handoff is written; see the next section for the deploy status the committing session must confirm.
+**The app is live and in real use** at **https://hybrid-training-tracker.vercel.app** behind the passphrase gate. Head is `ddd50c1` (R10 complete), pushed 2026-09-05 ~00:00 UTC; **production deploy confirmed** (Vercel commit status on GitHub: success at ~00:02 UTC; URL returns 307 to the gate).
 
 - **No program is active** (owner request 2026-09-04, "I will be changing it up"). `training_programs` row `aea8db93` (Athletic Muscle Base — Block 1) is `is_active=false`, kept for one-tap reactivation. Today shows the waiting-for-program state. Repo copy of the program: `programs/block-1-athletic-muscle-base.md`.
 - **Supabase** (ref `woawbkhcoegvwrsfgbix`, service-role only, RLS no-policies by design). **One schema change is NOT applied yet:** the new `athlete_settings` table (bottom of `supabase/schema.sql`). Until the owner runs it in the SQL editor, /settings shows defaults (RIR hidden) and toggling fails with an explicit "table has not been applied yet" message; nothing else is affected. Row counts unchanged from the previous handoff otherwise (`workout_sessions` 8 real rows through 2026-09-02, plus the stray active Saturday 2026-08-29 row `52b05e65`).
@@ -25,7 +25,7 @@ Prior sessions' settled items still standing: R9 mechanics (cardio card, set rem
 
 ## In progress / where it stopped
 
-Nothing mid-flight. Commit + push + deploy confirmation are the last steps of this session (the committing session updates the deploy line in Current state).
+Nothing mid-flight. Session closed cleanly with this handoff's confirmation commit.
 
 ## Next steps (priority order)
 
@@ -101,4 +101,4 @@ npx tsx "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\test-
 npx tsx --env-file=.env "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\check-db-state.ts"
 curl.exe -s -o NUL -w "%{http_code}" https://hybrid-training-tracker.vercel.app
 ```
-Healthy ≈ clean tree (only `next-env.d.ts` churn) with the R10 commit at head, 4378 and 26 passed, `training_programs` 1 row, no `sample-` sessions, `athlete_settings` listed (a "does not exist" there means the DDL is still unapplied), URL returns 307 (gate working). In-app: /exercises shows muscle-group chips with counts and no running entries; /settings shows the RIR toggle; /workout/active?source=sample never focuses an input on arrival.
+Healthy ≈ clean tree (only `next-env.d.ts` churn) with `ddd50c1`+ at head, 4378 and 26 passed, `training_programs` 1 row, no `sample-` sessions, `athlete_settings` listed (a "does not exist" there means the DDL is still unapplied), URL returns 307 (gate working). In-app: /exercises shows muscle-group chips with counts and no running entries; /settings shows the RIR toggle; /workout/active?source=sample never focuses an input on arrival.
