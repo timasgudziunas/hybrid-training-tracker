@@ -59,7 +59,7 @@ Target duration: 75 minutes
 
 - Standing Calf Raise: 5 x 10-15 | rest: isolation | notes: pause in the stretched and contracted positions
 - Ab Wheel: 4 x 6-12 | rest: moderate compound
-- Copenhagen Plank: 3 x 20-30s hold, each side | rest: isolation
+- Short-Lever Copenhagen Plank: 3 x 20-30s hold, each side | rest: isolation
 
 ### Mobility (mobility)
 
@@ -136,7 +136,7 @@ Target duration: 75 minutes
 - Seated Dumbbell Shoulder Press: 3 x 8-12 | rest: moderate compound
 - Cable Lateral Raise: 5 x 12-20 | rest: isolation
 - Rear-Delt Fly: 4 x 12-20 | rest: isolation
-- Cable Triceps Extension: 3 x 10-15 | rest: isolation
+- Overhead Cable Triceps Extension: 3 x 10-15 | rest: isolation
 - EZ-Bar Curl: 3 x 10-15 | rest: isolation
 
 ### Mobility (mobility)
