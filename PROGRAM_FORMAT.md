@@ -46,7 +46,7 @@ Right under a day header, before the first section, you can write:
 
 - Any plain sentence, which becomes the day's description.
 - `Target duration: 60 minutes` for the day's target length.
-- `+ Ultimate practice later` if Ultimate practice happens later that day. This line can actually appear anywhere within the day, not only at the top. It only marks the day as scheduled. Actual attendance is checked off in the app on the day.
+- `+ Ultimate practice later` if Ultimate practice happens later that day (`+ Frisbee practice later` and `+ Ultimate frisbee practice later` mean the same thing). This line can actually appear anywhere within the day, not only at the top. It only marks the day as scheduled. Actual attendance is checked off in the app on the day.
 
 ### Sections
 

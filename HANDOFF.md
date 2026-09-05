@@ -6,7 +6,7 @@
 
 **Accounts are LIVE.** `deaf6a3` pushed and deployed (Vercel commit status: success; URL returns 307 to `/sign-in`). Owner completed every cutover step on 2026-09-05 ~03:45 UTC and confirmed "I signed in and I see all my data": Confirm email is OFF in Supabase Auth (verified via the public settings endpoint), `schema.sql` applied, backfill run. `auth.users` has exactly 1 account (the owner). `check-db-state.ts`: body_checkins 9, training_programs 1, workout_sessions 8, ultimate_practice_days 0, athlete_settings 1, all with `0 without user_id`.
 
-- **No program is active** (unchanged). `training_programs` row `aea8db93` (Block 1) is `is_active=false`.
+- **Active program: `bd4bc30c` "Athletic Muscle and Calisthenics Foundation"** (Block 2, six days Mon to Sat, Sunday rest, Frisbee practice Mon/Wed/Thu), loaded 2026-09-05 ~03:44 UTC via `scripts/activate-program-file.ts` from `programs/block-2-athletic-muscle-and-calisthenics-foundation.md`. Block 1 `aea8db93` stays inactive as history. Before loading, three names were aligned to library entries (Overhead Press to Overhead Barbell Press, Ab-Wheel Rollout to Ab Wheel, Broad Jump to Standing Broad Jump) and five `rest: core` clauses became `rest: isolation` (core is not a rest category). Eight real exercises have no library guidance yet: Assisted Muscle-Up Transition, Explosive Assisted Pull-Up, False-Grip Hang, Tuck Flag Hold, Wall Handstand Shoulder Shrug, Wall-Facing Handstand Hold, Copenhagen Plank (library has Short-Lever / Long-Lever), Cable Triceps Extension (library has Overhead Cable Triceps Extension / Triceps Pressdown). The parser now accepts `+ Frisbee practice later` and `+ Ultimate frisbee practice later` as the practice flag.
 - **Verification state (this tree):** `npm run build` green with zero static-render fallbacks; `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 14 test suites green (4,629 assertions) plus `validate-program.ts`. Headless Edge drive of the auth flow against a local production build (`next start -p 3100`, throwaway confirmed user via the admin API): **12/12** (gate redirect with redirect param, wrong password error, sign-in lands on the requested page, Today renders for a fresh account, no Progress nav item, Settings shows the signed-in email, toggle measures 48 x 28, sign-out returns to sign-in and the gate is back, invite field shown when `APP_PASSPHRASE` is set, wrong invite rejected). Data reads/writes under RLS could NOT be verified: the policies do not exist in Supabase yet.
 
 ## Just completed (this session, 2026-09-05): four owner requests
@@ -22,7 +22,7 @@ Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 
 ## Next steps (priority order)
 
-1. **Owner: paste the new program** on /program (Block 1 `aea8db93` stays deactivated until then; Today shows the waiting state).
+1. **Optional: add library entries** for the eight Block 2 exercises without guidance (see Current state), or rename Copenhagen Plank / Cable Triceps Extension in the program to the library variant the owner means.
 2. **Owner: gym verification of R10** on the next real session: no keyboard on arrival / Next set / Add set; Log set then Next exercise; swipe a set to delete; overview progress bar; add an exercise; swap to a different set type and revert. Also confirm the RIR toggle saves now that `athlete_settings` exists.
 3. **Inviting other athletes:** give them the URL and the invite passphrase (`APP_PASSPHRASE` in Vercel). They sign up at /sign-up and start with an empty account (no program, no history). Rotate `APP_PASSPHRASE` in Vercel + redeploy to stop new sign-ups.
 4. **Next build block: the in-app program builder** (owner: "put it off for now, but make sure it isn't forgotten"). Scope it as its own PLAN.md block before starting.
@@ -51,7 +51,7 @@ Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 | `supabase/migrations/2026-09-05-backfill-owner-user-id.sql` | One-time owner backfill (edit the email placeholder first) |
 | `lib/program/catalog/*.ts` · `lib/program/exercise-catalog.ts` | The library, 265 entries after the 2026-09-05 overlap cleanup (15 removed: 5 cardio intensity variants folded into Stationary Bike / Rowing Machine, Weighted Dip / Push-Up / Pull-Up folded into their bodyweight entries since every set logs weight anyway, Upright Dip, Rope Pressdown, Cyclist Squat, generic Leg Curl and Calf Raise, L-Sit Practice, Lower and Upper Body Mobility) |
 | `app/workout/active/` | Active workout screen (unchanged this session) |
-| `scripts/test-*.ts` (14) · `check-db-state.ts` · `generate-program-format-library.ts` | Test suites; DB state reports rows missing `user_id`; regenerates the library-name list in `PROGRAM_FORMAT.md` (run after any catalog change) |
+| `scripts/test-*.ts` (14) · `check-db-state.ts` · `generate-program-format-library.ts` · `activate-program-file.ts` | Test suites; DB state reports rows missing `user_id`; regenerates the library-name list in `PROGRAM_FORMAT.md` (run after any catalog change); loads a program file into an account by email (a write, owner go-ahead required) |
 
 ## Operational landmines
 

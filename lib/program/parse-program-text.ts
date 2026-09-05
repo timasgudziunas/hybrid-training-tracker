@@ -232,7 +232,8 @@ function normalizeRestCategory(raw: string): RestCategory | null {
   return REST_CATEGORY_ALIASES[key] ?? REST_CATEGORY_ALIASES[key.replace(/-/g, ' ')] ?? null;
 }
 
-const ULTIMATE_FLAG_PATTERN = /^\+\s*ultimate practice later\b/i;
+// "Ultimate", "Frisbee", and "Ultimate frisbee" all mean the same practice.
+const ULTIMATE_FLAG_PATTERN = /^\+\s*(?:ultimate(?:\s+frisbee)?|frisbee)\s+practice later\b/i;
 const TARGET_DURATION_PATTERN = /^(?:target duration|duration)\s*:\s*(\d+)/i;
 const DAY_HEADER_PATTERN = /^##\s+([A-Za-z]+)\s*(?::\s*(.*))?$/;
 const SECTION_HEADER_PATTERN = /^###\s+(.+)$/;
