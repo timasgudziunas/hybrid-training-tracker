@@ -83,32 +83,7 @@ export const BACK_EXERCISES: CatalogExercise[] = [
       'Only using a partial range',
       'Letting the shoulders shrug instead of the lats initiating',
     ],
-    substitutions: ['pull-up', 'weighted-pull-up'],
-  },
-  {
-    id: 'weighted-pull-up',
-    name: 'Weighted Pull-Up',
-    category: 'strength',
-    primaryMuscles: ['lats'],
-    secondaryMuscles: ['biceps', 'upper back'],
-    progressionType: 'double-progression',
-    muscleGroup: 'back',
-    equipment: ['pull-up-bar', 'other'],
-    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 4, maxReps: 8 },
-    intendedFeeling:
-      'You should feel the same full lat stretch and pull as a bodyweight pull up under additional external load.',
-    cues: [
-      'Secure the added weight before starting the set',
-      'Start every rep from a full hang',
-      'Drive the elbows down and back without kipping',
-      'Lower under control despite the extra load',
-    ],
-    commonMistakes: [
-      'Adding weight before bodyweight reps are fully controlled',
-      'Using momentum or kipping to move the extra load',
-      'Cutting the range short as the set gets hard',
-    ],
-    substitutions: ['pull-up', 'chin-up'],
+    substitutions: ['pull-up'],
   },
   {
     id: 'wide-grip-lat-pulldown',

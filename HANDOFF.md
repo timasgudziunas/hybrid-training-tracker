@@ -34,6 +34,7 @@ Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 - Old progress photos stay at bucket root (`<date>.<ext>`); new ones go under `<userId>/`. Signing works for both because the server signs whatever path the owner's own row holds. No object move needed.
 - `getAthleteContext()` calls `supabase.auth.getUser()` (a network round-trip) once per server action or page fetch. Fine at this scale; switch to `getClaims()` if it ever shows up in latency.
 - If `APP_PASSPHRASE` is ever removed from Vercel env, sign-up becomes open to anyone.
+- History logged under a folded catalog name (e.g. Block 1's `easy-cycling`, `calf-raise`, `l-sit-practice`) is untouched and still resolves if that exact name is pasted again; it simply carries no library guidance now. A new program using the canonical name starts fresh history for that exercise.
 - Benchmarks and readiness may return later: both tables and their PRODUCT_SPEC sections are retained. If they return under accounts, they need `user_id` + an `own rows` policy like every other table.
 
 ## Where everything lives
@@ -48,7 +49,7 @@ Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
 | `app/body/bodyweight-series-actions.ts` | Bodyweight series for Review (moved from the deleted progress actions) |
 | `supabase/schema.sql` | Idempotent multi-user schema with RLS policies (benchmarks and readiness tables retired, not dropped) |
 | `supabase/migrations/2026-09-05-backfill-owner-user-id.sql` | One-time owner backfill (edit the email placeholder first) |
-| `lib/program/catalog/*.ts` · `lib/program/exercise-catalog.ts` | The 281-entry library (unchanged) |
+| `lib/program/catalog/*.ts` · `lib/program/exercise-catalog.ts` | The library, 265 entries after the 2026-09-05 overlap cleanup (15 removed: 5 cardio intensity variants folded into Stationary Bike / Rowing Machine, Weighted Dip / Push-Up / Pull-Up folded into their bodyweight entries since every set logs weight anyway, Upright Dip, Rope Pressdown, Cyclist Squat, generic Leg Curl and Calf Raise, L-Sit Practice, Lower and Upper Body Mobility) |
 | `app/workout/active/` | Active workout screen (unchanged this session) |
 | `scripts/test-*.ts` (14) · `check-db-state.ts` · `generate-program-format-library.ts` | Test suites; DB state reports rows missing `user_id`; regenerates the library-name list in `PROGRAM_FORMAT.md` (run after any catalog change) |
 

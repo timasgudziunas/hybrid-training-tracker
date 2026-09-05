@@ -464,32 +464,7 @@ export const ARM_EXERCISES: CatalogExercise[] = [
     muscleGroup: 'triceps',
     equipment: ['cable'],
     defaultPrescription: { type: 'repetitions', sets: 3, minReps: 10, maxReps: 15 },
-    substitutions: ['rope-pressdown', 'single-arm-cable-pressdown'],
-  },
-  {
-    id: 'rope-pressdown',
-    name: 'Rope Pressdown',
-    category: 'hypertrophy',
-    primaryMuscles: ['triceps'],
-    secondaryMuscles: [],
-    progressionType: 'double-progression',
-    muscleGroup: 'triceps',
-    equipment: ['cable'],
-    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 10, maxReps: 15 },
-    intendedFeeling:
-      'You should feel an extra squeeze at the bottom as the rope splits apart, on top of the usual triceps pressdown contraction.',
-    cues: [
-      'Pin your elbows at your sides and keep them still',
-      'Press down and split the rope ends apart at the bottom',
-      'Squeeze the triceps hard at full extension',
-      'Control the return to a full stretch',
-    ],
-    commonMistakes: [
-      'Letting the elbows drift away from the body',
-      'Skipping the rope split at the bottom',
-      'Using the shoulders to help push the weight down',
-    ],
-    substitutions: ['triceps-pressdown', 'single-arm-cable-pressdown'],
+    substitutions: ['single-arm-cable-pressdown'],
   },
   {
     id: 'single-arm-cable-pressdown',
@@ -514,7 +489,7 @@ export const ARM_EXERCISES: CatalogExercise[] = [
       'Rotating the torso to help finish the rep',
       'Cutting the stretch short at the top',
     ],
-    substitutions: ['triceps-pressdown', 'rope-pressdown'],
+    substitutions: ['triceps-pressdown'],
   },
   {
     id: 'kickback',
@@ -542,31 +517,6 @@ export const ARM_EXERCISES: CatalogExercise[] = [
     substitutions: ['triceps-pressdown', 'dumbbell-overhead-extension'],
   },
   {
-    id: 'upright-dip',
-    name: 'Upright Dip',
-    category: 'calisthenics',
-    primaryMuscles: ['triceps'],
-    secondaryMuscles: ['chest', 'shoulders'],
-    progressionType: 'double-progression',
-    muscleGroup: 'triceps',
-    equipment: ['dip-bars'],
-    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 8, maxReps: 15 },
-    intendedFeeling:
-      'You should feel your triceps driving the lockout with your torso kept upright, biasing the triceps over the chest.',
-    cues: [
-      'Keep your torso as upright as possible throughout',
-      'Lower until your shoulders dip just below your elbows',
-      'Keep your elbows tracking back, not flared wide',
-      'Press up through full extension without swinging',
-    ],
-    commonMistakes: [
-      'Leaning forward and shifting the work to the chest',
-      'Descending so deep it strains the front of the shoulder',
-      'Using a leg swing to help finish the rep',
-    ],
-    substitutions: ['bench-dip', 'close-grip-bench-press'],
-  },
-  {
     id: 'bench-dip',
     name: 'Bench Dip',
     category: 'calisthenics',
@@ -589,7 +539,7 @@ export const ARM_EXERCISES: CatalogExercise[] = [
       'Descending too deep and straining the front of the shoulder',
       'Using leg drive instead of the triceps to finish the rep',
     ],
-    substitutions: ['upright-dip', 'triceps-pressdown'],
+    substitutions: ['dip', 'triceps-pressdown'],
   },
   {
     id: 'machine-triceps-extension',

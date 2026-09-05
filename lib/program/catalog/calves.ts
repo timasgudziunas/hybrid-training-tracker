@@ -27,32 +27,7 @@ export const CALF_EXERCISES: CatalogExercise[] = [
       'Only using a short partial range',
       'Rushing reps so momentum replaces the calf squeeze',
     ],
-    substitutions: ['calf-raise', 'smith-machine-calf-raise'],
-  },
-  {
-    id: 'calf-raise',
-    name: 'Calf Raise',
-    category: 'hypertrophy',
-    primaryMuscles: ['calves'],
-    secondaryMuscles: [],
-    progressionType: 'double-progression',
-    muscleGroup: 'calves',
-    equipment: ['machine'],
-    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 10, maxReps: 15 },
-    intendedFeeling:
-      'You should feel your calves stretch at the bottom and squeeze fully at the top of every rep.',
-    cues: [
-      'Lower your heels until you feel a full stretch',
-      'Push up as high onto your toes as possible',
-      'Pause and squeeze at the top',
-      'Control the descent instead of dropping',
-    ],
-    commonMistakes: [
-      'Bouncing out of the bottom stretch',
-      'Using a short, partial range',
-      'Rushing reps so the calf never fully contracts',
-    ],
-    substitutions: ['standing-calf-raise', 'seated-calf-raise'],
+    substitutions: ['smith-machine-calf-raise'],
   },
   {
     id: 'seated-calf-raise',
@@ -77,7 +52,7 @@ export const CALF_EXERCISES: CatalogExercise[] = [
       'Bouncing at the bottom of the stretch',
       'Letting the knees lift off the pad to cheat more height',
     ],
-    substitutions: ['standing-calf-raise', 'calf-raise'],
+    substitutions: ['standing-calf-raise'],
   },
   {
     id: 'leg-press-calf-raise',
@@ -177,7 +152,7 @@ export const CALF_EXERCISES: CatalogExercise[] = [
       'Bouncing at the bottom of the stretch',
       'Letting the knees bend to assist the raise',
     ],
-    substitutions: ['standing-calf-raise', 'calf-raise'],
+    substitutions: ['standing-calf-raise'],
   },
   {
     id: 'tibialis-raise',

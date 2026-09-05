@@ -229,7 +229,7 @@ export const POSTERIOR_CHAIN_EXERCISES: CatalogExercise[] = [
       'Lifting the hips or back off the pad to move more weight',
       'Letting the weight drop instead of controlling the negative',
     ],
-    substitutions: ['lying-leg-curl', 'leg-curl'],
+    substitutions: ['lying-leg-curl'],
   },
   {
     id: 'lying-leg-curl',
@@ -254,32 +254,7 @@ export const POSTERIOR_CHAIN_EXERCISES: CatalogExercise[] = [
       'Using momentum instead of a controlled curl',
       'Cutting the range short at either end',
     ],
-    substitutions: ['seated-leg-curl', 'leg-curl'],
-  },
-  {
-    id: 'leg-curl',
-    name: 'Leg Curl',
-    category: 'hypertrophy',
-    primaryMuscles: ['hamstrings'],
-    secondaryMuscles: [],
-    progressionType: 'double-progression',
-    muscleGroup: 'hamstrings',
-    equipment: ['machine'],
-    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 10, maxReps: 15 },
-    intendedFeeling:
-      'You should feel your hamstrings contracting through the full range, from full stretch to full squeeze.',
-    cues: [
-      'Set the pad position so it contacts just above your heels',
-      'Curl through a full range under control',
-      'Squeeze hard at the top of the curl',
-      'Control the return to the stretch rather than letting it drop',
-    ],
-    commonMistakes: [
-      'Using short, bouncy partial reps',
-      'Lifting the hips to move more weight',
-      'Letting the weight drop on the way back instead of controlling it',
-    ],
-    substitutions: ['seated-leg-curl', 'lying-leg-curl'],
+    substitutions: ['seated-leg-curl'],
   },
 
   // --- Glutes: hip extension pattern ---

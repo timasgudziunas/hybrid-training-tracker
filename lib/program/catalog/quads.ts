@@ -527,29 +527,4 @@ export const QUAD_EXERCISES: CatalogExercise[] = [
       'Setting the hold too shallow to load the quads',
     ],
   },
-  {
-    id: 'cyclist-squat',
-    name: 'Cyclist Squat',
-    category: 'hypertrophy',
-    primaryMuscles: ['quads'],
-    secondaryMuscles: ['glutes'],
-    progressionType: 'double-progression',
-    muscleGroup: 'quads',
-    equipment: ['barbell'],
-    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 8, maxReps: 12 },
-    intendedFeeling:
-      'You should feel an intensely quad-focused squat with your heels elevated and feet close together, and very little demand on your hips.',
-    cues: [
-      'Elevate your heels and set a narrow stance',
-      'Keep your torso upright throughout the descent',
-      'Sit straight down rather than back',
-      'Drive up through a full range without locking out hard',
-    ],
-    commonMistakes: [
-      'Using a stance wide enough to shift load back to the hips',
-      'Rushing the descent instead of controlling it',
-      'Cutting the range short to handle more weight',
-    ],
-    substitutions: ['heel-elevated-squat', 'front-squat'],
-  },
 ];

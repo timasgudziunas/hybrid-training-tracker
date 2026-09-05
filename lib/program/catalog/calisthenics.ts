@@ -8,7 +8,8 @@ import type { CatalogExercise } from '../program-types';
  * Every other entry is new library content: pushing and pulling static-hold
  * skills, dip and push-up progressions, and the two qualitative warm-up
  * blocks the paste-format program references by name (Pulling Preparation,
- * Upper Body Preparation) plus the L-Sit Practice preset.
+ * Upper Body Preparation). The former L-Sit Practice preset folded into
+ * L-Sit in the 2026-09-05 overlap cleanup.
  */
 export const CALISTHENICS_EXERCISES: CatalogExercise[] = [
   // --- Preserved: scapular and planche foundation ---
@@ -218,35 +219,6 @@ export const CALISTHENICS_EXERCISES: CatalogExercise[] = [
       'Doing enough volume that it becomes its own fatiguing set',
       'Skipping the dead hang and going straight into loaded pulling',
       'Rushing the band pull-aparts with momentum instead of a controlled squeeze',
-    ],
-  },
-  {
-    id: 'l-sit-practice',
-    name: 'L-Sit Practice',
-    category: 'calisthenics',
-    primaryMuscles: ['hip flexors', 'core'],
-    secondaryMuscles: ['shoulders', 'triceps'],
-    progressionType: 'none',
-    muscleGroup: 'core',
-    equipment: ['bodyweight'],
-    defaultPrescription: {
-      type: 'qualitative',
-      description: 'Four to five high quality attempts using the hardest progression that can be held with good position.',
-      approxMinMinutes: 8,
-      approxMaxMinutes: 12,
-    },
-    intendedFeeling:
-      'You should feel your hip flexors and core holding a clean, compressed position with your shoulders depressed, never a shaky, collapsing attempt.',
-    cues: [
-      'Pick the hardest progression you can hold with good position, not the hardest one you can barely start',
-      'Depress your shoulders away from your ears before lifting your legs',
-      'Prioritize a clean hold over a longer, deteriorating one',
-      'Rest fully between attempts so every attempt starts fresh',
-    ],
-    commonMistakes: [
-      'Choosing a progression too advanced and shaking through it',
-      'Letting the hold continue well after position has broken down',
-      'Rushing between attempts without enough recovery',
     ],
   },
 

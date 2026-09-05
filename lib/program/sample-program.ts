@@ -47,7 +47,7 @@ Target duration: 60 minutes
 - L-Sit: Four to five high quality attempts.
 
 ### Recovery (recovery, optional)
-- Zone 2 Cardio (Cycling Preferred): Ten minutes of easy, conversational-pace cycling. (~10 min)
+- Stationary Bike: Ten minutes of easy, conversational-pace cycling. (~10 min)
 
 ## Tuesday: Sample Recovery
 A lighter second day, mostly to show a program can span more than one day.

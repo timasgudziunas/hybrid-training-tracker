@@ -7,8 +7,8 @@ import type { CatalogExercise } from '../program-types';
  * guidance existed before so it is written fresh here), adding only
  * muscleGroup, equipment, and defaultPrescription. Every other entry is
  * new library content: joint prep drills, static stretches, and corrective
- * work, plus the qualitative flow preset the paste-format program
- * references by name (Lower and Upper Body Mobility). No walking-based
+ * work, plus the qualitative Mobility Flow preset (the former Lower and
+ * Upper Body Mobility folded into it on 2026-09-05). No walking-based
  * warm-ups live here; machine cardio and dead hangs live in their own
  * files.
  */
@@ -94,45 +94,6 @@ export const MOBILITY_PREHAB_EXERCISES: CatalogExercise[] = [
       'Rushing through so fast that nothing meaningfully improves',
       'Forcing an aggressive stretch into an irritated area',
       'Skipping regions that feel fine that day instead of covering everything briefly',
-    ],
-  },
-  {
-    id: 'lower-and-upper-body-mobility',
-    name: 'Lower and Upper Body Mobility',
-    category: 'mobility',
-    primaryMuscles: ['hips', 'ankles', 'shoulders', 'thoracic spine', 'wrists'],
-    secondaryMuscles: [],
-    progressionType: 'none',
-    muscleGroup: 'full-body',
-    equipment: ['bodyweight'],
-    defaultPrescription: {
-      type: 'qualitative',
-      description: 'Controlled mobility through commonly used athletic ranges across the hips, ankles, spine, and shoulders.',
-      items: [
-        '90/90 hip switches',
-        'Adductor rock backs',
-        'Hip flexor mobility',
-        'Deep squat hold',
-        'Ankle dorsiflexion rocks',
-        'Thoracic rotations',
-        'Shoulder circles',
-        'Wrist mobility',
-      ],
-      approxMinMinutes: 12,
-      approxMaxMinutes: 15,
-    },
-    intendedFeeling:
-      'You should feel your hips, ankles, spine, and shoulders all moving a little more freely by the end, with no area feeling forced or irritated.',
-    cues: [
-      'Use controlled, comfortable ranges throughout, never an aggressive stretch',
-      'Give a little extra time to whichever area feels tightest that day',
-      'Keep breathing steady rather than holding tension',
-      'Treat this as preparation, not a competition for maximum range',
-    ],
-    commonMistakes: [
-      'Aggressively stretching an irritated groin or joint instead of working around it',
-      'Rushing through every item without actually feeling any of them',
-      'Skipping the upper body portion when only the legs feel tight',
     ],
   },
 
