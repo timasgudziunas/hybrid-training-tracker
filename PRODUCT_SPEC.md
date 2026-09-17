@@ -142,6 +142,16 @@ The active workout is primarily a linear, one-thing-at-a-time experience, like m
 - An exercise can be added mid-workout from the library (overview and completion screen). It lands in an optional "Added today" section of that session, uses the exercise's preset, and never turns the session into Modified: doing extra is not failing the plan. Added exercises are listed on the completion screen as information.
 - Presets feed Swap: swapping in an exercise that logs a different kind of set (a hold for a reps exercise, a cardio block for a hold) adopts the substitute's preset while keeping the program's set count; reverting restores the original prescription. Same-kind swaps keep the program's sets and reps as written.
 
+### Supersets (owner request, 2026-09-17)
+
+A superset is two exercises performed back to back with little or no rest between them: one set of the first exercise, straight into one set of the second, resting only after both sets are done, then repeating that pattern for every set. A pasted program marks two or more consecutive exercises in the same section as one superset with a pipe clause added to each member's line, for example a line ending in `| superset: A`. Every exercise in a section that carries the same letter becomes one group.
+
+During the active workout the flow alternates between a group's members instead of finishing one exercise before starting the next: one set of the first member, then one set of the second, back to the first for its next set, and so on until every set of both members is logged. The log button on a superset member reads "Next: <partner>" in place of "Next set". Rest guidance is shown only once, on the last member, as "Rest after the pair".
+
+Each member keeps its own history, previous performance, and swap behavior; a superset never merges two exercises into one record. Skipping one member does not skip the whole group. It leaves the remaining member or members as ordinary straight sets with normal rest between them. Members can carry different set counts, and whichever member finishes its sets first simply stops appearing in the alternation while the other continues alone until it is also done.
+
+Today and the session overview both show the grouping. Today brackets a group's rows with a left border and a small label naming the letter and when rest happens. The overview marks each member with a small pill next to its name.
+
 ## 7. Previous Performance
 
 Previous performance should be highly visible. For every strength exercise, show "LAST TIME" with weight x reps for each set, for example:

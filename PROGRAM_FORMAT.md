@@ -72,7 +72,7 @@ A line starting with `>` right after a section header becomes a note shown with 
 
 ### Exercises
 
-Each exercise is a line starting with a dash, in the form `Name: prescription`. Add optional clauses after a prescription with a pipe character, for rest guidance and for notes.
+Each exercise is a line starting with a dash, in the form `Name: prescription`. Add optional clauses after a prescription with a pipe character, for rest guidance, for notes, and for supersets.
 
 ```
 - Back Squat: 3 x 6-10 | rest: heavy compound | notes: brace before every rep
@@ -158,6 +158,27 @@ Give two exercise names separated by a slash or the word "or" to offer a choice 
 - Face Pull / Reverse Cable Fly: 2 x 15-20 | rest: isolation
 - Seated Leg Curl or Lying Leg Curl: 3 x 10-15
 ```
+
+### Supersets
+
+Two exercises performed back to back with little or no rest between them: one set of the first, straight into one set of the second, rest only after both, repeat for every set. Add a `superset:` clause with a shared letter to both lines.
+
+```
+- Dumbbell Bench Press: 3 x 8-12 | superset: A | rest: moderate compound
+- Chest-Supported Row: 3 x 8-12 | superset: A
+```
+
+The token is one to three letters or digits, so A, B2, and 1 all work. Case does not matter, it is always shown as a capital letter.
+
+The two lines need to be in the same section and right next to each other. If they are not, the app moves them together automatically and the preview tells you so.
+
+Put rest guidance on the last line of the pair, not the first. That is where the app shows it, since rest only happens after both exercises are done for that round.
+
+Try to give both exercises the same number of sets. If the counts do not match, the preview warns you and the exercise with fewer sets simply finishes early.
+
+A descriptive line without a formal sets and reps structure, like a warm up or a mobility flow, cannot be part of a superset.
+
+In the workout, the app alternates a set of the first exercise with a set of the second, returning to the first exercise once the second is done, until every set of the round is complete. Each exercise still keeps its own history, its own previous performance shown while you lift, and its own swap options.
 
 ### Exercise names and the exercise library
 

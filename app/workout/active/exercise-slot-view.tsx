@@ -42,6 +42,8 @@ export default function ExerciseSlotView({
   exercises,
   showRir,
   advanceLabel,
+  supersetInfo,
+  logSetLabel,
   onChoose,
   onLogSet,
   onRemoveCurrentSet,
@@ -69,6 +71,22 @@ export default function ExerciseSlotView({
   /** What the big advance button reads once this exercise's sets/ride are
    * fully logged (active-workout-screen.tsx, derived from what's next). */
   advanceLabel: string;
+  /** Superset display for this slot (owner's definition, 2026-09-17): null
+   * when it isn't in one. `token` is the program's group letter (e.g. "A"),
+   * `partnerNames` lists every OTHER member's currently-logged name,
+   * `nextPartnerName` is who tapping the log button would move to right
+   * now, and `isLastInGroup` is whether this is the group's last member in
+   * template order (active-workout-screen.tsx). */
+  supersetInfo: {
+    token: string;
+    partnerNames: string[];
+    nextPartnerName: string | null;
+    isLastInGroup: boolean;
+  } | null;
+  /** Overrides ExerciseEntryCard's own "Next set"/"Log set"/"Done: rep N of
+   * M" wording on the button that commits the current set — set while a
+   * superset partner still needs work, undefined otherwise. */
+  logSetLabel?: string;
   onChoose: (exerciseId: string) => void;
   onLogSet: (set: SetLog) => void;
   onRemoveCurrentSet: () => void;
@@ -100,12 +118,22 @@ export default function ExerciseSlotView({
   const prescribed = templateSlot.exercise;
   const isSkipped = slotLog.status === "skipped";
 
+  // Small pill naming the superset group (e.g. "Superset A"), shown on both
+  // the choice screen and the logging body. Kept as one shared element so
+  // the two render sites can never drift in wording.
+  const supersetPill = supersetInfo ? (
+    <span className="inline-flex w-fit items-center rounded-full border border-accent/40 bg-accent-soft px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent-strong">
+      Superset {supersetInfo.token}
+    </span>
+  ) : null;
+
   if (!slotLog.chosenExerciseId) {
     return (
       <div className="flex flex-col gap-5">
         <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
           {templateSlot.section.name}
         </p>
+        {supersetPill}
         <ExerciseChoiceCard
           primaryExerciseId={prescribed.exerciseId}
           alternativeExerciseIds={prescribed.alternativeExerciseIds ?? []}
@@ -134,6 +162,23 @@ export default function ExerciseSlotView({
   const restGuidance = prescribed.restCategory ? REST_GUIDANCE_BY_CATEGORY[prescribed.restCategory] : null;
   const prescribedName = exercises[prescribed.exerciseId]?.name ?? prescribed.exerciseId;
 
+  // In a superset, a non-last member gets "no rest, go straight into the
+  // partner" guidance instead of the normal rest line; the last member
+  // keeps the normal guidance but prefixed to make clear it covers the
+  // whole pair (or round, for a group of more than two) rather than just
+  // this one exercise.
+  const restLine = (() => {
+    if (supersetInfo && !supersetInfo.isLastInGroup) {
+      return `No rest here. Straight into ${supersetInfo.nextPartnerName ?? "the next exercise"}.`;
+    }
+    if (!restGuidance) return null;
+    if (supersetInfo?.isLastInGroup) {
+      const prefix = supersetInfo.partnerNames.length > 1 ? "Rest after the round" : "Rest after the pair";
+      return `${prefix}: ${restGuidance.guidance}`;
+    }
+    return `Rest: ${restGuidance.guidance}`;
+  })();
+
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
       {isSkipped ? (
@@ -153,6 +198,12 @@ export default function ExerciseSlotView({
         <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
           {templateSlot.section.name}
         </p>
+        {supersetInfo ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {supersetPill}
+            <span className="text-xs text-ink-tertiary">With {supersetInfo.partnerNames.join(" and ")}</span>
+          </div>
+        ) : null}
         <h1 className="font-display text-2xl font-bold leading-tight text-ink-primary sm:text-3xl">{name}</h1>
         {hasSubstitution ? (
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink-tertiary">
@@ -166,7 +217,7 @@ export default function ExerciseSlotView({
             </button>
           </div>
         ) : null}
-        {restGuidance ? <p className="text-xs text-ink-tertiary">Rest: {restGuidance.guidance}</p> : null}
+        {restLine ? <p className="text-xs text-ink-tertiary">{restLine}</p> : null}
         {prescribed.notes?.length ? (
           <ul className="flex flex-col gap-0.5 text-xs text-ink-tertiary">
             {prescribed.notes.map((note) => (
@@ -211,6 +262,7 @@ export default function ExerciseSlotView({
           exercise={chosenExercise}
           showRir={showRir}
           advanceLabel={advanceLabel}
+          logSetLabel={logSetLabel}
           onLogSet={onLogSet}
           onRemoveCurrentSet={onRemoveCurrentSet}
           onDeleteSet={onDeleteSet}

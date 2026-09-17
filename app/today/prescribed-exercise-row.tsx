@@ -25,10 +25,16 @@ export default function PrescribedExerciseRow({
   exercise,
   sectionName,
   exercises,
+  isSupersetMember = false,
 }: {
   exercise: PrescribedExercise;
   sectionName: string;
   exercises: Record<string, Exercise>;
+  /** True when this row renders inside a superset wrapper (see
+   * WorkoutSectionCard), which already carries the group's own label line
+   * and left border: the row itself tightens its padding to read as one
+   * member of a pair rather than a standalone exercise. */
+  isSupersetMember?: boolean;
 }) {
   const name = resolveExerciseChoiceName(exercises, exercise.exerciseId, exercise.alternativeExerciseIds);
   const restGuidance = exercise.restCategory ? REST_GUIDANCE_BY_CATEGORY[exercise.restCategory] : null;
@@ -38,7 +44,7 @@ export default function PrescribedExerciseRow({
   const showPrescriptionInline = exercise.prescription.type !== "qualitative";
 
   return (
-    <li className="flex flex-col gap-1.5 py-3.5">
+    <li className={`flex flex-col gap-1.5 ${isSupersetMember ? "py-2.5" : "py-3.5"}`}>
       {!nameRepeatsSection || showPrescriptionInline ? (
         <div className="flex items-baseline justify-between gap-3">
           {!nameRepeatsSection ? <span className="text-sm font-medium text-ink-primary">{name}</span> : null}

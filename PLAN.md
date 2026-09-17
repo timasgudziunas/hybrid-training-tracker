@@ -109,6 +109,19 @@ Owner decisions (asked and answered 2026-09-04): remove everything on foot from 
 
 **Done when:** build, lint, and every test suite green; headless drive of the sample workout covers the new flow; owner confirms in the gym. *Shipped 2026-09-04: build, lint, 15 suites (4,592 assertions), and a 39-check headless drive all green; gym confirmation pending.*
 
+## R11: Supersets (2026-09-17)
+
+Owner request: two exercises performed back to back with little or no rest between them, one set of the first straight into one set of the second, resting only after both, repeating for every set. `PrescribedExercise.supersetGroup` carries the grouping token; the parser guarantees members are contiguous within a section and every group has at least two members.
+
+- [x] Parser accepts a `| superset: <letter>` clause on a member line and validates it: members contiguous within a section, groups of at least two, never on a qualitative prescription.
+- [x] PROGRAM_FORMAT.md documents the superset clause.
+- [x] Sample program includes one superset pair.
+- [x] Active workout alternates one set per member, returning to the first after the last; the log button reads "Next: <partner>" and the last member shows "Rest after the pair"; skipping one member leaves the other as straight sets; differing set counts let the shorter member finish early.
+- [x] Today, session overview, and history all show the grouping: Today brackets consecutive members with a labeled left border, overview and history mark each member with a small pill.
+- [x] Tests cover parser validation, alternation, and display grouping.
+
+**Done when:** build, lint, and every test suite green; a superset pair runs end to end in the sample workout.
+
 > The phases below predate the rework. Their FEATURE checklists remain the requirements source for R3-R8 above; their ordering and the assumption of a code-seeded program are superseded.
 
 ## Phase 4: Progression engine

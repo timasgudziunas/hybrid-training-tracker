@@ -80,7 +80,7 @@ Suggested, not final schema. Do not over-normalize prematurely if a simpler stru
 | Exercise | id, name, category, primaryMuscles, secondaryMuscles, instructions, cues, commonMistakes, intendedFeeling, progressionType, substitutions |
 | WorkoutTemplate | id, name, weekday, description, targetDuration, sections |
 | WorkoutSection | id, name, order, type (warmup, speed, power, calisthenics, strength, core, mobility, recovery, cardio) |
-| PrescribedExercise | exerciseId, sets, minReps, maxReps, duration, rest, notes, progressionRule, order |
+| PrescribedExercise | exerciseId, sets, minReps, maxReps, duration, rest, notes, progressionRule, order, supersetGroup |
 | WorkoutSession | id, date, workoutTemplateId, startedAt, completedAt, status, duration, notes, readinessData |
 | ExercisePerformance | workoutSessionId, exerciseId, sets, notes, substitution |
 | SetPerformance | setNumber, weight, reps, rir, duration, distance, time, completed |
@@ -106,7 +106,7 @@ Notes:
 
 ## Edge cases to account for
 
-Workout completed after midnight; missed workout; unscheduled workout; substituted exercise; partial workout; duplicate workout; browser refresh during an active workout; changing weight units; missing previous performance; first-ever exercise exposure; deload/reduced-volume sessions; Ultimate practice cancellation; Sunday rest; manually edited historical data.
+Workout completed after midnight; missed workout; unscheduled workout; substituted exercise; partial workout; duplicate workout; browser refresh during an active workout; changing weight units; missing previous performance; first-ever exercise exposure; deload/reduced-volume sessions; Ultimate practice cancellation; Sunday rest; manually edited historical data; a skipped superset partner.
 
 Do not let edge-case handling overwhelm the MVP.
 

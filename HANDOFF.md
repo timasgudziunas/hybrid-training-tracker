@@ -1,81 +1,80 @@
-# HANDOFF.md — Session Handoff (updated 2026-09-05 ~04:00 UTC, supersedes all 2026-09-05 ~03:15 UTC and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-09-17 ~19:30 UTC, supersedes all 2026-09-05 ~04:00 UTC and earlier versions)
 
-> To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables; the "What this project is" and "Tech stack" sections now describe accounts), then `PLAN.md` (R10 is the newest completed block; R5 benchmarks are retired; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth; `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format.
+> To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables), then `PLAN.md` (R11 Supersets is the newest completed block; R10 before it; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth (§6 now has a Supersets subsection); `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format (now documents `superset:`).
 
-## Current state (as of 2026-09-05 ~04:00 UTC)
+## Current state (as of 2026-09-17 ~19:30 UTC)
 
-**Accounts are LIVE.** `deaf6a3` pushed and deployed (Vercel commit status: success; URL returns 307 to `/sign-in`). Owner completed every cutover step on 2026-09-05 ~03:45 UTC and confirmed "I signed in and I see all my data": Confirm email is OFF in Supabase Auth (verified via the public settings endpoint), `schema.sql` applied, backfill run. `auth.users` has exactly 1 account (the owner). `check-db-state.ts`: body_checkins 9, training_programs 1, workout_sessions 8, ultimate_practice_days 0, athlete_settings 1, all with `0 without user_id`.
+**Two commits this session, both verified end to end on a local production build, pushed to `main` for the Vercel deploy** (verify with landmine 6's `gh api` command; the push happened at the end of this session, so check the status before assuming it is live).
 
-- **Active program: `0df9dadc` "Athletic Muscle and Calisthenics Foundation"** (Block 2, six days Mon to Sat, Sunday rest, Frisbee practice Mon/Wed/Thu), loaded 2026-09-05 ~03:44 UTC via `scripts/activate-program-file.ts` from `programs/block-2-athletic-muscle-and-calisthenics-foundation.md`. Block 1 `aea8db93` stays inactive as history. Before loading, three names were aligned to library entries (Overhead Press to Overhead Barbell Press, Ab-Wheel Rollout to Ab Wheel, Broad Jump to Standing Broad Jump) and five `rest: core` clauses became `rest: isolation` (core is not a rest category). Owner then confirmed (via their program-writing bot) Copenhagen Plank means Short-Lever Copenhagen Plank and Cable Triceps Extension means Overhead Cable Triceps Extension; both renamed, program reloaded as `771a9477` (the first load `bd4bc30c` was deleted, no sessions referenced it). The owner then asked for library entries for the six remaining movements (Assisted Muscle-Up Transition, Explosive Assisted Pull-Up, False-Grip Hang, Tuck Flag Hold, Wall Handstand Shoulder Shrug, Wall-Facing Handstand Hold): added to `lib/program/catalog/calisthenics.ts` (library now 271), program reloaded as `0df9dadc` so the stored parse carries their guidance (guidance is copied into `parsed` at paste time, so a catalog change never reaches an already-stored program without a reload). Only the eight warm-up and mobility flows are without guidance, by design. Superseded rows `bd4bc30c` and `771a9477` were deleted (no sessions referenced them). The parser now accepts `+ Frisbee practice later` and `+ Ultimate frisbee practice later` as the practice flag.
-- **Verification state (this tree):** `npm run build` green with zero static-render fallbacks; `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 14 test suites green (4,629 assertions) plus `validate-program.ts`. Headless Edge drive of the auth flow against a local production build (`next start -p 3100`, throwaway confirmed user via the admin API): **12/12** (gate redirect with redirect param, wrong password error, sign-in lands on the requested page, Today renders for a fresh account, no Progress nav item, Settings shows the signed-in email, toggle measures 48 x 28, sign-out returns to sign-in and the gate is back, invite field shown when `APP_PASSPHRASE` is set, wrong invite rejected). Data reads/writes under RLS could NOT be verified: the policies do not exist in Supabase yet.
+- **`d220fca` gym feedback batch** (owner's notes from gym sessions, 2026-09-17): set inputs no longer prefill from a previous session (reps and seconds always blank; weight, box height, jump distance still carry forward within the current session only); the per-exercise timer is persisted per slot (`ExerciseSlotLog.activeSeconds` + `enteredAt`, `lib/workout-session/slot-time.ts`) so leaving and returning, or refreshing, keeps counting; a skipped exercise can be un-skipped (banner + footer button, and logging a set on it un-skips automatically); the overview and progress bar show the swapped-in exercise name; a "Swapped in for X" line with a one-tap Undo sits under the heading; the swap panel is a full-width block below the footer controls with a 48px search box (16px text) and 48px+ rows; Weighted Plank asks for added weight (hold-field config), medicine ball throws and Trap Bar Jump ask for weight (`lib/program/set-entry-fields.ts`); `PROGRAM_FORMAT.md` library list regenerated.
+- **Supersets (uncommitted at the time of writing this file; committed together with this handoff as the next commit).** Paste clause `| superset: A` on each member line (`lib/program/parse-program-text.ts`, `PrescribedExercise.supersetGroup`). Parser: lone member → warning and field stripped; non-contiguous members moved together with a warning and orders renumbered; mismatched set counts → warning; descriptive line → error. Execution (`lib/workout-session/superset-flow.ts`, `active-workout-screen.tsx` `handleLogSet`): logging a NEW set hands off to the next partner that still needs work, wrapping through the group; edits never move; the log button reads `Next: <partner>`; the slot view shows a `Superset A` pill, `With <partner>`, `No rest here. Straight into <partner>.` on non-last members and `Rest after the pair: ...` on the last. Today, the paste preview, the overview, and history tag members. Sample program's Monday pairs Bulgarian Split Squat and Cable Woodchop (both 2 sets) as superset A.
+- **Not done, by owner instruction:** the "cap sets at three" and "too much volume" notes were program content, and the owner said they are rewriting the program themselves. Nothing in the app enforces a set cap.
+- **Verification state (this tree):** `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 16 test suites plus `validate-program.ts` green (new: `test-slot-time.ts` 21, `test-parse-superset.ts` 37, `test-superset-flow.ts` 14); `next build` green. Headless Edge drives against `next start -p 3100` with throwaway users (deleted afterwards): feedback batch 24/24, supersets 19/19. Scripts live in the session scratchpad only (not in the repo).
+- Active program is unchanged: `0df9dadc` "Athletic Muscle and Calisthenics Foundation" (Block 2). The owner is rewriting it; the new program will need `superset:` clauses wherever pairs are intended, and set counts they want.
 
-## Just completed (this session, 2026-09-05): four owner requests
+## Just completed (this session, 2026-09-17)
 
-1. **Athletic benchmarks removed "for now."** `app/progress/` and `lib/benchmarks/` deleted; Progress nav item gone (mobile nav is now Today, History, More); monthly review lost its "Athletic benchmarks logged" and "Calisthenics" sections; `fetchBodyweightSeries` moved to `app/body/bodyweight-series-actions.ts`. The `athletic_benchmarks` table is intentionally NOT dropped (no code path, no policies). Docs note the pause (PLAN R5 / Phase 7, PRODUCT_SPEC screens table and benchmark section, CLAUDE.md non-negotiable 23).
-2. **Accounts (Supabase Auth, email + password).** `@supabase/ssr` added. `proxy.ts` now requires a signed-in user on every route except `/sign-in`, `/sign-up`, `/auth/*`. New: `app/sign-in/`, `app/sign-up/`, `app/auth/actions.ts` (sign in / sign up / sign out), `app/auth/callback/route.ts` (email confirmation landing), `lib/supabase/user-client.ts` (anon key + session cookies), `lib/auth/athlete-context.ts` (`getAthleteContext()` returns `{ supabase, userId, email }` or `{ ok: false, reason }`). Every data-access file now goes through the athlete context; upserts include `user_id` and conflict on `(user_id, <date|key>)`. Service-role client is reserved for progress-photo signing (upload path is now `<userId>/<date>.<ext>`) and admin scripts. `APP_PASSPHRASE` is reused as an optional invite passphrase for sign-up only. Settings page gained an Account card (email + Sign out). Local workout mirrors are cleared on the sign-in / sign-up screens and on sign-out (`app/auth/clear-local-athlete-data.ts`) so a shared device never resumes another athlete's session. Today, Program, and both Library pages are now `force-dynamic` (they read per-account data). The old passphrase gate (`app/unlock/`, `lib/auth/passphrase-cookie.ts`) is deleted.
-3. **RIR toggle** on /settings redrawn at 48 x 28 (was 52 x 44); the whole row is the switch.
-4. **Readiness removed "for now"** (second request, after the owner saw benchmarks still live in production because nothing was pushed yet). `app/readiness/` and the home readiness strip deleted, Readiness nav item gone, Recovery tiles (sleep, energy, soreness, groin trend) dropped from both reviews, `app/review/recovery-metrics.ts` renamed to `bodyweight-change.ts` with only the bodyweight helper left. `readiness_entries` table kept, no code path, no policies, removed from the backfill migration and `check-db-state.ts`. Headless smoke with a throwaway user: no readiness strip on Today, nav is Today / History / More (Library, Program, Body, Review, Settings), Review shows Training / Progression / Bodyweight only, `/readiness` and `/progress` return 404.
+See the two bullets above. Design decisions worth knowing: one paste syntax only (`superset: <token>`, 1 to 3 letters or digits, uppercased); groups are section scoped; time spent with the app closed counts toward the current exercise (same tradeoff as the session timer); within-session weight carry-forward was kept on purpose (the owner's complaint was about previous-session defaults).
 
 ## In progress / where it stopped
 
-Nothing mid-flight. Cutover complete; this confirmation commit closes the block.
+Nothing mid-flight.
 
 ## Next steps (priority order)
 
-1. **Owner: first gym session on Block 2** (also the R10 verification list below).
-2. **Owner: gym verification of R10** on the next real session: no keyboard on arrival / Next set / Add set; Log set then Next exercise; swipe a set to delete; overview progress bar; add an exercise; swap to a different set type and revert. Also confirm the RIR toggle saves now that `athlete_settings` exists.
-3. **Inviting other athletes:** give them the URL and the invite passphrase (`APP_PASSPHRASE` in Vercel). They sign up at /sign-up and start with an empty account (no program, no history). Rotate `APP_PASSPHRASE` in Vercel + redeploy to stop new sign-ups.
-4. **Next build block: the in-app program builder** (owner: "put it off for now, but make sure it isn't forgotten"). Scope it as its own PLAN.md block before starting.
-5. Optional cosmetic: pre-existing dashes in a few in-workout strings (`lib/program/rest-guidance.ts`, `exercise-entry-card.tsx`, `app/today/format-prescription.ts`).
-6. Optional hygiene: delete stray active Saturday 2026-08-29 row `52b05e65`; repair 2026-08-26's null completed_at.
+1. **Owner: gym verification** of the feedback fixes and supersets on a real session (blank inputs, timer survives leaving, Unskip, swap panel on the phone, Undo, `Next: <partner>` flow, `Rest after the pair`).
+2. **Owner: load the rewritten program** (with `superset:` clauses) via /program or `scripts/activate-program-file.ts`.
+3. **Next build block: the in-app program builder** (PLAN R10 deferred item). When it comes, it needs a superset control too.
+4. Optional cosmetic: pre-existing dashes in a few in-workout strings (`lib/program/rest-guidance.ts`, `app/today/format-prescription.ts`, entry card range labels like "8-12").
+5. Optional hygiene: delete stray active Saturday 2026-08-29 row `52b05e65`; repair 2026-08-26's null completed_at.
 
 ## Open decisions / blockers
 
-- Old progress photos stay at bucket root (`<date>.<ext>`); new ones go under `<userId>/`. Signing works for both because the server signs whatever path the owner's own row holds. No object move needed.
-- `getAthleteContext()` calls `supabase.auth.getUser()` (a network round-trip) once per server action or page fetch. Fine at this scale; switch to `getClaims()` if it ever shows up in latency.
+- Superset rest line is template-order based: with mismatched set counts the last member's final tap can still hop back to an earlier member; the button label reflects that, the static rest line does not. Acceptable; the doc tells authors to match set counts.
+- `getAthleteContext()` calls `supabase.auth.getUser()` once per server action or page fetch. Fine at this scale.
 - If `APP_PASSPHRASE` is ever removed from Vercel env, sign-up becomes open to anyone.
-- History logged under a folded catalog name (e.g. Block 1's `easy-cycling`, `calf-raise`, `l-sit-practice`) is untouched and still resolves if that exact name is pasted again; it simply carries no library guidance now. A new program using the canonical name starts fresh history for that exercise.
-- Benchmarks and readiness may return later: both tables and their PRODUCT_SPEC sections are retained. If they return under accounts, they need `user_id` + an `own rows` policy like every other table.
+- Benchmarks and readiness may return later: tables and PRODUCT_SPEC sections retained; they would need `user_id` + an `own rows` policy.
 
 ## Where everything lives
 
 | Path | What it is |
 |---|---|
-| `proxy.ts` | Auth gate (session refresh + redirect to /sign-in) |
-| `lib/supabase/user-client.ts` · `lib/auth/athlete-context.ts` · `lib/auth/safe-redirect-path.ts` | Per-user client, the one entry point for athlete data, redirect sanitizer |
-| `lib/supabase/server-client.ts` | Service-role client: photo signing + admin scripts only |
-| `app/auth/` · `app/sign-in/` · `app/sign-up/` | Auth actions, callback route, shared shell/styles, local-data clearing, the two screens |
-| `app/settings/account-card.tsx` | Signed-in email + Sign out |
-| `app/body/bodyweight-series-actions.ts` | Bodyweight series for Review (moved from the deleted progress actions) |
-| `supabase/schema.sql` | Idempotent multi-user schema with RLS policies (benchmarks and readiness tables retired, not dropped) |
-| `supabase/migrations/2026-09-05-backfill-owner-user-id.sql` | One-time owner backfill (edit the email placeholder first) |
-| `lib/program/catalog/*.ts` · `lib/program/exercise-catalog.ts` | The library, 271 entries (265 after the 2026-09-05 overlap cleanup, plus six Block 2 calisthenics entries) (15 removed: 5 cardio intensity variants folded into Stationary Bike / Rowing Machine, Weighted Dip / Push-Up / Pull-Up folded into their bodyweight entries since every set logs weight anyway, Upright Dip, Rope Pressdown, Cyclist Squat, generic Leg Curl and Calf Raise, L-Sit Practice, Lower and Upper Body Mobility) |
-| `app/workout/active/` | Active workout screen (unchanged this session) |
-| `scripts/test-*.ts` (14) · `check-db-state.ts` · `generate-program-format-library.ts` · `activate-program-file.ts` | Test suites; DB state reports rows missing `user_id`; regenerates the library-name list in `PROGRAM_FORMAT.md` (run after any catalog change); loads a program file into an account by email (a write, owner go-ahead required) |
+| `lib/program/parse-program-text.ts` · `lib/program/program-types.ts` | Paste parser (now `superset:` clause + `finalizeSupersets`), `PrescribedExercise.supersetGroup` |
+| `lib/workout-session/superset-flow.ts` · `scripts/test-superset-flow.ts` | Pure superset handoff rule (`nextSupersetSlotKey`, `slotNeedsWork`) + tests |
+| `lib/workout-session/slot-time.ts` · `scripts/test-slot-time.ts` | Persisted per-exercise time bookkeeping + tests |
+| `lib/program/set-entry-fields.ts` | Per-exercise set input config: repetitions fields and the new hold fields (Weighted Plank), ball weight overrides |
+| `app/workout/active/` | Active workout screen: `active-workout-screen.tsx` (handleLogSet superset handoff, handleUnskip, slot time effect), `exercise-slot-view.tsx` (swap panel state, Undo line, Skipped banner, superset pill/rest line), `exercise-swap-picker.tsx` (panel only), `exercise-entry-card.tsx` (hold fields, `logSetLabel`) |
+| `app/today/workout-section-card.tsx` · `app/history/[date]/session-exercise-list.tsx` · `app/workout/active/workout-overview.tsx` | Superset grouping/tags on Today (and paste preview), history, overview |
+| `scripts/test-parse-superset.ts` · `scripts/validate-program.ts` | Parser superset tests; sample must demonstrate a superset |
+| `PROGRAM_FORMAT.md` | Paste format incl. "Supersets" section; library block is generated by `scripts/generate-program-format-library.ts` (rerun after any catalog or logging-label change) |
+| `proxy.ts` · `lib/auth/athlete-context.ts` · `lib/supabase/*` · `supabase/schema.sql` | Auth gate, per-user data entry point, clients, multi-user schema with RLS (unchanged this session) |
 
 ## Operational landmines
 
 1. UI renders from the ACTIVE PASTED PROGRAM (or sample) only — never hardcode workout content (non-negotiable 16).
 2. Sunday always rest; any weekday can be rest — never hardcode "Sunday" in rest-day copy.
-3. Progress photos: private bucket, signed URLs only; `SUPABASE_SERVICE_ROLE_KEY` server-only. Photo bytes never through server actions (~4.5 MB cap). Upload path prefix comes from the server's `userId`, never from the client.
-4. ALL session saves go through the mount's `createSessionSaveQueue` instance; read `sessionRef.current` at fire time; `clearLocalSession()` only after a queue-confirmed ok save or a non-resumable leftover.
+3. Progress photos: private bucket, signed URLs only; `SUPABASE_SERVICE_ROLE_KEY` server-only. Photo bytes never through server actions (~4.5 MB cap). Upload path prefix comes from the server's `userId`.
+4. ALL session saves go through the mount's `createSessionSaveQueue` instance; read `sessionRef.current` at fire time; `clearLocalSession()` only after a queue-confirmed ok save or a non-resumable leftover. `handleLogSet` now persists once with both the slot change and any superset `currentSlotKey` move; keep it that way (never two persists for one tap).
 5. Next 16: `proxy.ts` not `middleware.ts`. New routes are gated automatically; add public routes to the matcher's exclusion list only.
 6. Vercel MCP plugin unreliable; CLI not installed. Deploy verification: `gh api repos/timasgudziunas/hybrid-training-tracker/commits/<sha>/status`.
 7. No `ANTHROPIC_API_KEY` in any env.
-8. **(changed)** RLS now HAS policies (`own rows`, `user_id = auth.uid()`) on every athlete table, and athlete data must go through `getAthleteContext()`. `createServerSupabaseClient` (service role) may only appear in `app/body/actions.ts` (upload URL) and `app/body/page.tsx` (photo signing); `grep -rn createServerSupabaseClient app lib` should show exactly those.
-9. **(new)** `getAthleteContext()` must rethrow Next's `DYNAMIC_SERVER_USAGE` error; any page that calls it needs `export const dynamic = "force-dynamic"` (Today, Program, Library index and detail, Body, Settings all have it).
-10. **(new)** Server-action redirects are soft navigations: headless checks must wait on `location.href`, not `waitForNavigation`. Reload the sign-in page between a failed and a successful attempt in a drive script.
+8. RLS has `own rows` policies on every athlete table; athlete data goes through `getAthleteContext()`. `createServerSupabaseClient` (service role) may only appear in `app/body/actions.ts` and `app/body/page.tsx`.
+9. `getAthleteContext()` must rethrow Next's `DYNAMIC_SERVER_USAGE`; pages calling it need `export const dynamic = "force-dynamic"`.
+10. Server-action redirects are soft navigations: headless checks poll `location.pathname`, never `waitForNavigation`.
 11. Owner's NO DASHES rule applies to UI strings and docs; `scripts/test-exercise-catalog.ts` enforces it on catalog strings. CSS uppercases labels: headless text checks must be case-insensitive.
 12. Coaching text lives ONLY in `lib/program/catalog/*.ts`.
 13. Exercise ids are ALWAYS `slugifyExerciseName(name)`; renaming a catalog entry orphans history.
-14. `next dev`/`next build` flip-flop `next-env.d.ts`; stale `.next/dev/types` can fail `next build`'s type check after routes are deleted: `rm -rf .next/dev` then rebuild.
+14. `next dev`/`next build` flip-flop `next-env.d.ts`; stale `.next/dev/types` can fail `next build`: `rm -rf .next/dev` then rebuild.
 15. Sample sessions (`workout_template_id` prefix `sample-`) stay excluded everywhere.
 16. Never add `autoFocus` under `app/workout/active/` or the library search.
-17. Logging the final target set marks the slot completed in `handleLogSet`; the advance button is navigation only.
+17. Logging the final target set marks the slot completed in `handleLogSet`; the advance button is navigation only. Inside a superset the same tap also moves `currentSlotKey` to the partner that still needs work.
 18. `modified` is TERMINAL; deviations are derived, never persisted; added exercises are not deviations.
-19. Catalog edits must keep `npx tsx scripts/test-exercise-catalog.ts` green, then rerun `npx tsx scripts/generate-program-format-library.ts` so `PROGRAM_FORMAT.md` lists the current names.
-20. End-to-end UI verification: `puppeteer-core` in the session scratchpad + system Edge (forward-slash path) against `npx next start -p 3100`; port 3000 is often the `blurbs` dev server. Throwaway auth users via `POST /auth/v1/admin/users` with `email_confirm: true`; delete after.
-21. Parallel agents with exclusive file ownership work well here; the orchestrator writes shared types/config/contracts FIRST.
+19. Catalog edits must keep `npx tsx scripts/test-exercise-catalog.ts` green, then rerun `npx tsx scripts/generate-program-format-library.ts`. The same regen is needed after any change to `loggingFieldLabels` in `set-entry-fields.ts`.
+20. End-to-end UI verification: `puppeteer-core` in the session scratchpad + system Edge against `npx next start -p 3100`; port 3000 is often the `blurbs` dev server. Throwaway auth users via `POST /auth/v1/admin/users` with `email_confirm: true`; delete after. A fresh account's Today shows "No program loaded", so verify Today rendering through the /program paste preview (same components). Kill the server with `taskkill //PID <pid> //F //T` (find it via `netstat -ano | grep ":3100 "`).
+21. Parallel agents with exclusive file ownership work well here; the orchestrator writes shared types/config/contracts FIRST. An agent in a git worktree (`.claude/worktrees/...`) needs a `node_modules` junction (PowerShell `New-Item -ItemType Junction`); copy its files back, then `git worktree remove --force` and delete the `.claude/` dir before running `tsc` (the duplicate tree would be type-checked too).
+22. **(new)** Set inputs must never prefill from a previous session (owner, 2026-09-17). The "Last time" panel is the only place previous performance shows; `prefillNumeric` in `exercise-entry-card.tsx` reads this session's committed sets only.
+23. **(new)** `ExerciseSlotLog.enteredAt` is only set while a slot is current; the transition effect in `active-workout-screen.tsx` (keyed on `currentSlotKey`) is the one place that opens/closes it. Never set it elsewhere.
+24. **(new)** Superset invariants the runtime assumes and the parser guarantees: members contiguous within one section, at least two members, never a qualitative member. If a future program builder writes `supersetGroup` directly, it must keep these.
 
 ## Quick health check
 
@@ -85,4 +84,4 @@ git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" status --shor
 npx tsx --env-file=.env "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\check-db-state.ts"
 curl.exe -s -o NUL -w "%{http_code}" https://hybrid-training-tracker.vercel.app
 ```
-Healthy ≈ clean tree, confirmation commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`. `check-db-state.ts` counts on `user_id` (athlete_settings has no `id` column).
+Healthy ≈ clean tree, the supersets commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`.

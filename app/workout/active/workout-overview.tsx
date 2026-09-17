@@ -117,7 +117,14 @@ export default function WorkoutOverview({
                         isCurrent ? "text-accent-strong" : "text-ink-secondary hover:text-ink-primary"
                       }`}
                     >
-                      <span className="text-sm font-medium">{name}</span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium">{name}</span>
+                        {slot.exercise.supersetGroup ? (
+                          <span className="rounded-full border border-line-default px-1.5 text-[10px] uppercase tracking-wide text-ink-tertiary">
+                            Superset {slot.exercise.supersetGroup}
+                          </span>
+                        ) : null}
+                      </span>
                       <span
                         className={`text-xs font-medium ${
                           isCurrent

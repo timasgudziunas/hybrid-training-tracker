@@ -35,6 +35,116 @@ import type {
   WorkoutTemplate,
 } from './program-types';
 
+const SUPERSET_TOKEN_PATTERN = /^[A-Za-z0-9]{1,3}$/;
+
+/** A prescription's set count, or undefined for the one type that has none
+ * (qualitative work never carries a superset group, so callers that reach
+ * here for a group member can treat undefined as "should not happen"). */
+function prescriptionSetCount(prescription: Prescription): number | undefined {
+  return prescription.type === 'qualitative' ? undefined : prescription.sets;
+}
+
+/**
+ * Resolves superset groups within one closed section, in place: a group
+ * with only one member is not a superset (warn, strip the field), a
+ * group whose members are not contiguous is moved together immediately
+ * after its first member (warn, then renumber every exercise's `order`
+ * 1..n), and a group whose members prescribe different set counts is
+ * left grouped but flagged (warn). Runs once per section, so groups never
+ * cross section boundaries even when two sections reuse the same token.
+ */
+function finalizeSupersets(section: WorkoutSection, lineNumbers: number[], warnings: string[]): void {
+  const exercises = section.exercises;
+
+  const tokenOrder: string[] = [];
+  const indicesByToken = new Map<string, number[]>();
+  exercises.forEach((exercise, index) => {
+    const token = exercise.supersetGroup;
+    if (!token) return;
+    if (!indicesByToken.has(token)) {
+      indicesByToken.set(token, []);
+      tokenOrder.push(token);
+    }
+    indicesByToken.get(token)!.push(index);
+  });
+
+  // A "group" of one is not a superset: warn and strip the field.
+  for (const token of tokenOrder) {
+    const indices = indicesByToken.get(token)!;
+    if (indices.length === 1) {
+      warnings.push(
+        `Line ${lineNumbers[indices[0]]}: superset ${token} in section "${section.name}" has only one exercise; it is treated as a normal exercise.`
+      );
+      delete exercises[indices[0]].supersetGroup;
+      indicesByToken.delete(token);
+    }
+  }
+
+  const groupTokens = tokenOrder.filter((token) => indicesByToken.has(token));
+
+  // Contiguity: any group whose members are not already next to each other
+  // gets moved together, directly after its first member, keeping the
+  // members' relative order and everything else's relative order too.
+  const nonContiguousTokens = groupTokens.filter((token) => {
+    const indices = indicesByToken.get(token)!;
+    return indices.some((index, k) => k > 0 && index !== indices[k - 1] + 1);
+  });
+
+  if (nonContiguousTokens.length > 0) {
+    for (const token of nonContiguousTokens) {
+      warnings.push(
+        `Line ${lineNumbers[indicesByToken.get(token)![0]]}: superset ${token} exercises in section "${section.name}" were not next to each other; they were moved together.`
+      );
+    }
+
+    const consumed = new Set<number>();
+    const newExercises: PrescribedExercise[] = [];
+    const newLineNumbers: number[] = [];
+    exercises.forEach((exercise, index) => {
+      if (consumed.has(index)) return;
+      const token = exercise.supersetGroup;
+      const groupIndices = token ? indicesByToken.get(token) : undefined;
+      if (groupIndices) {
+        for (const memberIndex of groupIndices) {
+          newExercises.push(exercises[memberIndex]);
+          newLineNumbers.push(lineNumbers[memberIndex]);
+          consumed.add(memberIndex);
+        }
+      } else {
+        newExercises.push(exercise);
+        newLineNumbers.push(lineNumbers[index]);
+        consumed.add(index);
+      }
+    });
+    exercises.length = 0;
+    exercises.push(...newExercises);
+    lineNumbers.length = 0;
+    lineNumbers.push(...newLineNumbers);
+  }
+
+  // Renumbering is always correct to redo, reordered or not.
+  exercises.forEach((exercise, index) => {
+    exercise.order = index + 1;
+  });
+
+  // Set-count mismatch: flagged, not fixed. Checked last, against the
+  // final (possibly reordered) exercise list.
+  for (const token of groupTokens) {
+    const members = exercises.filter((exercise) => exercise.supersetGroup === token);
+    const setCounts = members
+      .map((exercise) => prescriptionSetCount(exercise.prescription))
+      .filter((sets): sets is number => sets !== undefined);
+    const min = Math.min(...setCounts);
+    const max = Math.max(...setCounts);
+    if (min !== max) {
+      const firstLine = lineNumbers[exercises.findIndex((exercise) => exercise.supersetGroup === token)];
+      warnings.push(
+        `Line ${firstLine}: superset ${token}: set counts differ (${min} and ${max}); the exercise with fewer sets finishes early.`
+      );
+    }
+  }
+}
+
 export interface ParseProgramResult {
   /** Present only when there are zero errors. */
   program?: ResolvedProgram;
@@ -304,15 +414,20 @@ export function parseProgramText(text: string): ParseProgramResult {
   let exerciseBaselineIndent: number | null = null;
   let lastExercise: PrescribedExercise | null = null;
   let lastExerciseQualitative: Extract<Prescription, { type: 'qualitative' }> | null = null;
+  // Line number for each exercise pushed into currentSection.exercises, kept
+  // in parallel (same indices) so superset warnings can cite a line number.
+  let exerciseLineNumbers: number[] = [];
 
   function closeSection() {
     if (currentDay && currentSection) {
+      finalizeSupersets(currentSection, exerciseLineNumbers, state.warnings);
       currentDay.sections.push(currentSection);
     }
     currentSection = null;
     exerciseBaselineIndent = null;
     lastExercise = null;
     lastExerciseQualitative = null;
+    exerciseLineNumbers = [];
   }
 
   function closeDay() {
@@ -514,11 +629,13 @@ export function parseProgramText(text: string): ParseProgramResult {
       const segments = afterColon.split('|').map((s) => s.trim());
       const prescriptionText = segments[0] ?? '';
       let restCategory: RestCategory | undefined;
+      let supersetGroup: string | undefined;
       const notes: string[] = [];
 
       for (const segment of segments.slice(1)) {
         const restMatch = /^rest\s*:\s*(.+)$/i.exec(segment);
         const notesMatch = /^notes?\s*:\s*(.+)$/i.exec(segment);
+        const supersetMatch = /^superset\s*:\s*(.*)$/i.exec(segment);
         if (restMatch) {
           const normalized = normalizeRestCategory(restMatch[1]);
           if (normalized) {
@@ -533,12 +650,29 @@ export function parseProgramText(text: string): ParseProgramResult {
             const trimmedNote = note.trim();
             if (trimmedNote.length > 0) notes.push(trimmedNote);
           }
+        } else if (supersetMatch) {
+          const rawToken = supersetMatch[1].trim();
+          if (SUPERSET_TOKEN_PATTERN.test(rawToken)) {
+            supersetGroup = rawToken.toUpperCase();
+          } else {
+            state.errors.push(
+              `Line ${lineNumber}: invalid superset token "${rawToken}". Expected 1 to 3 letters or digits, e.g. "A" or "B2".`
+            );
+          }
         } else if (segment.length > 0) {
           state.warnings.push(`Line ${lineNumber}: unrecognized clause "${segment}" was ignored.`);
         }
       }
 
       const prescription = parseCorePrescription(prescriptionText);
+
+      if (supersetGroup && prescription.type === 'qualitative') {
+        state.errors.push(
+          `Line ${lineNumber}: descriptive exercises cannot be part of a superset.`
+        );
+        supersetGroup = undefined;
+      }
+
       const primaryId = resolveExerciseId(names[0], state);
       const alternativeIds = names.slice(1).map((n) => resolveExerciseId(n, state));
 
@@ -549,9 +683,11 @@ export function parseProgramText(text: string): ParseProgramResult {
         ...(alternativeIds.length > 0 ? { alternativeExerciseIds: alternativeIds } : {}),
         ...(restCategory ? { restCategory } : {}),
         ...(notes.length > 0 ? { notes } : {}),
+        ...(supersetGroup ? { supersetGroup } : {}),
       };
 
       currentSection.exercises.push(prescribedExercise);
+      exerciseLineNumbers.push(lineNumber);
       lastExercise = prescribedExercise;
       lastExerciseQualitative = prescription.type === 'qualitative' ? prescription : null;
       continue;

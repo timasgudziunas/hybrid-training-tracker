@@ -23,6 +23,7 @@ import { createSessionSaveQueue, type SessionSaveQueue } from "@/lib/workout-ses
 import { transitionCurrentSlot } from "@/lib/workout-session/slot-time";
 import { isCardioSlot } from "@/lib/workout-session/cardio-slot";
 import { addExtraSet, deleteLoggedSet, removeCurrentSet, targetSetCount } from "@/lib/workout-session/slot-set-edits";
+import { nextSupersetSlotKey, supersetMembers } from "@/lib/workout-session/superset-flow";
 import { addExerciseToSession } from "@/lib/workout-session/add-exercise";
 import { prescriptionForSwap, swapChangesPrescription } from "@/lib/workout-session/swap-prescription";
 import type {
@@ -411,46 +412,68 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   );
 
   const handleLogSet = useCallback(
-    (slotKey: string, set: SetLog) =>
-      updateSlot(slotKey, (slot) => {
-        const sets = [...slot.sets];
-        // A set number beyond the currently committed count is the new
-        // "current" set being entered — committing it clears the draft, so
-        // the next fresh set starts blank. A set number within the
-        // existing range is a correction to an earlier set (edit-a-set):
-        // the draft for whatever set is currently being entered must
-        // survive that untouched.
-        const isNewCurrentSet = set.setNumber > slot.sets.length;
-        sets[set.setNumber - 1] = set;
-        const nextSlot: ExerciseSlotLog = { ...slot, sets, draft: isNewCurrentSet ? undefined : slot.draft };
-        // Logging a set on a skipped slot un-skips it (owner: "I'm not sure
-        // if there's a way to un skip an exercise right now") — a skipped
-        // slot is treated exactly like upcoming for the completion check
-        // just below, and it must never be left skipped once work has been
-        // logged on it, whether or not that work fills every prescribed
-        // set.
-        if (nextSlot.status === "skipped") {
-          nextSlot.status = "upcoming";
-        }
-        // R10: logging the final target set no longer advances (owner:
-        // "I want to see the exercise overview and then click Next
-        // exercise"), so completion is recorded HERE, the moment the last
-        // set lands. Otherwise an exercise with every set logged would still
-        // read as upcoming in the progress bar and, if the athlete jumped
-        // elsewhere without tapping Next exercise, as "Not done" at Finish.
-        // The advance button afterwards is navigation only.
-        const prescription = templateSlots.find((s) => s.slotKey === slotKey)?.exercise.prescription;
-        if (
-          prescription &&
-          prescription.type !== "qualitative" &&
-          nextSlot.status === "upcoming" &&
-          sets.length >= targetSetCount(prescription.sets, nextSlot)
-        ) {
-          nextSlot.status = "completed";
-        }
-        return nextSlot;
-      }),
-    [updateSlot, templateSlots]
+    (slotKey: string, set: SetLog) => {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const slot = prev.performance.slots[slotKey];
+      const sets = [...slot.sets];
+      // A set number beyond the currently committed count is the new
+      // "current" set being entered — committing it clears the draft, so
+      // the next fresh set starts blank. A set number within the existing
+      // range is a correction to an earlier set (edit-a-set): the draft for
+      // whatever set is currently being entered must survive that
+      // untouched, and (superset flow, 2026-09-17) an edit never moves
+      // currentSlotKey — only a genuinely new set can hand off to a
+      // partner.
+      const isNewCurrentSet = set.setNumber > slot.sets.length;
+      sets[set.setNumber - 1] = set;
+      const nextSlot: ExerciseSlotLog = { ...slot, sets, draft: isNewCurrentSet ? undefined : slot.draft };
+      // Logging a set on a skipped slot un-skips it (owner: "I'm not sure
+      // if there's a way to un skip an exercise right now") — a skipped
+      // slot is treated exactly like upcoming for the completion check just
+      // below, and it must never be left skipped once work has been logged
+      // on it, whether or not that work fills every prescribed set.
+      if (nextSlot.status === "skipped") {
+        nextSlot.status = "upcoming";
+      }
+      // R10: logging the final target set no longer advances (owner:
+      // "I want to see the exercise overview and then click Next
+      // exercise"), so completion is recorded HERE, the moment the last
+      // set lands. Otherwise an exercise with every set logged would still
+      // read as upcoming in the progress bar and, if the athlete jumped
+      // elsewhere without tapping Next exercise, as "Not done" at Finish.
+      // The advance button afterwards is navigation only. This can make
+      // nextSlot 'completed' even while a superset partner still needs
+      // work — the handoff below still fires, because
+      // nextSupersetSlotKey never looks at `slotKey`'s own status.
+      const prescription = templateSlots.find((s) => s.slotKey === slotKey)?.exercise.prescription;
+      if (
+        prescription &&
+        prescription.type !== "qualitative" &&
+        nextSlot.status === "upcoming" &&
+        sets.length >= targetSetCount(prescription.sets, nextSlot)
+      ) {
+        nextSlot.status = "completed";
+      }
+
+      const nextSlots = { ...prev.performance.slots, [slotKey]: nextSlot };
+      // Superset execution (owner's definition, 2026-09-17): a NEW set
+      // (never a correction) hands off to whichever partner in the group
+      // still needs work, wrapping through the group; stays put when
+      // nothing does, or when this slot isn't in a superset at all
+      // (nextSupersetSlotKey returns null in both cases).
+      const nextCurrentSlotKey = isNewCurrentSet ? nextSupersetSlotKey(templateSlots, nextSlots, slotKey) : null;
+
+      persist({
+        ...prev,
+        performance: {
+          ...prev.performance,
+          slots: nextSlots,
+          ...(nextCurrentSlotKey ? { currentSlotKey: nextCurrentSlotKey } : {}),
+        },
+      });
+    },
+    [persist, templateSlots]
   );
 
   // Un-skips a slot (owner: "I'm not sure if there's a way to un skip an
@@ -902,6 +925,44 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         )
       : false;
 
+  // Superset display for the current slot (owner's definition, 2026-09-17):
+  // null when the current slot isn't in one. Names come from the session's
+  // own exercisesSnapshot via each member's chosenExerciseId (falling back
+  // to its prescribed exerciseId), so a swapped-in member shows the name
+  // actually being logged. `nextPartnerName` mirrors exactly what tapping
+  // the log button would move to right now — recomputed every render from
+  // the live slot logs, same as advanceLabel below.
+  const supersetInfo = (() => {
+    if (!currentTemplateSlot) return null;
+    const members = supersetMembers(templateSlots, currentTemplateSlot.slotKey);
+    if (members.length === 0) return null;
+
+    const nameForMember = (member: TemplateSlot): string => {
+      const log = session.performance.slots[member.slotKey];
+      const exerciseId = log?.chosenExerciseId ?? member.exercise.exerciseId;
+      return exercises[exerciseId]?.name ?? exerciseId;
+    };
+
+    const partnerNames = members
+      .filter((member) => member.slotKey !== currentTemplateSlot.slotKey)
+      .map(nameForMember);
+    const nextSlotKey = nextSupersetSlotKey(templateSlots, session.performance.slots, currentTemplateSlot.slotKey);
+    const nextMember = nextSlotKey ? templateSlots.find((s) => s.slotKey === nextSlotKey) ?? null : null;
+
+    return {
+      token: currentTemplateSlot.exercise.supersetGroup as string,
+      partnerNames,
+      nextPartnerName: nextMember ? nameForMember(nextMember) : null,
+      isLastInGroup: members[members.length - 1].slotKey === currentTemplateSlot.slotKey,
+    };
+  })();
+
+  // What the button that logs the current set reads, when it differs from
+  // the card's own "Next set"/"Log set"/"Done: rep N of M" wording: inside a
+  // superset it names the partner tapping it will move to, so the athlete
+  // never has to guess (undefined lets the entry card keep its default).
+  const logSetLabel = supersetInfo?.nextPartnerName ? `Next: ${supersetInfo.nextPartnerName}` : undefined;
+
   const liveStats = computeCompletionStats(session.performance, templateSlots);
   // Recomputed on every render, same as liveStats above — cheap over a
   // single day's slots, and the completion screen must always reflect the
@@ -1001,6 +1062,8 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             exercises={exercises}
             showRir={athleteSettings.showRir}
             advanceLabel={advanceLabel}
+            supersetInfo={supersetInfo}
+            logSetLabel={logSetLabel}
             onChoose={(exerciseId) => handleChoose(currentTemplateSlot.slotKey, exerciseId)}
             onLogSet={(set) => handleLogSet(currentTemplateSlot.slotKey, set)}
             onRemoveCurrentSet={() => handleRemoveCurrentSet(currentTemplateSlot.slotKey)}

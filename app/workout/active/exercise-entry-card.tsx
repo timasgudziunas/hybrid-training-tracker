@@ -148,6 +148,7 @@ export default function ExerciseEntryCard({
   previousSets,
   showRir,
   advanceLabel,
+  logSetLabel,
   onLogSet,
   onRemoveCurrentSet,
   onDeleteSet,
@@ -168,6 +169,12 @@ export default function ExerciseEntryCard({
    * exercise" when one is upcoming, "Session overview"/"Session summary"
    * otherwise (active-workout-screen.tsx). */
   advanceLabel: string;
+  /** Overrides this card's own "Next set"/"Log set"/"Done: rep N of M"
+   * wording on the button that commits the CURRENT set (never the advance
+   * button above, which already has its own `advanceLabel`) — set by the
+   * parent while a superset partner still needs work, so the athlete sees
+   * exactly what tapping it will do (active-workout-screen.tsx). */
+  logSetLabel?: string;
   onLogSet: (set: SetLog) => void;
   onRemoveCurrentSet: () => void;
   onDeleteSet: (setNumber: number) => void;
@@ -377,7 +384,7 @@ export default function ExerciseEntryCard({
                 onClick={() => commitSet(buildRepetitionSet())}
                 className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
               >
-                {isFinalSet ? "Log set" : "Next set"}
+                {logSetLabel ?? (isFinalSet ? "Log set" : "Next set")}
               </button>
             </div>
           ) : null}
@@ -404,7 +411,7 @@ export default function ExerciseEntryCard({
                 onClick={() => commitSet(buildHoldSet())}
                 className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
               >
-                {isFinalSet ? "Log set" : "Next set"}
+                {logSetLabel ?? (isFinalSet ? "Log set" : "Next set")}
               </button>
             </div>
           ) : null}
@@ -435,7 +442,7 @@ export default function ExerciseEntryCard({
                 }
                 className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
               >
-                Done: rep {currentSetNumber} of {targetSets}
+                {logSetLabel ?? `Done: rep ${currentSetNumber} of ${targetSets}`}
               </button>
             </div>
           ) : null}

@@ -171,6 +171,13 @@ export interface PrescribedExercise {
   /** Omitted where the program gives no rest guidance for this item. */
   restCategory?: RestCategory;
   notes?: string[];
+  /** Superset group token within this section (e.g. "A"): consecutive
+   * exercises in one section sharing a token are performed back to back,
+   * one set of each, resting only after the round (owner request
+   * 2026-09-17). Section scoped; always uppercase; never set on a
+   * qualitative prescription. The parser guarantees members are contiguous
+   * and that a group has at least two members. */
+  supersetGroup?: string;
 }
 
 export interface WorkoutSection {

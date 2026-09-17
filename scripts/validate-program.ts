@@ -98,6 +98,7 @@ let sawQualitative = false;
 let sawChoicePair = false;
 let sawPerSide = false;
 let sawOptionalSection = false;
+let sawSuperset = false;
 
 for (const weekday of ALL_WEEKDAYS) {
   const template = program.templates[weekday];
@@ -112,6 +113,14 @@ for (const weekday of ALL_WEEKDAYS) {
       `${weekday} / ${section.name} exercises`,
       section.exercises.map((e) => e.order),
     );
+
+    for (let i = 0; i < section.exercises.length - 1; i += 1) {
+      const current = section.exercises[i];
+      const next = section.exercises[i + 1];
+      if (current.supersetGroup && current.supersetGroup === next.supersetGroup) {
+        sawSuperset = true;
+      }
+    }
 
     for (const prescribedExercise of section.exercises) {
       if (!program.exercises[prescribedExercise.exerciseId]) {
@@ -155,6 +164,7 @@ if (!sawQualitative) fail('Sample program has no qualitative-type prescription')
 if (!sawChoicePair) fail('Sample program has no either/or choice pair');
 if (!sawPerSide) fail('Sample program has no per-side prescription');
 if (!sawOptionalSection) fail('Sample program has no optional section');
+if (!sawSuperset) fail('Sample program has no superset group with contiguous members');
 
 // --- Day template ids are sample-prefixed ---
 for (const weekday of ALL_WEEKDAYS) {

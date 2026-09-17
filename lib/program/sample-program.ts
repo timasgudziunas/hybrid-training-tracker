@@ -34,8 +34,8 @@ Target duration: 60 minutes
 ### Strength (strength)
 - Hack Squat: 3 x 6-10 | rest: heavy compound | notes: brace before every rep
 - Face Pull / Reverse Cable Fly: 3 x 12-15 | rest: isolation
-- Bulgarian Split Squat: 2 x 8-12 each side | rest: moderate compound
-- Cable Woodchop: 3 x 10-12 | rest: isolation
+- Bulgarian Split Squat: 2 x 8-12 each side | superset: A
+- Cable Woodchop: 2 x 10-12 | superset: A | rest: moderate compound
 
 ### Carries (strength)
 > Walk tall, brace, and breathe. Set the weight down under control.

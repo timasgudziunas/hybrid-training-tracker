@@ -41,7 +41,14 @@ export default function SessionExerciseList({ performance }: { performance: Work
     const row = (
       <li key={templateSlot.slotKey} className="flex flex-col gap-1.5 py-3.5">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-sm font-medium text-ink-primary">{name}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-sm font-medium text-ink-primary">{name}</span>
+            {templateSlot.exercise.supersetGroup ? (
+              <span className="rounded-full border border-line-default px-1.5 text-[10px] uppercase tracking-wide text-ink-tertiary">
+                Superset {templateSlot.exercise.supersetGroup}
+              </span>
+            ) : null}
+          </span>
           <StatusBadge status={slotLog?.status} />
         </div>
 
