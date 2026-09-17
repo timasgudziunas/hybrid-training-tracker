@@ -1,8 +1,8 @@
-# HANDOFF.md — Session Handoff (updated 2026-09-17 ~21:00 UTC, supersedes all 2026-09-05 ~04:00 UTC and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-09-17 ~23:30 UTC, supersedes all 2026-09-17 ~21:00 UTC and earlier versions)
 
 > To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables), then `PLAN.md` (R11 Supersets is the newest completed block; R10 before it; older phases are historical). `PRODUCT_SPEC.md` is the product source of truth (§6 now has a Supersets subsection); `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format (now documents `superset:`).
 
-## Current state (as of 2026-09-17 ~21:00 UTC)
+## Current state (as of 2026-09-17 ~23:30 UTC)
 
 **Three commits on 2026-09-17: `d220fca` gym feedback batch, `8a83e9b` supersets (both verified end to end on a local production build and pushed), and the library addition described below (committed with this handoff; verify the push with landmine 6's `gh api` command before assuming it is live).**
 
@@ -11,7 +11,8 @@
 - **Not done, by owner instruction:** the "cap sets at three" and "too much volume" notes were program content, and the owner said they are rewriting the program themselves. Nothing in the app enforces a set cap.
 - **Verification state (this tree):** `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 16 test suites plus `validate-program.ts` green (new: `test-slot-time.ts` 21, `test-parse-superset.ts` 37, `test-superset-flow.ts` 14); `next build` green. Headless Edge drives against `next start -p 3100` with throwaway users (deleted afterwards): feedback batch 24/24, supersets 19/19. Scripts live in the session scratchpad only (not in the repo).
 - **Library addition (this commit, ~21:00 UTC):** three handstand entries, Wall Handstand Weight Shift (3 x 5 to 8 reps each side), Wall Handstand Toe Pull (3 x 3 to 5 reps), Freestanding Handstand (4 holds of 5 to 20 sec), all `calisthenics` / `shoulders` / `bodyweight`, in `lib/program/catalog/calisthenics.ts` with the owner's own cues and mistakes. Library is now 274 entries; `PROGRAM_FORMAT.md` library section regenerated. Catalog, filters, and rank-substitutes tests green, `tsc` clean. Owner instruction: these are NOT in the active program and the program was not reloaded.
-- Active program is unchanged: `0df9dadc` "Athletic Muscle and Calisthenics Foundation" (Block 2). The owner is rewriting it; the new program will need `superset:` clauses wherever pairs are intended, and set counts they want.
+- **Active program is now Block 3: `045c959d` "Five-Day Gym Program: Muscle, Athleticism, and Calisthenics"** (loaded 2026-09-17 ~23:45 UTC via `scripts/activate-program-file.ts`; Block 2 `0df9dadc` deactivated, row kept as history; `training_programs` has 3 rows).
+- **Block 3 file:** `programs/block-3-five-day-gym-program.md` ("Five-Day Gym Program: Muscle, Athleticism, and Calisthenics", Mon to Fri, Sat and Sun rest, Ultimate flagged Mon/Wed/Thu). Copied from the owner's Downloads file; only edits were the em dashes in the title and day headers (replaced with colons). Validator: PARSE PASSED, no warnings, 7 superset pairs, 60 of 61 slots have guidance (only "L-Sit Practice", a descriptive line, has none). Program files follow `programs/block-N-<kebab title>.md` with a plain `# <Program Name>` title line; Block 1's title lost its "— Block 1" suffix for that reason. `scripts/validate-program-file.ts` now prints `| superset: X` per member (it silently omitted them before).
 
 ## Just completed (this session, 2026-09-17 evening)
 
@@ -24,7 +25,7 @@ Nothing mid-flight.
 ## Next steps (priority order)
 
 1. **Owner: gym verification** of the feedback fixes and supersets on a real session (blank inputs, timer survives leaving, Unskip, swap panel on the phone, Undo, `Next: <partner>` flow, `Rest after the pair`).
-2. **Owner: load the rewritten program** (with `superset:` clauses) via /program or `scripts/activate-program-file.ts`.
+2. **Owner: first real sessions on Block 3** (loaded and live). Watch the superset handoffs on Monday accessories (two pairs) and Friday (two pairs), and the choice lines inside supersets (Face Pull or Reverse Cable Fly, Seated or Lying Leg Curl, Cable or Dumbbell Curl).
 3. **Next build block: the in-app program builder** (PLAN R10 deferred item). When it comes, it needs a superset control too.
 4. Optional cosmetic: pre-existing dashes in a few in-workout strings (`lib/program/rest-guidance.ts`, `app/today/format-prescription.ts`, entry card range labels like "8-12").
 5. Optional hygiene: delete stray active Saturday 2026-08-29 row `52b05e65`; repair 2026-08-26's null completed_at.
@@ -85,4 +86,4 @@ git -C "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker" status --shor
 npx tsx --env-file=.env "C:\Users\Timas Gudziunas\projects\hybrid-training-tracker\scripts\check-db-state.ts"
 curl.exe -s -o NUL -w "%{http_code}" https://hybrid-training-tracker.vercel.app
 ```
-Healthy ≈ clean tree, the handstand library commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`.
+Healthy ≈ clean tree, the Block 3 commit at head and pushed, every table `0 without user_id`, URL returns 307 to `/sign-in`.

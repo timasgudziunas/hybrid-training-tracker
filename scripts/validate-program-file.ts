@@ -1,7 +1,7 @@
 /**
  * Validates any owner-authored program file (paste format, see
  * PROGRAM_FORMAT.md) through the real parser, before it is pasted into the
- * app. Prints parse errors/warnings, the resolved week, and which exercises
+ * app. Prints parse errors/warnings, the resolved week (superset tags included), and which exercises
  * matched the guidance catalog ("Help me feel it" coverage).
  *
  * Run with:
@@ -116,7 +116,8 @@ for (const weekday of ALL_WEEKDAYS) {
         names.push(`${exercise.name}${hasGuidance ? ' [guidance]' : ''}`);
       }
       const restGuidance = prescribedExercise.restCategory ? ` | rest: ${prescribedExercise.restCategory}` : '';
-      console.log(`      - ${names.join(' or ')}: ${formatPrescription(prescribedExercise.prescription)}${restGuidance}`);
+      const superset = prescribedExercise.supersetGroup ? ` | superset: ${prescribedExercise.supersetGroup}` : '';
+      console.log(`      - ${names.join(' or ')}: ${formatPrescription(prescribedExercise.prescription)}${superset}${restGuidance}`);
       for (const note of prescribedExercise.notes ?? []) console.log(`          note: ${note}`);
     }
   }

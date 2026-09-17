@@ -1,4 +1,4 @@
-# Athletic Muscle Base — Block 1
+# Athletic Muscle Base
 
 ## Monday: Upper Push + Planche
 
