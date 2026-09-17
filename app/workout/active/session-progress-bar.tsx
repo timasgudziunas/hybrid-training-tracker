@@ -47,7 +47,12 @@ export default function SessionProgressBar({
           const log = slotLogs[slot.slotKey];
           const status = log?.status ?? "upcoming";
           const isCurrent = slot.slotKey === currentSlotKey;
-          const name = resolveExerciseChoiceName(exercises, slot.exercise.exerciseId, slot.exercise.alternativeExerciseIds);
+          // Same "the swapped-in exercise wins the name" rule as
+          // workout-overview.tsx: chosenExerciseId always reflects what's
+          // actually being done, prescribed-choice text does not.
+          const name =
+            (log?.chosenExerciseId ? exercises[log.chosenExerciseId]?.name : undefined) ??
+            resolveExerciseChoiceName(exercises, slot.exercise.exerciseId, slot.exercise.alternativeExerciseIds);
 
           const fillClass =
             status === "completed" ? "bg-accent" : status === "skipped" ? "bg-warning/40" : "bg-surface-3";

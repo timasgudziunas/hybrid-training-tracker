@@ -1,8 +1,10 @@
 /**
  * Tests for lib/workout-session/slot-set-edits.ts (removing/adding/deleting
- * sets during an active workout) and lib/program/set-entry-fields.ts
- * (per-exercise set input fields). Pre-registered assertions, in the style
- * of scripts/test-session-deviations.ts.
+ * sets during an active workout), lib/program/set-entry-fields.ts
+ * (per-exercise repetitions AND hold/duration set input fields), and
+ * lib/workout-session/format-logged-set.ts (formatting a logged hold with an
+ * added weight). Pre-registered assertions, in the style of
+ * scripts/test-session-deviations.ts.
  *
  * Run with:
  *   npx tsx scripts/test-slot-set-edits.ts
@@ -16,7 +18,12 @@ import {
   removeCurrentSet,
   targetSetCount,
 } from '../lib/workout-session/slot-set-edits';
-import { resolveRepetitionSetFields } from '../lib/program/set-entry-fields';
+import {
+  resolveRepetitionSetFields,
+  resolveHoldSetFields,
+  loggingFieldLabels,
+} from '../lib/program/set-entry-fields';
+import { formatLoggedSet } from '../lib/workout-session/format-logged-set';
 import type { ExerciseSlotLog, SetLog } from '../lib/workout-session/workout-session-types';
 import type { Exercise } from '../lib/program/program-types';
 
@@ -181,6 +188,77 @@ check(
   'resolveRepetitionSetFields: undefined exercise yields the default',
   resolveRepetitionSetFields(undefined).map((f) => f.key),
   ['weight', 'reps', 'rir']
+);
+
+check(
+  'resolveRepetitionSetFields: medicine ball rotational throw yields ball weight + reps',
+  resolveRepetitionSetFields(
+    exercise({ id: 'medicine-ball-rotational-throw', name: 'Medicine Ball Rotational Throw', category: 'power' })
+  ).map((f) => f.key),
+  ['weight', 'reps']
+);
+
+check(
+  'resolveRepetitionSetFields: medicine ball rotational throw weight field is labeled "Ball weight (lb)"',
+  resolveRepetitionSetFields(
+    exercise({ id: 'medicine-ball-rotational-throw', name: 'Medicine Ball Rotational Throw', category: 'power' })
+  ).map((f) => f.label),
+  ['Ball weight (lb)', 'Reps']
+);
+
+check(
+  'resolveRepetitionSetFields: trap bar jump yields weight + reps',
+  resolveRepetitionSetFields(exercise({ id: 'trap-bar-jump', name: 'Trap Bar Jump', category: 'power' })).map(
+    (f) => f.key
+  ),
+  ['weight', 'reps']
+);
+
+// --- resolveHoldSetFields ---
+
+check(
+  'resolveHoldSetFields: weighted-plank yields weight + seconds',
+  resolveHoldSetFields(exercise({ id: 'weighted-plank', name: 'Weighted Plank', category: 'hypertrophy' })).map(
+    (f) => f.key
+  ),
+  ['weight', 'seconds']
+);
+
+check(
+  'resolveHoldSetFields: side-plank yields the default (seconds only)',
+  resolveHoldSetFields(exercise({ id: 'side-plank', name: 'Side Plank', category: 'calisthenics' })).map(
+    (f) => f.key
+  ),
+  ['seconds']
+);
+
+check('resolveHoldSetFields: undefined exercise yields the default', resolveHoldSetFields(undefined).map((f) => f.key), [
+  'seconds',
+]);
+
+// --- loggingFieldLabels ---
+
+check(
+  'loggingFieldLabels: Weighted Plank hold prescription returns added weight + seconds labels',
+  loggingFieldLabels(
+    exercise({ id: 'weighted-plank', name: 'Weighted Plank', category: 'hypertrophy' }),
+    { type: 'hold', sets: 3, minSeconds: 30, maxSeconds: 45 }
+  ),
+  ['Added weight (lb)', 'Seconds achieved']
+);
+
+// --- formatLoggedSet ---
+
+check(
+  'formatLoggedSet: hold with weight includes "at <weight> lb"',
+  formatLoggedSet({ setNumber: 1, completed: true, seconds: 45, weight: 25 }, 'hold'),
+  '45 sec at 25 lb'
+);
+
+check(
+  'formatLoggedSet: hold without weight is unchanged',
+  formatLoggedSet({ setNumber: 1, completed: true, seconds: 45 }, 'hold'),
+  '45 sec'
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -1,21 +1,30 @@
 /**
- * Which inputs a repetitions-type set shows, per exercise (owner request
- * 2026-09-04: "for some of the exercises like box jump there should be
- * different fields such as height of the box"). Config, not code: adding a
- * field to an exercise is a one-line entry here, never a branch in the
- * entry card.
+ * Which inputs a repetitions-type or hold/duration-type set shows, per
+ * exercise (owner request 2026-09-04: "for some of the exercises like box
+ * jump there should be different fields such as height of the box"; owner
+ * request 2026-09-17: "some exercises are still missing fields such as
+ * weight for the medicine ball side throw" / "weighted plank doesn't have a
+ * field for the weight that I'm using"). Config, not code: adding a field to
+ * an exercise is a one-line entry here, never a branch in the entry card.
  *
- * Resolution order (first match wins), see resolveRepetitionSetFields:
+ * Two parallel systems live in this file:
+ *   - Repetitions fields (resolveRepetitionSetFields), for `repetitions`
+ *     prescriptions: weight/reps/RIR, or an exercise/category override.
+ *   - Hold fields (resolveHoldSetFields), for `hold` and non-cardio
+ *     `duration` prescriptions: seconds by default, or an exercise override
+ *     that adds an added-weight field (e.g. Weighted Plank).
+ *
+ * Resolution order (first match wins) for both:
  *   1. an exact exercise-id override (ids are slugified names, so
  *      "Box Jump" in any pasted program resolves to `box-jump`),
- *   2. a category override (e.g. every `power` exercise drops weight/RIR,
- *      since jumps are quality work, not load work),
- *   3. the default: weight, reps, RIR.
+ *   2. (repetitions only) a category override (e.g. every `power` exercise
+ *      drops weight/RIR, since jumps are quality work, not load work),
+ *   3. the default.
  *
  * The keys map 1:1 onto SetLog / SetDraft fields in
  * lib/workout-session/workout-session-types.ts. `reps` is always present
- * for a repetitions prescription and is never removable through this
- * config.
+ * for a repetitions prescription and `seconds` is always present for a
+ * hold/duration prescription; neither is removable through this config.
  */
 
 import type { Exercise, ExerciseCategory, Prescription } from './program-types';
@@ -47,6 +56,15 @@ export const JUMP_DISTANCE_FIELD: RepetitionSetFieldSpec = {
   unit: 'in',
   inputMode: 'decimal',
 };
+/** Owner request 2026-09-17: medicine ball throws are logged with the ball's
+ * weight, not a barbell/dumbbell weight, so it gets its own label even
+ * though it shares SetLog's `weight` field. */
+export const BALL_WEIGHT_FIELD: RepetitionSetFieldSpec = {
+  key: 'weight',
+  label: 'Ball weight (lb)',
+  unit: 'lb',
+  inputMode: 'decimal',
+};
 
 export const DEFAULT_REPETITION_SET_FIELDS: RepetitionSetFieldSpec[] = [WEIGHT_FIELD, REPS_FIELD, RIR_FIELD];
 
@@ -56,6 +74,15 @@ export const REPETITION_SET_FIELDS_BY_EXERCISE_ID: Record<string, RepetitionSetF
   'depth-jump': [BOX_HEIGHT_FIELD, REPS_FIELD],
   'standing-broad-jump': [JUMP_DISTANCE_FIELD, REPS_FIELD],
   'broad-jump': [JUMP_DISTANCE_FIELD, REPS_FIELD],
+  // Medicine ball throws are prescribed as `power` category (reps only by
+  // default below), but the ball's weight is real load information the
+  // athlete wants tracked (owner request 2026-09-17).
+  'medicine-ball-chest-pass': [BALL_WEIGHT_FIELD, REPS_FIELD],
+  'medicine-ball-slam': [BALL_WEIGHT_FIELD, REPS_FIELD],
+  'medicine-ball-rotational-throw': [BALL_WEIGHT_FIELD, REPS_FIELD],
+  // Trap Bar Jump is also `power` category but is loaded with an actual
+  // trap bar, so it keeps the ordinary weight field alongside reps.
+  'trap-bar-jump': [WEIGHT_FIELD, REPS_FIELD],
 };
 
 /** Per-category overrides, applied when no exercise-id override matches. */
@@ -80,6 +107,43 @@ export function hasRepetitionSetField(fields: RepetitionSetFieldSpec[], key: Rep
   return fields.some((field) => field.key === key);
 }
 
+/** Which inputs a hold/duration-type set shows, per exercise. Parallel to
+ * the repetitions system above but with only two possible keys: seconds is
+ * always present, and an exercise override may add an added-weight field
+ * (owner request 2026-09-17: "weighted plank doesn't have a field for the
+ * weight that I'm using"). */
+export type HoldSetFieldKey = 'weight' | 'seconds';
+
+export interface HoldSetFieldSpec {
+  key: HoldSetFieldKey;
+  /** Input label as shown above the field, unit included. */
+  label: string;
+  /** Short unit suffix used when formatting a logged set, e.g. "sec". */
+  unit: string;
+  inputMode: 'decimal' | 'numeric';
+}
+
+export const SECONDS_FIELD: HoldSetFieldSpec = { key: 'seconds', label: 'Seconds achieved', unit: 'sec', inputMode: 'numeric' };
+export const ADDED_WEIGHT_FIELD: HoldSetFieldSpec = { key: 'weight', label: 'Added weight (lb)', unit: 'lb', inputMode: 'decimal' };
+
+export const DEFAULT_HOLD_SET_FIELDS: HoldSetFieldSpec[] = [SECONDS_FIELD];
+
+/** Per-exercise overrides, keyed by exercise id (slugified name). */
+export const HOLD_SET_FIELDS_BY_EXERCISE_ID: Record<string, HoldSetFieldSpec[]> = {
+  'weighted-plank': [ADDED_WEIGHT_FIELD, SECONDS_FIELD],
+};
+
+export function resolveHoldSetFields(exercise: Exercise | undefined): HoldSetFieldSpec[] {
+  if (!exercise) return DEFAULT_HOLD_SET_FIELDS;
+  const byId = HOLD_SET_FIELDS_BY_EXERCISE_ID[exercise.id];
+  if (byId) return byId;
+  return DEFAULT_HOLD_SET_FIELDS;
+}
+
+export function hasHoldSetField(fields: HoldSetFieldSpec[], key: HoldSetFieldKey): boolean {
+  return fields.some((field) => field.key === key);
+}
+
 /** Readouts the cardio card asks for at the end of a ride/row
  * (app/workout/active/cardio-entry-card.tsx), as library-facing labels. */
 export const CARDIO_LOGGING_FIELD_LABELS = ['Time', 'Resistance', 'Avg watts', 'Avg speed', 'Distance'];
@@ -89,10 +153,12 @@ export const CARDIO_LOGGING_FIELD_LABELS = ['Time', 'Resistance', 'Avg watts', '
  * prescription (R10: the library shows "Logs: weight, reps, RIR" style
  * chips; the picker shows the same before an exercise is added). Mirrors
  * exactly what the entry cards render: repetitions come from
- * resolveRepetitionSetFields, holds/durations log seconds, cardio blocks
- * log the cardio readouts, distance reps log an optional time, and plain
- * qualitative blocks are a single mark-complete tap. `showRir` false drops
- * the RIR label (the athlete's RIR display setting, lib/settings).
+ * resolveRepetitionSetFields, holds/non-cardio durations come from
+ * resolveHoldSetFields (e.g. "Added weight (lb), Seconds achieved" for
+ * Weighted Plank), cardio blocks log the cardio readouts, distance reps log
+ * an optional time, and plain qualitative blocks are a single mark-complete
+ * tap. `showRir` false drops the RIR label (the athlete's RIR display
+ * setting, lib/settings).
  */
 export function loggingFieldLabels(exercise: Exercise | undefined, prescription: Prescription, showRir = true): string[] {
   const isCardio = exercise?.category === 'cardio';
@@ -102,9 +168,9 @@ export function loggingFieldLabels(exercise: Exercise | undefined, prescription:
         .filter((field) => showRir || field.key !== 'rir')
         .map((field) => field.label);
     case 'hold':
-      return ['Seconds held'];
+      return resolveHoldSetFields(exercise).map((field) => field.label);
     case 'duration':
-      return isCardio ? CARDIO_LOGGING_FIELD_LABELS : ['Seconds'];
+      return isCardio ? CARDIO_LOGGING_FIELD_LABELS : resolveHoldSetFields(exercise).map((field) => field.label);
     case 'distance':
       return ['Time (optional)'];
     case 'qualitative':

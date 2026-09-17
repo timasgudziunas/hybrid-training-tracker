@@ -20,6 +20,7 @@ import { loadPendingSessions, removePendingSession, stashPendingSession } from "
 import { isResumableSession, isSampleSession, isStaleUnfinishedSession } from "@/lib/workout-session/resumable-session";
 import { detectSessionDeviations, resolveFinishStatus } from "@/lib/workout-session/session-deviations";
 import { createSessionSaveQueue, type SessionSaveQueue } from "@/lib/workout-session/save-queue";
+import { transitionCurrentSlot } from "@/lib/workout-session/slot-time";
 import { isCardioSlot } from "@/lib/workout-session/cardio-slot";
 import { addExtraSet, deleteLoggedSet, removeCurrentSet, targetSetCount } from "@/lib/workout-session/slot-set-edits";
 import { addExerciseToSession } from "@/lib/workout-session/add-exercise";
@@ -92,13 +93,14 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   // so the completion screen can show saving/saved/failed distinctly and
   // offer a retry instead of silently claiming "Saved" on a failed save.
   const [finishState, setFinishState] = useState<FinishState>("idle");
-  // When the current slot was entered, for the small per-exercise timer.
-  // Deliberately not persisted — a refresh or an Overview jump restarting
-  // the count is fine for a glance-only indicator.
-  const [slotEnteredAtMs, setSlotEnteredAtMs] = useState<number | null>(null);
 
   const sessionRef = useRef<WorkoutSessionRecord | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The previous value of currentSlotKey, for the per-exercise time-tracking
+  // effect below. Starts null so the first run (a brand-new or resumed
+  // session's first slot) is treated as "nothing to close out", matching
+  // transitionCurrentSlot's own from-is-null handling.
+  const prevSlotKeyRef = useRef<string | null>(null);
 
   // One save queue per mount, wrapping the saveWorkoutSession server action
   // so every save (debounced autosave, visibility flush, initial save,
@@ -133,21 +135,6 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
   // `null` in any phase before "ready".
   const currentSlotKey = session?.performance.currentSlotKey ?? null;
 
-  // Resets the per-exercise timer whenever the athlete lands on a new
-  // current slot (advance, skip, or an Overview jump). Reading/writing refs
-  // and calling Date.now() are both disallowed during render by this
-  // project's stricter React Compiler-era lint rules (react-hooks/refs,
-  // react-hooks/purity), so this stays a real Effect; the setState call is
-  // nested inside an inner function (matching the `init()` pattern above)
-  // rather than sitting directly in the effect body, per this project's
-  // react-hooks/set-state-in-effect rule.
-  useEffect(() => {
-    function markEntered() {
-      if (currentSlotKey) setSlotEnteredAtMs(Date.now());
-    }
-    markEntered();
-  }, [currentSlotKey]);
-
   const persist = useCallback((next: WorkoutSessionRecord) => {
     sessionRef.current = next;
     setSession(next);
@@ -164,6 +151,36 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
       if (sessionRef.current) queueRef.current!.request(sessionRef.current);
     }, SAVE_DEBOUNCE_MS);
   }, []);
+
+  // Closes out the previous current slot's open time stint and opens the
+  // new one, whenever the athlete lands on a different current slot
+  // (advance, skip, an Overview jump, or Finish/end-early moving
+  // currentSlotKey to null). Reading sessionRef.current, writing the ref,
+  // and calling `new Date()` are all disallowed during render by this
+  // project's stricter React Compiler-era lint rules (react-hooks/refs,
+  // react-hooks/purity), so this stays a real Effect; persist() is called
+  // from an inner function (matching the `init()`/`markEntered()` pattern
+  // elsewhere in this file) rather than directly in the effect body, per
+  // this project's react-hooks/set-state-in-effect rule. Only persists when
+  // transitionCurrentSlot actually changed something (reference inequality)
+  // so this never causes a pointless save loop: persist() here never
+  // changes currentSlotKey itself, so the effect's own dependency never
+  // re-fires as a result of the save it triggers.
+  useEffect(() => {
+    function applySlotTransition() {
+      const prev = sessionRef.current;
+      if (!prev) return;
+      const fromSlotKey = prevSlotKeyRef.current;
+      prevSlotKeyRef.current = currentSlotKey;
+      if (fromSlotKey === currentSlotKey) return;
+
+      const nextSlots = transitionCurrentSlot(prev.performance.slots, fromSlotKey, currentSlotKey, new Date().toISOString());
+      if (nextSlots !== prev.performance.slots) {
+        persist({ ...prev, performance: { ...prev.performance, slots: nextSlots } });
+      }
+    }
+    applySlotTransition();
+  }, [currentSlotKey, persist]);
 
   // Resume-or-start, once on mount. Prefers a local (this-device, this
   // browser) active session over a Supabase-fetched one, since local writes
@@ -406,6 +423,15 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
         const isNewCurrentSet = set.setNumber > slot.sets.length;
         sets[set.setNumber - 1] = set;
         const nextSlot: ExerciseSlotLog = { ...slot, sets, draft: isNewCurrentSet ? undefined : slot.draft };
+        // Logging a set on a skipped slot un-skips it (owner: "I'm not sure
+        // if there's a way to un skip an exercise right now") — a skipped
+        // slot is treated exactly like upcoming for the completion check
+        // just below, and it must never be left skipped once work has been
+        // logged on it, whether or not that work fills every prescribed
+        // set.
+        if (nextSlot.status === "skipped") {
+          nextSlot.status = "upcoming";
+        }
         // R10: logging the final target set no longer advances (owner:
         // "I want to see the exercise overview and then click Next
         // exercise"), so completion is recorded HERE, the moment the last
@@ -423,6 +449,25 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
           nextSlot.status = "completed";
         }
         return nextSlot;
+      }),
+    [updateSlot, templateSlots]
+  );
+
+  // Un-skips a slot (owner: "I'm not sure if there's a way to un skip an
+  // exercise right now"). Mirrors handleLogSet's completion rule: a
+  // non-qualitative slot that already has every prescribed set logged
+  // (possible if sets were logged before it was skipped, or added back via
+  // "+ Add set" while skipped) goes straight to completed rather than
+  // upcoming, so it doesn't immediately look done-but-not-done.
+  const handleUnskip = useCallback(
+    (slotKey: string) =>
+      updateSlot(slotKey, (slot) => {
+        const prescription = templateSlots.find((s) => s.slotKey === slotKey)?.exercise.prescription;
+        const alreadyComplete =
+          prescription !== undefined &&
+          prescription.type !== "qualitative" &&
+          slot.sets.length >= targetSetCount(prescription.sets, slot);
+        return { ...slot, status: alreadyComplete ? "completed" : "upcoming" };
       }),
     [updateSlot, templateSlots]
   );
@@ -456,6 +501,9 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     (slotKey: string) => {
       const prev = sessionRef.current;
       if (!prev) return;
+      // Always sets status to "completed" regardless of the slot's prior
+      // status, so marking a skipped qualitative block done un-skips it the
+      // same way handleLogSet does for a set-based slot.
       const updatedSlot: ExerciseSlotLog = {
         ...prev.performance.slots[slotKey],
         qualitativeCompleted: true,
@@ -900,12 +948,15 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             startedAt={session.startedAt}
             endedAt={finishState !== "idle" ? session.completedAt : null}
           />
-          {currentSlotKey && !overviewOpen && !isCurrentSlotCardio && slotEnteredAtMs !== null ? (
+          {currentSlotKey && !overviewOpen && !isCurrentSlotCardio && currentSlotLog ? (
             <>
               <span className="text-ink-tertiary" aria-hidden="true">
                 &middot;
               </span>
-              <ExerciseTimer sinceMs={slotEnteredAtMs} />
+              <ExerciseTimer
+                baseSeconds={currentSlotLog.activeSeconds ?? 0}
+                sinceMs={currentSlotLog.enteredAt ? new Date(currentSlotLog.enteredAt).getTime() : null}
+              />
             </>
           ) : null}
           <SyncStatusBadge synced={synced} />
@@ -957,6 +1008,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
             onAddExtraSet={() => handleAddExtraSet(currentTemplateSlot.slotKey)}
             onAdvance={() => advanceFrom(currentTemplateSlot.slotKey, "completed")}
             onSkip={() => advanceFrom(currentTemplateSlot.slotKey, "skipped")}
+            onUnskip={() => handleUnskip(currentTemplateSlot.slotKey)}
             onSetNote={(note) => handleSetNote(currentTemplateSlot.slotKey, note)}
             onQualitativeComplete={() => handleQualitativeComplete(currentTemplateSlot.slotKey)}
             onDraftChange={(draft) => handleDraftChange(currentTemplateSlot.slotKey, draft)}

@@ -19,19 +19,29 @@ function formatElapsed(totalSeconds: number): string {
 
 /** Small, unobtrusive time-on-this-exercise indicator (owner request: "I
  * want there to be a timer for how long I have been on an exercise. It
- * shouldn't be huge, but still exist."). `sinceMs` is not persisted —
- * active-workout-screen resets it whenever the current slot changes, and a
- * refresh or a jump via Overview simply restarts the count, which is fine
- * for a glance-only indicator. */
-export default function ExerciseTimer({ sinceMs }: { sinceMs: number }) {
+ * shouldn't be huge, but still exist." / "when I click off of an exercise
+ * and come back, I want it to save the time I spent on it. Right now it
+ * resets back to zero and starts counting again").
+ *
+ * `baseSeconds` is the time already banked for this slot from earlier
+ * stints as the current exercise (lib/workout-session/slot-time.ts,
+ * ExerciseSlotLog.activeSeconds); `sinceMs` is the wall-clock moment the
+ * athlete most recently entered it (ExerciseSlotLog.enteredAt, parsed to
+ * ms), or null while it isn't the current exercise. Both are read from the
+ * session's own persisted state, not local component state, so leaving an
+ * exercise and coming back — or refreshing mid-exercise — keeps counting
+ * instead of resetting to zero. */
+export default function ExerciseTimer({ baseSeconds, sinceMs }: { baseSeconds: number; sinceMs: number | null }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    if (sinceMs === null) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sinceMs]);
 
-  const elapsedSeconds = (now - sinceMs) / 1000;
+  const liveSeconds = sinceMs !== null ? Math.max(0, (now - sinceMs) / 1000) : 0;
+  const elapsedSeconds = baseSeconds + liveSeconds;
 
   return (
     <span

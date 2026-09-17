@@ -96,11 +96,17 @@ export default function WorkoutOverview({
               {slots.map((slot) => {
                 const log = slotLogs[slot.slotKey];
                 const isCurrent = slot.slotKey === currentSlotKey;
-                const name = resolveExerciseChoiceName(
-                  exercises,
-                  slot.exercise.exerciseId,
-                  slot.exercise.alternativeExerciseIds
-                );
+                // A swapped-in exercise, or a decided "A or B" choice, wins
+                // the display name: exercises[chosenExerciseId] is always
+                // what's actually being done, unlike the prescribed choice
+                // string, which never changes after a swap (owner: "an
+                // exercise that I swap doesn't read as the new exercise on
+                // the overview page"). Falls back to the prescribed choice
+                // string only when nothing has been chosen yet, or the
+                // chosen id is somehow missing from the snapshot.
+                const name =
+                  (log?.chosenExerciseId ? exercises[log.chosenExerciseId]?.name : undefined) ??
+                  resolveExerciseChoiceName(exercises, slot.exercise.exerciseId, slot.exercise.alternativeExerciseIds);
 
                 return (
                   <li key={slot.slotKey}>

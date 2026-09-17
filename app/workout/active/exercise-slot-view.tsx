@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { Exercise } from "@/lib/program/program-types";
 import { REST_GUIDANCE_BY_CATEGORY } from "@/lib/program/rest-guidance";
 import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
@@ -24,6 +27,13 @@ import PreviousPerformanceSummary from "./previous-performance-summary";
  * skip). `exercises` is the session's own exercisesSnapshot (2026-08-25
  * rework) — never the old static catalog — so names/guidance always match
  * exactly what was active when this session started.
+ *
+ * Owns the swap panel's expand/collapse state (2026-09-17 rework: the panel
+ * used to live entirely inside ExerciseSwapPicker, squeezed into the
+ * footer's row of small controls, which read as "not mobile" per owner
+ * feedback). The footer keeps a small "Swap" text trigger; the panel itself
+ * renders as its own full-width block below the footer row, still inside
+ * the card, and is scrolled into view when it opens.
  */
 export default function ExerciseSlotView({
   templateSlot,
@@ -39,6 +49,7 @@ export default function ExerciseSlotView({
   onAddExtraSet,
   onAdvance,
   onSkip,
+  onUnskip,
   onSetNote,
   onQualitativeComplete,
   onDraftChange,
@@ -65,6 +76,10 @@ export default function ExerciseSlotView({
   onAddExtraSet: () => void;
   onAdvance: () => void;
   onSkip: () => void;
+  /** Reverses a skip, putting the slot back among the not-done exercises
+   * (owner request 2026-09-17: undo an accidental tap, or come back once a
+   * busy machine opens up). */
+  onUnskip: () => void;
   onSetNote: (note: string) => void;
   onQualitativeComplete: () => void;
   onDraftChange: (draft: ExerciseSlotLog["draft"]) => void;
@@ -74,7 +89,16 @@ export default function ExerciseSlotView({
   onSwap: (exercise: Exercise) => void;
   onRevertSwap: () => void;
 }) {
+  const [swapPanelOpen, setSwapPanelOpen] = useState(false);
+  const swapPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!swapPanelOpen) return;
+    swapPanelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [swapPanelOpen]);
+
   const prescribed = templateSlot.exercise;
+  const isSkipped = slotLog.status === "skipped";
 
   if (!slotLog.chosenExerciseId) {
     return (
@@ -90,10 +114,10 @@ export default function ExerciseSlotView({
         />
         <button
           type="button"
-          onClick={onSkip}
+          onClick={isSkipped ? onUnskip : onSkip}
           className="self-start text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
         >
-          Skip this exercise
+          {isSkipped ? "Unskip" : "Skip this exercise"}
         </button>
       </div>
     );
@@ -112,11 +136,36 @@ export default function ExerciseSlotView({
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-line-hairline bg-surface-1 p-5 shadow-card sm:p-6">
+      {isSkipped ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3">
+          <p className="text-sm font-medium text-ink-primary">Skipped</p>
+          <button
+            type="button"
+            onClick={onUnskip}
+            className="flex min-h-9 min-w-11 items-center justify-center rounded-full border border-line-default px-3 text-xs font-medium text-ink-secondary transition-colors active:bg-surface-2"
+          >
+            Unskip
+          </button>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-1.5">
         <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
           {templateSlot.section.name}
         </p>
         <h1 className="font-display text-2xl font-bold leading-tight text-ink-primary sm:text-3xl">{name}</h1>
+        {hasSubstitution ? (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-tertiary">
+            <span>Swapped in for {prescribedName}</span>
+            <button
+              type="button"
+              onClick={onRevertSwap}
+              className="flex min-h-9 min-w-11 items-center justify-center rounded-full border border-line-default px-3 text-xs font-medium text-ink-secondary transition-colors active:bg-surface-2"
+            >
+              Undo
+            </button>
+          </div>
+        ) : null}
         {restGuidance ? <p className="text-xs text-ink-tertiary">Rest: {restGuidance.guidance}</p> : null}
         {prescribed.notes?.length ? (
           <ul className="flex flex-col gap-0.5 text-xs text-ink-tertiary">
@@ -187,23 +236,42 @@ export default function ExerciseSlotView({
             >
               Going lighter
             </button>
+            <button
+              type="button"
+              onClick={() => setSwapPanelOpen((prev) => !prev)}
+              className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
+            >
+              Swap
+            </button>
+            <button
+              type="button"
+              onClick={isSkipped ? onUnskip : onSkip}
+              className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
+            >
+              {isSkipped ? "Unskip" : "Skip exercise"}
+            </button>
+          </div>
+        </div>
+
+        {swapPanelOpen ? (
+          <div ref={swapPanelRef}>
             <ExerciseSwapPicker
               sectionType={templateSlot.section.type}
               currentExercise={chosenExercise}
               prescribedName={prescribedName}
               hasSubstitution={hasSubstitution}
-              onPick={onSwap}
-              onRevert={onRevertSwap}
+              onPick={(exercise) => {
+                onSwap(exercise);
+                setSwapPanelOpen(false);
+              }}
+              onRevert={() => {
+                onRevertSwap();
+                setSwapPanelOpen(false);
+              }}
+              onClose={() => setSwapPanelOpen(false)}
             />
-            <button
-              type="button"
-              onClick={onSkip}
-              className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
-            >
-              Skip exercise
-            </button>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

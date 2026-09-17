@@ -76,7 +76,11 @@ export function formatLoggedSet(set: SetLog, prescriptionType: Prescription['typ
   }
 
   if (prescriptionType === 'hold' || prescriptionType === 'duration') {
-    return set.seconds !== undefined ? `${set.seconds} sec` : 'Logged';
+    if (set.seconds === undefined) return 'Logged';
+    // A weighted hold (e.g. Weighted Plank) shows the added weight so the
+    // "Last time" panel and history read "45 sec at 25 lb" instead of just
+    // the seconds (owner request 2026-09-17).
+    return set.weight !== undefined ? `${set.seconds} sec at ${set.weight} lb` : `${set.seconds} sec`;
   }
 
   if (prescriptionType === 'distance') {

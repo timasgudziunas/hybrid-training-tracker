@@ -35,11 +35,16 @@ export default function ExercisePickerList({
   onPick,
   groups,
   emptyLabel,
+  listMaxHeightClassName = "max-h-80",
 }: {
   exercises: Exercise[];
   onPick: (exercise: Exercise) => void;
   groups?: ExercisePickerGroup[];
   emptyLabel?: string;
+  /** Tailwind max-height class for the scrollable list area. Defaults to
+   * today's max-h-80 (the "Add exercise" browse) so only callers that need
+   * a taller mobile-friendly panel (the swap picker, max-h-[60vh]) opt in. */
+  listMaxHeightClassName?: string;
 }) {
   const [query, setQuery] = useState("");
   const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | "all">("all");
@@ -75,7 +80,7 @@ export default function ExercisePickerList({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search exercises"
-        className="h-11 rounded-lg border border-line-default bg-surface-2 px-3 text-sm text-ink-primary focus:border-accent focus:outline-none"
+        className="h-12 rounded-lg border border-line-default bg-surface-2 px-3 text-base text-ink-primary focus:border-accent focus:outline-none"
       />
 
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -106,7 +111,7 @@ export default function ExercisePickerList({
         ))}
       </div>
 
-      <div className="flex max-h-80 flex-col overflow-y-auto">
+      <div className={`flex ${listMaxHeightClassName} flex-col overflow-y-auto`}>
         {displayGroups.map((group) =>
           group.items.length === 0 ? null : (
             <div
@@ -132,7 +137,11 @@ function ExercisePickerRow({ exercise, onPick }: { exercise: Exercise; onPick: (
   const preset = exercise.defaultPrescription ? formatPrescriptionPreset(exercise.defaultPrescription) : null;
 
   return (
-    <button type="button" onClick={onPick} className="flex flex-col gap-0.5 py-2.5 text-left transition-colors active:bg-surface-2">
+    <button
+      type="button"
+      onClick={onPick}
+      className="flex min-h-12 flex-col justify-center gap-0.5 py-3 text-left transition-colors active:bg-surface-2"
+    >
       <span className="text-sm text-ink-secondary">{exercise.name}</span>
       {exercise.primaryMuscles.length > 0 ? (
         <span className="text-xs text-ink-tertiary">{exercise.primaryMuscles.join(", ")}</span>

@@ -7,8 +7,12 @@ import { targetSetCount } from "@/lib/workout-session/slot-set-edits";
 import {
   resolveRepetitionSetFields,
   hasRepetitionSetField,
+  resolveHoldSetFields,
+  hasHoldSetField,
   type RepetitionSetFieldKey,
   type RepetitionSetFieldSpec,
+  type HoldSetFieldKey,
+  type HoldSetFieldSpec,
 } from "@/lib/program/set-entry-fields";
 import RirSelector from "./rir-selector";
 import PreviousPerformanceSummary from "./previous-performance-summary";
@@ -20,6 +24,9 @@ function formatRange(min: number, max: number): string {
 }
 
 type NumericFieldKey = Exclude<RepetitionSetFieldKey, "rir">;
+/** The subset of hold-field keys that render as plain numeric inputs (both
+ * of them: weight and seconds have no tap-selector counterpart). */
+type PrefillableKey = NumericFieldKey | HoldSetFieldKey;
 
 /** Reps are always a whole number; every other repetitions field (weight,
  * box height, jump distance) accepts a decimal. */
@@ -27,22 +34,27 @@ function parseFieldValue(field: RepetitionSetFieldSpec, raw: string): number {
   return field.key === "reps" ? Number.parseInt(raw, 10) : Number.parseFloat(raw);
 }
 
-/** Carries the last-entered value forward within this session (adjacent
- * sets are almost always close in weight/height/distance); falls back to
- * last session's corresponding set, then empty ("first exposure" edge
- * case). Works for any numeric SetLog field, so box height and jump
- * distance prefill exactly like weight does. */
-function prefillNumeric(committedSets: SetLog[], previousSets: SetLog[] | undefined, field: NumericFieldKey | "seconds"): string {
+/** Seconds achieved is always a whole number; an added-weight hold field
+ * accepts a decimal like every other weight input. */
+function parseHoldFieldValue(field: HoldSetFieldSpec, raw: string): number {
+  return field.key === "seconds" ? Number.parseInt(raw, 10) : Number.parseFloat(raw);
+}
+
+/** Carries the last-entered value forward WITHIN this session only (adjacent
+ * sets are almost always close in weight/height/distance) — never falls
+ * back to a previous session's set. Owner request 2026-09-17: "I don't want
+ * the current field ... to default to the previous time I did it ... I want
+ * it to be blank." Previous-session performance is shown in the "Last time"
+ * panel (PreviousPerformanceSummary) only; it is never typed into an input.
+ * Works for any numeric SetLog field, so box height, jump distance, and a
+ * hold's added weight all prefill exactly like repetitions weight does.
+ * Never called for `seconds`: a hold/duration's seconds field always starts
+ * blank, with no within-session carry-forward and no prescription-max
+ * default either. */
+function prefillNumeric(committedSets: SetLog[], field: Exclude<PrefillableKey, "seconds">): string {
   const lastCommitted = committedSets[committedSets.length - 1];
   const lastValue = lastCommitted?.[field];
-  if (typeof lastValue === "number") return String(lastValue);
-
-  const setIndex = committedSets.length;
-  const previous = previousSets?.[setIndex] ?? previousSets?.[previousSets.length - 1];
-  const previousValue = previous?.[field];
-  if (typeof previousValue === "number") return String(previousValue);
-
-  return "";
+  return typeof lastValue === "number" ? String(lastValue) : "";
 }
 
 /** One-line summary of an already-committed set for the compact edit list,
@@ -68,7 +80,9 @@ function formatCommittedSetSummary(set: SetLog, prescription: Exclude<Prescripti
   }
 
   if (prescription.type === "hold" || prescription.type === "duration") {
-    const parts = set.seconds !== undefined ? [`${set.seconds}s`] : [];
+    const parts: string[] = [];
+    if (set.weight !== undefined) parts.push(`${set.weight} lb`);
+    if (set.seconds !== undefined) parts.push(`${set.seconds}s`);
     return [`Set ${set.setNumber}`, ...parts].join(" · ");
   }
 
@@ -78,6 +92,13 @@ function formatCommittedSetSummary(set: SetLog, prescription: Exclude<Prescripti
 }
 
 function numericDraftValue(draft: SetDraft, key: NumericFieldKey): string {
+  const raw = draft[key];
+  return typeof raw === "string" ? raw : "";
+}
+
+/** Same as numericDraftValue but for a hold/duration field (weight or
+ * seconds) — both are string fields on SetDraft already. */
+function holdDraftValue(draft: SetDraft, key: HoldSetFieldKey): string {
   const raw = draft[key];
   return typeof raw === "string" ? raw : "";
 }
@@ -96,9 +117,10 @@ function numericFieldsOf(fields: RepetitionSetFieldSpec[]): (RepetitionSetFieldS
  * instead.
  *
  * Which inputs a repetitions set shows (weight/reps/RIR, or box
- * height/reps for a box jump, or reps alone for power work) comes from
- * lib/program/set-entry-fields.ts, resolved once per exercise — never a
- * hardcoded branch here.
+ * height/reps for a box jump, or reps alone for power work) and which
+ * inputs a hold/duration set shows (seconds alone, or added weight plus
+ * seconds for a weighted hold) both come from lib/program/set-entry-fields.ts,
+ * resolved once per exercise — never a hardcoded branch here.
  *
  * The target set count (2026-09-04 rework, "removing a set removed the
  * wrong one") is prescribed sets adjusted by extraSets/removedSets via
@@ -154,6 +176,7 @@ export default function ExerciseEntryCard({
   onDraftChange: (draft: SetDraft) => void;
 }) {
   const fields = resolveRepetitionSetFields(exercise);
+  const holdFields = resolveHoldSetFields(exercise);
   const targetSets = targetSetCount(prescription.sets, slotLog);
   const currentSetNumber = slotLog.sets.length + 1;
   const allSetsLogged = slotLog.sets.length >= targetSets;
@@ -166,16 +189,21 @@ export default function ExerciseEntryCard({
     const initial: SetDraft = {};
     if (prescription.type === "repetitions") {
       if (hasRepetitionSetField(fields, "weight")) {
-        initial.weight = prefillNumeric(slotLog.sets, previousSets, "weight");
+        initial.weight = prefillNumeric(slotLog.sets, "weight");
       }
       if (hasRepetitionSetField(fields, "boxHeightInches")) {
-        initial.boxHeightInches = prefillNumeric(slotLog.sets, previousSets, "boxHeightInches");
+        initial.boxHeightInches = prefillNumeric(slotLog.sets, "boxHeightInches");
       }
       if (hasRepetitionSetField(fields, "jumpDistanceInches")) {
-        initial.jumpDistanceInches = prefillNumeric(slotLog.sets, previousSets, "jumpDistanceInches");
+        initial.jumpDistanceInches = prefillNumeric(slotLog.sets, "jumpDistanceInches");
       }
     } else if (prescription.type === "hold" || prescription.type === "duration") {
-      initial.seconds = prefillNumeric(slotLog.sets, previousSets, "seconds") || String(prescription.maxSeconds);
+      // Added weight (e.g. Weighted Plank) carries forward within-session
+      // like any other weight field; seconds always starts blank (owner
+      // request 2026-09-17), with no prescription-max default.
+      if (hasHoldSetField(holdFields, "weight")) {
+        initial.weight = prefillNumeric(slotLog.sets, "weight");
+      }
     }
     return initial;
   });
@@ -218,6 +246,15 @@ export default function ExerciseEntryCard({
       }
       const raw = numericDraftValue(draft, field.key);
       if (raw) set[field.key] = parseFieldValue(field, raw);
+    }
+    return set;
+  }
+
+  function buildHoldSet(): SetLog {
+    const set: SetLog = { setNumber: currentSetNumber, completed: true };
+    for (const field of holdFields) {
+      const raw = holdDraftValue(draft, field.key);
+      if (raw) set[field.key] = parseHoldFieldValue(field, raw);
     }
     return set;
   }
@@ -273,6 +310,7 @@ export default function ExerciseEntryCard({
           key={editingSetNumber}
           prescription={prescription}
           fields={fields}
+          holdFields={holdFields}
           showRir={showRir}
           set={slotLog.sets[editingSetNumber - 1]}
           onSave={(set) => {
@@ -346,25 +384,24 @@ export default function ExerciseEntryCard({
 
           {prescription.type === "hold" || prescription.type === "duration" ? (
             <div className="flex flex-col gap-4">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Seconds achieved</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={draft.seconds ?? ""}
-                  onChange={(e) => updateDraft("seconds", e.target.value)}
-                  className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
-                />
-              </label>
+              <div className={holdFields.length > 1 ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
+                {holdFields.map((field) => (
+                  <label key={field.key} className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">{field.label}</span>
+                    <input
+                      type="text"
+                      inputMode={field.inputMode}
+                      value={holdDraftValue(draft, field.key)}
+                      onChange={(e) => updateDraft(field.key, e.target.value)}
+                      className="h-16 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-3xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
+                      placeholder="0"
+                    />
+                  </label>
+                ))}
+              </div>
               <button
                 type="button"
-                onClick={() =>
-                  commitSet({
-                    setNumber: currentSetNumber,
-                    completed: true,
-                    seconds: draft.seconds ? Number.parseInt(draft.seconds, 10) : undefined,
-                  })
-                }
+                onClick={() => commitSet(buildHoldSet())}
                 className="h-16 rounded-xl bg-accent text-lg font-semibold text-accent-ink shadow-card transition-colors active:bg-accent-strong"
               >
                 {isFinalSet ? "Log set" : "Next set"}
@@ -451,6 +488,7 @@ export default function ExerciseEntryCard({
 function EditSetForm({
   prescription,
   fields,
+  holdFields,
   showRir,
   set,
   onSave,
@@ -459,6 +497,7 @@ function EditSetForm({
 }: {
   prescription: Exclude<Prescription, { type: "qualitative" }>;
   fields: RepetitionSetFieldSpec[];
+  holdFields: HoldSetFieldSpec[];
   /** Athlete setting: whether to show the RIR selector at all (see the
    * matching prop on ExerciseEntryCard). A set logged before the setting
    * was turned off keeps its RIR value on save even with the selector
@@ -481,7 +520,16 @@ function EditSetForm({
     return initial;
   });
   const [rir, setRir] = useState<number | undefined>(set.rir);
-  const [seconds, setSeconds] = useState(() => (set.seconds !== undefined ? String(set.seconds) : ""));
+  // Editing an already-committed set shows its existing values (this is a
+  // correction form, not the fresh-set entry the blank-input rule targets).
+  const [holdValues, setHoldValues] = useState<Record<HoldSetFieldKey, string>>(() => {
+    const initial = {} as Record<HoldSetFieldKey, string>;
+    for (const field of holdFields) {
+      const raw = set[field.key];
+      initial[field.key] = raw !== undefined ? String(raw) : "";
+    }
+    return initial;
+  });
   const [timeSeconds, setTimeSeconds] = useState(() => (set.timeSeconds !== undefined ? String(set.timeSeconds) : ""));
 
   return (
@@ -521,16 +569,21 @@ function EditSetForm({
       ) : null}
 
       {prescription.type === "hold" || prescription.type === "duration" ? (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Seconds achieved</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={seconds}
-            onChange={(e) => setSeconds(e.target.value)}
-            className="h-14 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-2xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
-          />
-        </label>
+        <div className={holdFields.length > 1 ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
+          {holdFields.map((field) => (
+            <label key={field.key} className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">{field.label}</span>
+              <input
+                type="text"
+                inputMode={field.inputMode}
+                value={holdValues[field.key]}
+                onChange={(e) => setHoldValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                className="h-14 rounded-xl border border-line-default bg-surface-2 px-4 font-display text-2xl tabular-nums text-ink-primary shadow-well transition-colors focus:border-accent focus:outline-none"
+                placeholder="0"
+              />
+            </label>
+          ))}
+        </div>
       ) : null}
 
       {prescription.type === "distance" ? (
@@ -565,7 +618,10 @@ function EditSetForm({
             }
           }
           if (prescription.type === "hold" || prescription.type === "duration") {
-            built.seconds = seconds ? Number.parseInt(seconds, 10) : undefined;
+            for (const field of holdFields) {
+              const raw = holdValues[field.key];
+              built[field.key] = raw ? parseHoldFieldValue(field, raw) : undefined;
+            }
           }
           if (prescription.type === "distance") {
             built.distanceCompleted = true;

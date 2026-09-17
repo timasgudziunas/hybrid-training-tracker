@@ -95,6 +95,19 @@ export interface ExerciseSlotLog {
    * refreshing (the parent remounts ExerciseEntryCard on every commit,
    * which would otherwise reset component-local input state to blank). */
   draft?: SetDraft;
+  /** Accumulated seconds this slot was the current exercise, closed out
+   * every time the athlete leaves it (advance, skip, jump via Overview,
+   * Finish). Owner: "when I click off of an exercise and come back, I want
+   * it to save the time I spent on it" — see lib/workout-session/slot-time.ts
+   * for the transition logic that maintains this alongside `enteredAt`. */
+  activeSeconds?: number;
+  /** ISO timestamp set while this slot is the current exercise, cleared
+   * when it stops being current. Persisted (not component state) so a
+   * refresh keeps counting from where it left off. Because it survives
+   * while the app is closed, time spent away from the app before returning
+   * counts toward the exercise too — the same tradeoff the whole-session
+   * timer already makes. */
+  enteredAt?: string;
 }
 
 /** Uncommitted input values for the set currently being entered (see
