@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getLocalDateString } from "@/lib/date/local-date-string";
 import { getLocalWeekday } from "@/lib/date/weekday-from-date";
-import type { Prescription, TrainingDayTemplate, Exercise } from "@/lib/program/program-types";
+import type { Prescription, TrainingDayTemplate, Exercise, Weekday } from "@/lib/program/program-types";
 import { getWorkoutForWeekday, exercisesForTemplate } from "@/lib/program/resolved-program";
 import { SAMPLE_DEMO_WEEKDAY, SAMPLE_PROGRAM } from "@/lib/program/sample-program";
 import { closeUnfinishedSession } from "@/lib/workout-session/close-unfinished-session";
@@ -75,7 +75,17 @@ function withUpdatedPrescription(
   };
 }
 
-export default function ActiveWorkoutScreen({ source }: { source: "sample" | "program" }) {
+export default function ActiveWorkoutScreen({
+  source,
+  dayOverride = null,
+}: {
+  source: "sample" | "program";
+  /** Program day to start instead of the device's weekday (see page.tsx's
+   * `?day=`), for making up a missed session. Ignored on Sundays (non-
+   * negotiable 11: Sunday is a true rest day) and whenever a session is
+   * resumed rather than created. */
+  dayOverride?: Weekday | null;
+}) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [session, setSession] = useState<WorkoutSessionRecord | null>(null);
   // Only populated when phase becomes "rest-day" — since the 2026-08-25
@@ -287,7 +297,13 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
 
         // The sample always starts its showcase day so the demo never
         // dead-ends on one of the sample's rest days.
-        const weekday = source === "sample" ? SAMPLE_DEMO_WEEKDAY : getLocalWeekday(now);
+        const deviceWeekday = getLocalWeekday(now);
+        const weekday =
+          source === "sample"
+            ? SAMPLE_DEMO_WEEKDAY
+            : dayOverride && deviceWeekday !== "sunday"
+              ? dayOverride
+              : deviceWeekday;
         const deviceTemplate = getWorkoutForWeekday(program, weekday);
         if (deviceTemplate.restDay) {
           if (!cancelled) {
@@ -347,7 +363,7 @@ export default function ActiveWorkoutScreen({ source }: { source: "sample" | "pr
     return () => {
       cancelled = true;
     };
-  }, [source]);
+  }, [source, dayOverride]);
 
   // Best-effort immediate flush (in addition to the debounce) when the tab
   // is being hidden or closed — cheap insurance on top of the localStorage
