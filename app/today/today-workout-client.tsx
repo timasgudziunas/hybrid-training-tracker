@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import type { ResolvedProgram, Weekday } from "@/lib/program/program-types";
+import type { ResolvedProgram, TrainingDayTemplate, Weekday } from "@/lib/program/program-types";
 import { getWorkoutForWeekday } from "@/lib/program/resolved-program";
 import { getLocalWeekday } from "@/lib/date/weekday-from-date";
 import { capitalizeLabel } from "./capitalize-label";
@@ -18,6 +18,17 @@ function subscribeToNothing(): () => void {
 
 function getClientWeekday(): Weekday {
   return getLocalWeekday(new Date());
+}
+
+/** Yesterday's training day, offered as a one-tap make-up when today is a
+ * rest day. Never on Sunday (a true rest day, non-negotiable 11), and only
+ * when yesterday actually had a workout. */
+function makeUpTemplateFor(program: ResolvedProgram, weekday: Weekday): TrainingDayTemplate | null {
+  if (weekday === "sunday") return null;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const previous = getWorkoutForWeekday(program, getLocalWeekday(yesterday));
+  return previous.restDay ? null : previous;
 }
 
 // The server renders in UTC, which can disagree with the athlete's local
@@ -44,7 +55,7 @@ export default function TodayWorkoutClient({ program }: { program: ResolvedProgr
         {capitalizeLabel(weekday)}
       </p>
       {template.restDay ? (
-        <RestDayCard template={template} />
+        <RestDayCard template={template} makeUp={makeUpTemplateFor(program, weekday)} />
       ) : (
         <>
           <WorkoutCard template={template} exercises={program.exercises} />
