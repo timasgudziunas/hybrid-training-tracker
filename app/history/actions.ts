@@ -28,6 +28,11 @@ export interface SessionSummary {
   workoutTemplateId: string;
   status: WorkoutSessionStatus;
   startedAt: string;
+  /** The missed training day this session makes up for (owner decision
+   * 2026-09-27, make-up sessions), read straight out of the performance
+   * jsonb so the calendar can credit the session to that date without
+   * loading the whole blob. Null for ordinary sessions. */
+  makeUpForDate: string | null;
 }
 
 type SessionSummaryDbRow = {
@@ -37,6 +42,7 @@ type SessionSummaryDbRow = {
   workout_template_id: string;
   status: WorkoutSessionStatus;
   started_at: string;
+  make_up_for_date: string | null;
 };
 
 function summaryFromDbRow(row: SessionSummaryDbRow): SessionSummary {
@@ -47,6 +53,7 @@ function summaryFromDbRow(row: SessionSummaryDbRow): SessionSummary {
     workoutTemplateId: row.workout_template_id,
     status: row.status,
     startedAt: row.started_at,
+    makeUpForDate: row.make_up_for_date ?? null,
   };
 }
 
@@ -99,7 +106,7 @@ export async function fetchSessionSummaries(
   try {
     let query = supabase
       .from(SESSIONS_TABLE)
-      .select("id, session_date, weekday, workout_template_id, status, started_at")
+      .select("id, session_date, weekday, workout_template_id, status, started_at, make_up_for_date:performance->>makeUpForDate")
       .order("session_date", { ascending: true });
 
     if (startDate) query = query.gte("session_date", startDate);
@@ -133,7 +140,17 @@ export async function fetchSessionForDate(sessionDate: string): Promise<ActionRe
   const { supabase } = context.data;
 
   try {
-    const { data, error } = await supabase.from(SESSIONS_TABLE).select("*").eq("session_date", sessionDate);
+    // A day drill-down for a MISSED date must also resolve a make-up
+    // performed on a later date (owner decision 2026-09-27): the make-up row
+    // still carries session_date = the day it was performed, and only its
+    // performance.makeUpForDate points back at the missed date, so the query
+    // has to match either column. sessionDate is already validated by the
+    // page's yyyy-mm-dd regex before this action ever runs, so it is safe to
+    // interpolate into the .or() filter string.
+    const { data, error } = await supabase
+      .from(SESSIONS_TABLE)
+      .select("*")
+      .or(`session_date.eq.${sessionDate},performance->>makeUpForDate.eq.${sessionDate}`);
 
     if (error) {
       console.error("[history/actions] Session-for-date lookup failed:", error);
@@ -148,6 +165,7 @@ export async function fetchSessionForDate(sessionDate: string): Promise<ActionRe
         workoutTemplateId: row.workoutTemplateId,
         status: row.status,
         startedAt: row.startedAt,
+        makeUpForDate: row.performance.makeUpForDate ?? null,
       }))
     );
     const representative = byDate.get(sessionDate);

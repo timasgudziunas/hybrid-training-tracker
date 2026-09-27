@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Exercise } from "@/lib/program/program-types";
 import type { SessionDeviation } from "@/lib/workout-session/session-deviations";
 import type { CompletionStats, EndedEarlyReason } from "@/lib/workout-session/workout-session-types";
+import { formatDateLabelShort } from "@/lib/date/format-date-label";
 import AddExercisePicker from "./add-exercise-picker";
 
 const DIFFICULTY_OPTIONS = [1, 2, 3, 4, 5] as const;
@@ -38,6 +39,7 @@ export default function CompletionSummary({
   endedEarlyReason,
   addedExerciseNames,
   onAddExercise,
+  makeUpForDate,
 }: {
   startedAt: string;
   finalDurationSeconds: number | null;
@@ -56,6 +58,10 @@ export default function CompletionSummary({
    * only, never a deviation: adding extra work is not failing the plan. */
   addedExerciseNames: string[];
   onAddExercise: (exercise: Exercise) => void;
+  /** performance.makeUpForDate (owner decision 2026-09-27, make-up
+   * sessions), when this session makes up a missed day. Null on an
+   * ordinary session. */
+  makeUpForDate?: string | null;
 }) {
   // Frozen when this screen appears (the parent remounts it on view change)
   // so it doesn't tick while the athlete types a note; the exact stored
@@ -83,6 +89,9 @@ export default function CompletionSummary({
         <h1 className="font-display text-6xl font-bold tabular-nums text-ink-primary sm:text-7xl">
           {formatDuration(durationSeconds)}
         </h1>
+        {makeUpForDate ? (
+          <p className="text-xs font-medium text-ink-tertiary">Making up {formatDateLabelShort(makeUpForDate)}</p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -122,6 +122,18 @@ Owner request: two exercises performed back to back with little or no rest betwe
 
 **Done when:** build, lint, and every test suite green; a superset pair runs end to end in the sample workout.
 
+## R12: Make-up sessions (2026-09-27)
+
+Owner decision: a training day missed within the last 3 days can be made up on any later day, rest days and Sunday included (CLAUDE.md non-negotiables 11 and 20 amended). Replaces the temporary one-day `?day=` override from 2026-09-26. Rule lives in `lib/workout-session/make-up-candidates.ts` (`MAKE_UP_WINDOW_DAYS = 3`); the session is stored on the performed date with `performance.makeUpForDate` = the missed date, and every per-date view keys on the effective date (`lib/history/session-filtering.ts`).
+
+- [x] Pure candidate rule plus tests: window, program coverage, rest days skipped, completed or modified or already made-up days excluded, most recent first.
+- [x] Today: rest-day card (Sunday included) lists one button per missed day; training day shows a "Missed" card with "Make it up instead" links.
+- [x] `/workout/active?makeUpFor=yyyy-mm-dd` validates with the same rule, stamps the session, and shows "Making up Friday, Sep 25" in the header; invalid requests fall back to the device weekday.
+- [x] History: calendar credits the missed date (completed or modified with a "made up later" marker), drill-down on the missed date opens the make-up session and names the performed date, adherence counts it as met.
+- [x] Docs: CLAUDE.md non-negotiables 11 and 20, PRODUCT_SPEC §5 and §15.
+
+**Done when:** build, lint, and every test suite green; a make-up started from Today on a rest day lands on the missed date in History. *Shipped 2026-09-27: build, lint, 17 suites, and an 18-check headless drive (throwaway account, Sunday make-up of a missed Friday) all green; gym confirmation pending.*
+
 > The phases below predate the rework. Their FEATURE checklists remain the requirements source for R3-R8 above; their ordering and the assumption of a code-seeded program are superseded.
 
 ## Phase 4: Progression engine

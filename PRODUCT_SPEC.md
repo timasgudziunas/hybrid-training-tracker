@@ -98,6 +98,15 @@ Set 3  [weight] [reps] [RIR]
 
 Logging must be extremely fast. The user should not have to navigate through multiple modal windows to record a set.
 
+### Make-up sessions (owner decision, 2026-09-27)
+
+A training day missed within the last 3 days (`MAKE_UP_WINDOW_DAYS`, one constant in `lib/workout-session/make-up-candidates.ts`) can be made up on any later day, rest days and Sunday included. A day counts as missed when the active program covered it, it was a training day, and no completed or modified session is credited to it. Days before the program was activated never qualify.
+
+- On a rest day, the rest-day card lists one full-width button per missed day, most recent first: "Make up Friday: Upper B".
+- On a training day, a small "Missed" card sits under today's workout with a "Make it up instead" link per missed day. A make-up starts in place of today's session, never in addition to it.
+- The make-up session is stored on the date it is performed and stamped with the missed date (`performance.makeUpForDate`). History, the calendar, and adherence credit it to the missed date, so Friday reads as made up rather than missed and the Saturday it was done on stays whatever the program says Saturday is.
+- One offer per missed day; the athlete chooses which to make up when more than one is open. Nothing is offered once the window has passed.
+
 ## 6. Workout Execution
 
 When the athlete presses Start Workout, record: workout start time, prescribed session, exercises, target sets, target reps.
@@ -274,7 +283,7 @@ A modified session still counts as showing up. The application should encourage 
 
 ## 15. Training Calendar
 
-Provide a calendar/history interface. Potential statuses: Completed, Modified, Ultimate practice, Rest, Missed. Clicking a day opens the workout record.
+Provide a calendar/history interface. Potential statuses: Completed, Modified, Ultimate practice, Rest, Missed. Clicking a day opens the workout record. A day made up later (see §5, Make-up sessions) shows as completed or modified with a "made up later" marker, and opening it shows the make-up session with the date it was actually performed.
 
 Show adherence metrics such as "22 / 24 planned sessions completed, 92% adherence." Prefer adherence over psychologically punishing streak mechanics. A streak may exist as secondary information but should not dominate the product.
 

@@ -1,22 +1,12 @@
 import { fetchActiveProgram } from "@/app/program/actions";
 import type { ActiveProgramWeek } from "@/lib/history/day-classification";
+import { activeSinceDateFromCreatedAt } from "@/lib/history/active-since-date";
 import { fetchBodyCheckinDates, fetchSessionSummaries } from "./actions";
 import { fetchUltimatePracticeDates } from "@/app/today/ultimate-practice-actions";
 import HistoryCalendarClient from "./history-calendar-client";
 import SiteHeader from "@/app/site-header";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Approximates "the calendar date the active program became active" from
- * its `createdAt` timestamp. A true device-local date isn't knowable for a
- * past server timestamp (only "today" can be resolved on the athlete's own
- * clock — see history-calendar-client.tsx) — this is a deliberate,
- * documented day-granularity approximation using the timestamp's UTC date.
- */
-function activeSinceDateFromCreatedAt(createdAt: string): string {
-  return new Date(createdAt).toISOString().slice(0, 10);
-}
 
 /**
  * Server-fetches everything History needs: the active program (to shade

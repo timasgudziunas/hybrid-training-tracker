@@ -210,6 +210,17 @@ export interface WorkoutSessionPerformance {
    * ever taken. See session-deviations.ts for how these plus the slot logs
    * become the deviation list shown to the athlete. */
   modifications?: SessionModificationState;
+  /**
+   * Make-up sessions (owner decision 2026-09-27): when the athlete starts a
+   * program day he missed within the last MAKE_UP_WINDOW_DAYS (see
+   * lib/workout-session/make-up-candidates.ts), this is the "yyyy-mm-dd" of
+   * the missed training day. `sessionDate` stays the date the session was
+   * actually performed. History and adherence credit the session to THIS
+   * date (lib/history/session-filtering.ts keys by the effective date), so
+   * the missed day reads "made up" rather than "missed". Absent on every
+   * ordinary session.
+   */
+  makeUpForDate?: string;
 }
 
 /** One full session row — mirrors workout_sessions 1:1. */

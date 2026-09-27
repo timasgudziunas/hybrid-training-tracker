@@ -4,11 +4,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getLocalDateString } from "@/lib/date/local-date-string";
 import { getLocalWeekday } from "@/lib/date/weekday-from-date";
-import type { Prescription, TrainingDayTemplate, Exercise, Weekday } from "@/lib/program/program-types";
+import type { Prescription, TrainingDayTemplate, Exercise, WorkoutTemplate } from "@/lib/program/program-types";
 import { getWorkoutForWeekday, exercisesForTemplate } from "@/lib/program/resolved-program";
 import { SAMPLE_DEMO_WEEKDAY, SAMPLE_PROGRAM } from "@/lib/program/sample-program";
 import { closeUnfinishedSession } from "@/lib/workout-session/close-unfinished-session";
 import { createNewSession } from "@/lib/workout-session/create-session";
+import { makeUpCandidateForDate, MAKE_UP_WINDOW_DAYS } from "@/lib/workout-session/make-up-candidates";
+import { activeSinceDateFromCreatedAt } from "@/lib/history/active-since-date";
+import { addDays } from "@/lib/history/calendar-grid";
+import { groupSessionsByDate } from "@/lib/history/session-filtering";
 import { computeCompletionStats } from "@/lib/workout-session/completion-stats";
 import { flattenTemplateSlots, nextUnfinishedSlotKey, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import {
@@ -36,8 +40,10 @@ import type {
 } from "@/lib/workout-session/workout-session-types";
 import { DEFAULT_ATHLETE_SETTINGS, type AthleteSettings } from "@/lib/settings/athlete-settings";
 import { fetchAthleteSettings } from "@/app/settings/actions";
-import { fetchActiveProgram } from "@/app/program/actions";
+import { fetchActiveProgram, type ProgramRecord } from "@/app/program/actions";
 import { fetchActiveSessionForToday, fetchPreviousPerformance, saveWorkoutSession } from "@/app/workout/actions";
+import { fetchSessionSummaries } from "@/app/history/actions";
+import { formatDateLabelShort } from "@/lib/date/format-date-label";
 import SessionTimer from "./session-timer";
 import ExerciseTimer from "./exercise-timer";
 import SyncStatusBadge from "./sync-status-badge";
@@ -77,14 +83,18 @@ function withUpdatedPrescription(
 
 export default function ActiveWorkoutScreen({
   source,
-  dayOverride = null,
+  makeUpFor = null,
 }: {
   source: "sample" | "program";
-  /** Program day to start instead of the device's weekday (see page.tsx's
-   * `?day=`), for making up a missed session. Ignored on Sundays (non-
-   * negotiable 11: Sunday is a true rest day) and whenever a session is
-   * resumed rather than created. */
-  dayOverride?: Weekday | null;
+  /** The missed training day ("yyyy-mm-dd") to start instead of the
+   * device's weekday (see page.tsx's `?makeUpFor=`), owner decision
+   * 2026-09-27. Only ever consulted for a brand-new PROGRAM session (never
+   * the sample, never a resumed session) and only after re-validated here
+   * with the exact rule that offered it on Today (makeUpCandidateForDate) —
+   * an invalid, expired, or already-done date is silently ignored and the
+   * screen falls back to the device's own weekday, rest day included. No
+   * Sunday guard: making up a missed day on Sunday is allowed. */
+  makeUpFor?: string | null;
 }) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [session, setSession] = useState<WorkoutSessionRecord | null>(null);
@@ -281,13 +291,18 @@ export default function ActiveWorkoutScreen({
         // is a static, already-parsed module — no server round trip needed.
         // Otherwise use whatever program is currently active; if none is,
         // there is nothing to start (mirrors the Today screen's waiting
-        // state, for anyone who lands on this URL directly).
+        // state, for anyone who lands on this URL directly). `activeProgramRecord`
+        // is kept alongside the resolved program (rather than only its
+        // `.parsed`) because a make-up request below needs its `createdAt`
+        // too.
+        let activeProgramRecord: ProgramRecord | null = null;
         const program =
           source === "sample"
             ? SAMPLE_PROGRAM
             : await (async () => {
                 const activeResult = await fetchActiveProgram();
-                return activeResult.ok ? activeResult.data?.parsed ?? null : null;
+                activeProgramRecord = activeResult.ok ? activeResult.data : null;
+                return activeProgramRecord?.parsed ?? null;
               })();
 
         if (!program) {
@@ -298,22 +313,44 @@ export default function ActiveWorkoutScreen({
         // The sample always starts its showcase day so the demo never
         // dead-ends on one of the sample's rest days.
         const deviceWeekday = getLocalWeekday(now);
-        const weekday =
-          source === "sample"
-            ? SAMPLE_DEMO_WEEKDAY
-            : dayOverride && deviceWeekday !== "sunday"
-              ? dayOverride
-              : deviceWeekday;
-        const deviceTemplate = getWorkoutForWeekday(program, weekday);
-        if (deviceTemplate.restDay) {
+        let template: WorkoutTemplate =
+          source === "sample" ? getWorkoutForWeekday(program, SAMPLE_DEMO_WEEKDAY) : getWorkoutForWeekday(program, deviceWeekday);
+        // Make-up sessions (owner decision 2026-09-27): re-validates
+        // `makeUpFor` with the exact rule that offered it on Today
+        // (makeUpCandidateForDate) rather than trusting the URL — a stale,
+        // expired, tampered, or already-done date just falls through to the
+        // ordinary device-weekday template above, rest day included. Never
+        // consulted for the sample. No Sunday guard here: making up a
+        // missed day on Sunday is allowed.
+        let makeUpForDate: string | null = null;
+        if (source === "program" && makeUpFor && activeProgramRecord) {
+          const record: ProgramRecord = activeProgramRecord;
+          const summariesResult = await fetchSessionSummaries(addDays(today, -(MAKE_UP_WINDOW_DAYS + 1)));
+          const sessionByDate = groupSessionsByDate(summariesResult.ok ? summariesResult.data : []);
+          const candidate = makeUpCandidateForDate({
+            date: makeUpFor,
+            today,
+            program: {
+              templates: record.parsed.templates,
+              activeSinceDate: activeSinceDateFromCreatedAt(record.createdAt),
+            },
+            sessionByDate,
+          });
+          if (candidate) {
+            template = candidate.template;
+            makeUpForDate = candidate.date;
+          }
+        }
+
+        if (template.restDay) {
           if (!cancelled) {
-            setRestDayDescription(deviceTemplate.description);
+            setRestDayDescription(template.description);
             setPhase("rest-day");
           }
           return;
         }
-        const exercisesSnapshot = exercisesForTemplate(program, deviceTemplate);
-        resolved = createNewSession(deviceTemplate, exercisesSnapshot, now);
+        const exercisesSnapshot = exercisesForTemplate(program, template);
+        resolved = createNewSession(template, exercisesSnapshot, now, { makeUpForDate });
         queueRef.current!.request(resolved);
       }
 
@@ -363,7 +400,7 @@ export default function ActiveWorkoutScreen({
     return () => {
       cancelled = true;
     };
-  }, [source, dayOverride]);
+  }, [source, makeUpFor]);
 
   // Best-effort immediate flush (in addition to the debounce) when the tab
   // is being hidden or closed — cheap insurance on top of the localStorage
@@ -1049,6 +1086,12 @@ export default function ActiveWorkoutScreen({
         ) : null}
       </div>
 
+      {session.performance.makeUpForDate ? (
+        <p className="text-xs font-medium text-ink-tertiary">
+          Making up {formatDateLabelShort(session.performance.makeUpForDate)}
+        </p>
+      ) : null}
+
       {recoveryMode ? (
         <div className="rounded-xl border border-line-default bg-surface-2 px-4 py-3 text-sm text-ink-secondary">
           Recovery mode: reduce loads and effort, skip anything that does not feel right.
@@ -1115,6 +1158,7 @@ export default function ActiveWorkoutScreen({
             endedEarlyReason={session.performance.modifications?.endedEarlyReason}
             addedExerciseNames={addedExerciseNames}
             onAddExercise={handleAddExercise}
+            makeUpForDate={session.performance.makeUpForDate ?? null}
           />
         )}
       </div>

@@ -28,6 +28,13 @@ export type DayState =
 export interface DaySessionRef {
   id: string;
   status: WorkoutSessionStatus;
+  /** Date the session was actually performed ("yyyy-mm-dd"). Only differs
+   * from the date being classified for a make-up session. */
+  sessionDate?: string;
+  /** The missed training day this session makes up for, if any. Callers
+   * key sessions by effective date (lib/history/session-filtering.ts), so
+   * a ref with this set is always found under the missed date. */
+  makeUpForDate?: string | null;
 }
 
 export interface ActiveProgramWeek {
@@ -53,6 +60,11 @@ export interface DayClassification {
    * show as "left unfinished". Null when nothing was ever logged. */
   session: DaySessionRef | null;
   hasBodyCheckin: boolean;
+  /** When this training day was made up on a later date (owner decision
+   * 2026-09-27, make-up sessions): the "yyyy-mm-dd" it was actually
+   * performed. `state` is still completed/modified; this only changes how
+   * the day is labelled and where its drill-down lives. Null otherwise. */
+  madeUpOn: string | null;
 }
 
 const COMPLETE_STATUSES: ReadonlySet<WorkoutSessionStatus> = new Set(["completed", "modified"]);
@@ -103,5 +115,8 @@ export function classifyDay({
     state = "missed";
   }
 
-  return { date, weekday, isToday, state, hasUltimatePractice, session, hasBodyCheckin };
+  const madeUpOn =
+    session && session.makeUpForDate && session.sessionDate && session.sessionDate !== date ? session.sessionDate : null;
+
+  return { date, weekday, isToday, state, hasUltimatePractice, session, hasBodyCheckin, madeUpOn };
 }

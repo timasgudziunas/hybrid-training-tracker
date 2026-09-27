@@ -21,7 +21,13 @@ import type { ExerciseSlotLog, WorkoutSessionRecord } from './workout-session-ty
 export function createNewSession(
   template: TrainingDayTemplate,
   exercisesSnapshot: Record<string, Exercise>,
-  now: Date
+  now: Date,
+  options: {
+    /** The missed training day ("yyyy-mm-dd") this session makes up for
+     * (WorkoutSessionPerformance.makeUpForDate). Omit for an ordinary
+     * session. */
+    makeUpForDate?: string | null;
+  } = {}
 ): WorkoutSessionRecord {
   const slots = flattenTemplateSlots(template);
 
@@ -56,6 +62,7 @@ export function createNewSession(
       currentSlotKey: slots[0]?.slotKey ?? null,
       templateSnapshot: template,
       exercisesSnapshot,
+      ...(options.makeUpForDate ? { makeUpForDate: options.makeUpForDate } : {}),
     },
   };
 }

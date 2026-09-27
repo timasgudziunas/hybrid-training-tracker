@@ -2,7 +2,7 @@ import { computeCompletionStats } from "@/lib/workout-session/completion-stats";
 import { flattenTemplateSlots } from "@/lib/workout-session/flatten-template-slots";
 import { detectSessionDeviations } from "@/lib/workout-session/session-deviations";
 import type { WorkoutSessionRecord, WorkoutSessionStatus } from "@/lib/workout-session/workout-session-types";
-import { formatDateLabel } from "./format-date-label";
+import { formatDateLabel, formatDateLabelShort } from "./format-date-label";
 import SessionExerciseList from "./session-exercise-list";
 
 const STATUS_LABEL: Record<WorkoutSessionStatus, string> = {
@@ -52,6 +52,13 @@ export default function SessionDetail({ record }: { record: WorkoutSessionRecord
             {STATUS_LABEL[record.status]}
           </span>
         </div>
+
+        {performance.makeUpForDate ? (
+          <p className="text-sm text-ink-secondary">
+            Makes up for {formatDateLabelShort(performance.makeUpForDate)}. Performed{" "}
+            {formatDateLabelShort(record.sessionDate)}.
+          </p>
+        ) : null}
 
         {isUnfinished ? (
           <p className="text-sm text-ink-secondary">

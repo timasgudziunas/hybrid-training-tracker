@@ -23,6 +23,20 @@ export interface SessionLike {
   workoutTemplateId: string;
   status: WorkoutSessionStatus;
   startedAt: string;
+  /** The missed training day this session makes up for, if any (see
+   * WorkoutSessionPerformance.makeUpForDate). */
+  makeUpForDate?: string | null;
+}
+
+/**
+ * The calendar date a session is credited to: the missed day it makes up
+ * for when it is a make-up session, otherwise the date it was performed.
+ * Every per-date view (calendar, adherence, make-up candidates) keys on
+ * this, so a made-up Friday reads as done on Friday, and the Saturday it
+ * was performed on stays whatever the program says Saturday is.
+ */
+export function effectiveSessionDate(session: Pick<SessionLike, "sessionDate" | "makeUpForDate">): string {
+  return session.makeUpForDate ?? session.sessionDate;
 }
 
 /** Completed/modified rows are the most meaningful representative for a
@@ -45,20 +59,21 @@ function pickRepresentative<T extends SessionLike>(sessions: T[]): T {
 }
 
 /**
- * Groups sessions by calendar date, excluding sample-workout rows entirely,
- * and reduces to a single representative row per date (CLAUDE.md edge case:
- * duplicate workout on the same day — the calendar shows one state per day,
- * not one per row).
+ * Groups sessions by EFFECTIVE calendar date (see effectiveSessionDate),
+ * excluding sample-workout rows entirely, and reduces to a single
+ * representative row per date (CLAUDE.md edge case: duplicate workout on
+ * the same day — the calendar shows one state per day, not one per row).
  */
 export function groupSessionsByDate<T extends SessionLike>(sessions: T[]): Map<string, T> {
   const byDate = new Map<string, T[]>();
   for (const session of sessions) {
     if (isSampleSession(session.workoutTemplateId)) continue;
-    const existing = byDate.get(session.sessionDate);
+    const date = effectiveSessionDate(session);
+    const existing = byDate.get(date);
     if (existing) {
       existing.push(session);
     } else {
-      byDate.set(session.sessionDate, [session]);
+      byDate.set(date, [session]);
     }
   }
 

@@ -56,7 +56,7 @@ The repo is empty of code.
 8. Abs are trained progressively like any other muscle group.
 9. Mobility is integrated into training, not bolted on.
 10. Pain is never treated as ordinary soreness.
-11. Sunday is a true, complete rest day.
+11. Sunday is a true, complete rest day. Amended by owner decision 2026-09-27: the program never schedules anything on Sunday, but a training day missed within the make-up window (`MAKE_UP_WINDOW_DAYS`, 3) may be made up on Sunday like on any other day.
 12. HYROX is a future phase only. Do not build HYROX-specific programming now.
 13. Adherence over months matters more than any single perfect workout.
 14. The app should reduce decision-making, not add to it.
@@ -65,7 +65,7 @@ The repo is empty of code.
 17. Progression logic is transparent and deterministic. Never hide it behind an AI model. Always show the athlete why a recommendation was made.
 18. No manufactured single "athleticism score." Show underlying metrics instead.
 19. The software is not a medical diagnostic system. No diagnoses. Groin/pain symptoms get restrained messaging that recommends professional sports medicine or physical therapy assessment if they persist or interfere with sprinting or cutting; never an automatic rehab protocol.
-20. Sunday always renders REST DAY. Never manufacture a workout for it.
+20. Sunday always renders REST DAY. Never manufacture a workout for it. A make-up offer on a Sunday (see 11) is not a manufactured workout: it is a real program day the athlete missed, stamped with the missed date.
 21. A modified session is distinct from both completed and missed ("modify, don't fail").
 22. Active workout state must survive a browser refresh or accidental close.
 23. Deferred, do not build yet: AI analysis of training trends, automated program adjustments, a HYROX training phase, wearable integration, nutrition/body-composition integration, advanced fatigue modeling, video technique analysis, athletic benchmark tracking and the readiness check-in (both removed from the app 2026-09-05 for now; the `athletic_benchmarks` and `readiness_entries` tables are kept but have no code path). Deferred but PLANNED (owner 2026-09-04, "put it off for now, but make sure it isn't forgotten"): the in-app program builder that assembles a weekly program from the exercise library instead of pasting text; tracked in `PLAN.md` R10.

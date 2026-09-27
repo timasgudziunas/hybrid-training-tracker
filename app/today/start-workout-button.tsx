@@ -3,10 +3,12 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { getLocalDateString } from "@/lib/date/local-date-string";
+import { weekdayOfDateString } from "@/lib/history/calendar-grid";
 import { hasResumableLocalProgramSession, loadLocalSession } from "@/lib/workout-session/local-session-store";
 import { loadPendingSessions } from "@/lib/workout-session/pending-sync-store";
 import type { WorkoutSessionStatus } from "@/lib/workout-session/workout-session-types";
 import { fetchLatestSessionSummaryForDate } from "@/app/workout/actions";
+import { capitalizeLabel } from "./capitalize-label";
 
 function subscribeToNothing(): () => void {
   return () => {};
@@ -40,6 +42,10 @@ interface CompletedToday {
    * the Phase 5 rework) — decides between "Completed today" and "Modified
    * session today". */
   status: WorkoutSessionStatus;
+  /** The missed training day this session makes up for (owner decision
+   * 2026-09-27, make-up sessions). Null for an ordinary session; when set,
+   * it wins over the plain "Completed today" wording. */
+  makeUpForDate: string | null;
 }
 
 function formatMinutes(durationSeconds: number): string {
@@ -65,18 +71,33 @@ export default function StartWorkoutButton() {
       const result = await fetchLatestSessionSummaryForDate(today);
       if (cancelled) return;
       if (result.ok && result.data) {
-        setCompleted({ durationSeconds: result.data.durationSeconds, synced: true, status: result.data.status });
+        setCompleted({
+          durationSeconds: result.data.durationSeconds,
+          synced: true,
+          status: result.data.status,
+          makeUpForDate: result.data.makeUpForDate,
+        });
         return;
       }
 
       const local = loadLocalSession();
       if (local && (local.status === "completed" || local.status === "modified") && local.sessionDate === today) {
-        setCompleted({ durationSeconds: local.durationSeconds, synced: false, status: local.status });
+        setCompleted({
+          durationSeconds: local.durationSeconds,
+          synced: false,
+          status: local.status,
+          makeUpForDate: local.performance.makeUpForDate ?? null,
+        });
         return;
       }
       const pending = loadPendingSessions().find((session) => session.sessionDate === today);
       if (pending) {
-        setCompleted({ durationSeconds: pending.durationSeconds, synced: false, status: pending.status });
+        setCompleted({
+          durationSeconds: pending.durationSeconds,
+          synced: false,
+          status: pending.status,
+          makeUpForDate: pending.performance.makeUpForDate ?? null,
+        });
       }
     }
 
@@ -95,7 +116,11 @@ export default function StartWorkoutButton() {
     return (
       <div className="flex flex-col gap-2 rounded-xl border border-line-default bg-surface-1 p-4">
         <p className="text-sm font-medium text-ink-primary">
-          {completed.status === "modified" ? "Modified session today" : "Completed today"}
+          {completed.makeUpForDate
+            ? `Made up ${capitalizeLabel(weekdayOfDateString(completed.makeUpForDate))} today`
+            : completed.status === "modified"
+              ? "Modified session today"
+              : "Completed today"}
           {completed.durationSeconds !== null ? (
             <span className="text-ink-secondary"> &middot; {formatMinutes(completed.durationSeconds)}</span>
           ) : null}

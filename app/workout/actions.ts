@@ -138,10 +138,17 @@ export async function fetchActiveSessionForToday(sessionDate: string): Promise<A
  * isSampleSession rule, without importing a client-only local-storage
  * module here). `data: null` means nothing real was completed that date yet
  * — not a failure. */
-export async function fetchLatestSessionSummaryForDate(
-  sessionDate: string
-): Promise<
-  ActionResult<{ status: WorkoutSessionStatus; durationSeconds: number | null; workoutTemplateId: string } | null>
+export async function fetchLatestSessionSummaryForDate(sessionDate: string): Promise<
+  ActionResult<{
+    status: WorkoutSessionStatus;
+    durationSeconds: number | null;
+    workoutTemplateId: string;
+    /** The missed training day this session makes up for (owner decision
+     * 2026-09-27, make-up sessions), read straight out of the performance
+     * jsonb the same way app/history/actions.ts does. Null for an ordinary
+     * session. */
+    makeUpForDate: string | null;
+  } | null>
 > {
   const context = await getAthleteContext();
   if (!context.ok) return context;
@@ -150,7 +157,7 @@ export async function fetchLatestSessionSummaryForDate(
   try {
     const { data, error } = await supabase
       .from(TABLE)
-      .select("status, duration_seconds, workout_template_id")
+      .select("status, duration_seconds, workout_template_id, make_up_for_date:performance->>makeUpForDate")
       .eq("session_date", sessionDate)
       .in("status", ["completed", "modified"])
       .order("started_at", { ascending: false });
@@ -160,7 +167,12 @@ export async function fetchLatestSessionSummaryForDate(
       return { ok: false, reason: "Could not check today's session." };
     }
 
-    const rows = (data ?? []) as { status: WorkoutSessionStatus; duration_seconds: number | null; workout_template_id: string }[];
+    const rows = (data ?? []) as {
+      status: WorkoutSessionStatus;
+      duration_seconds: number | null;
+      workout_template_id: string;
+      make_up_for_date: string | null;
+    }[];
     const row = rows.find((candidate) => !candidate.workout_template_id.startsWith("sample-"));
     if (!row) {
       return { ok: true, data: null };
@@ -168,7 +180,12 @@ export async function fetchLatestSessionSummaryForDate(
 
     return {
       ok: true,
-      data: { status: row.status, durationSeconds: row.duration_seconds, workoutTemplateId: row.workout_template_id },
+      data: {
+        status: row.status,
+        durationSeconds: row.duration_seconds,
+        workoutTemplateId: row.workout_template_id,
+        makeUpForDate: row.make_up_for_date ?? null,
+      },
     };
   } catch (err) {
     console.error("[workout/actions] Latest session summary lookup threw:", err);

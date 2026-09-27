@@ -1,5 +1,6 @@
 "use client";
 
+import { activeSinceDateFromCreatedAt } from "@/lib/history/active-since-date";
 import { useEffect, useState } from "react";
 import { getLocalDateString } from "@/lib/date/local-date-string";
 import { addDays } from "@/lib/history/calendar-grid";
@@ -31,12 +32,6 @@ type LoadState =
       bodyweightSeries: BodyweightPoint[];
       ultimatePracticeDates: string[];
     };
-
-// Same day-granularity approximation app/history/page.tsx uses: a true
-// device-local date isn't knowable for a past server timestamp.
-function activeSinceDateFromCreatedAt(createdAt: string): string {
-  return new Date(createdAt).toISOString().slice(0, 10);
-}
 
 /**
  * Orchestrates the Review dashboard's data fetch (R8, old Phase 10). "Today"
@@ -79,12 +74,24 @@ export default function ReviewDashboard() {
 
       const sessions = sessionsResult.data;
 
+      // groupSessionsByDate keys by EFFECTIVE date (session-filtering.ts):
+      // for a make-up session that is performance.makeUpForDate, otherwise
+      // the performed sessionDate. WorkoutSessionRecord itself has no
+      // top-level makeUpForDate (it lives in the performance jsonb), so it
+      // has to be pulled out here for grouping, exactly like
+      // app/history/actions.ts does for the day drill-down — otherwise a
+      // made-up day would bucket under the day it was performed and the
+      // adherence math below would keep reading it as missed.
+      const sessionByDate = groupSessionsByDate(
+        sessions.map((session) => ({ ...session, makeUpForDate: session.performance.makeUpForDate ?? null }))
+      );
+
       setState({
         status: "ready",
         today,
         program,
         sessions,
-        sessionByDate: groupSessionsByDate(sessions),
+        sessionByDate,
         bodyweightSeries: bodyweightResult.ok ? bodyweightResult.data : [],
         ultimatePracticeDates: ultimatePracticeResult.ok ? ultimatePracticeResult.data : [],
       });

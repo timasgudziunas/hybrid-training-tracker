@@ -25,6 +25,10 @@ export default function CalendarLegend() {
           <span className="h-3 w-3 rounded-[4px] border border-accent" aria-hidden="true" />
           Today
         </div>
+        <div className="flex items-center gap-1.5 text-xs text-ink-secondary">
+          <span className="h-3 w-3 rounded-[4px] border border-dashed border-ink-tertiary bg-success-soft" aria-hidden="true" />
+          Made up later
+        </div>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-tertiary">
         <div className="flex items-center gap-1.5">

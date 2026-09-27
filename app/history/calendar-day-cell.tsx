@@ -25,13 +25,18 @@ export default function CalendarDayCell({
   inCurrentMonth: boolean;
   classification: DayClassification;
 }) {
-  const { date, state, isToday, hasUltimatePractice, hasBodyCheckin, session } = classification;
+  const { date, state, isToday, hasUltimatePractice, hasBodyCheckin, session, madeUpOn } = classification;
+  const isMadeUp = madeUpOn !== null;
+
+  // Today's accent border always wins (it's the one border the athlete
+  // needs to find at a glance); otherwise a made-up day gets a dashed
+  // border on top of its normal completed/modified tint, restrained rather
+  // than a badge (CLAUDE.md UX principles: no gamification).
+  const borderClass = isToday ? "border-accent" : isMadeUp ? "border-dashed border-ink-tertiary" : "border-transparent";
 
   const body = (
     <div
-      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border ${
-        isToday ? "border-accent" : "border-transparent"
-      } ${STATE_CLASS_NAMES[state]} ${inCurrentMonth ? "" : "opacity-35"}`}
+      className={`relative flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border ${borderClass} ${STATE_CLASS_NAMES[state]} ${inCurrentMonth ? "" : "opacity-35"}`}
     >
       <span className="font-display text-sm font-semibold tabular-nums">{day}</span>
       {hasUltimatePractice || hasBodyCheckin ? (
@@ -52,7 +57,12 @@ export default function CalendarDayCell({
   }
 
   return (
-    <Link href={`/history/${date}`} aria-label={`${date}, view session`} className="block">
+    <Link
+      href={`/history/${date}`}
+      aria-label={isMadeUp ? `${date}, view session, made up on ${madeUpOn}` : `${date}, view session`}
+      title={isMadeUp ? `made up on ${madeUpOn}` : undefined}
+      className="block"
+    >
       {body}
     </Link>
   );
