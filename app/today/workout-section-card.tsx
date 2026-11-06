@@ -70,7 +70,7 @@ export default function WorkoutSectionCard({
               <PrescribedExerciseRow
                 key={`${group.exercise.order}-${group.exercise.exerciseId}`}
                 exercise={group.exercise}
-                sectionName={section.name}
+                section={section}
                 exercises={exercises}
               />
             );
@@ -88,7 +88,7 @@ export default function WorkoutSectionCard({
                   <PrescribedExerciseRow
                     key={`${member.order}-${member.exerciseId}`}
                     exercise={member}
-                    sectionName={section.name}
+                    section={section}
                     exercises={exercises}
                     isSupersetMember
                   />

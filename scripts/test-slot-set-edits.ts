@@ -225,14 +225,15 @@ check(
 );
 
 check(
-  'resolveHoldSetFields: side-plank yields the default (seconds only)',
+  'resolveHoldSetFields: side-plank yields the default (added weight plus seconds)',
   resolveHoldSetFields(exercise({ id: 'side-plank', name: 'Side Plank', category: 'calisthenics' })).map(
     (f) => f.key
   ),
-  ['seconds']
+  ['weight', 'seconds']
 );
 
-check('resolveHoldSetFields: undefined exercise yields the default', resolveHoldSetFields(undefined).map((f) => f.key), [
+check('resolveHoldSetFields: undefined exercise yields the default (added weight plus seconds)', resolveHoldSetFields(undefined).map((f) => f.key), [
+  'weight',
   'seconds',
 ]);
 

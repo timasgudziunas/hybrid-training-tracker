@@ -1,6 +1,7 @@
-import type { Exercise, PrescribedExercise, QualitativePrescription } from "@/lib/program/program-types";
+import type { Exercise, PrescribedExercise, QualitativePrescription, WorkoutSection } from "@/lib/program/program-types";
 import { REST_GUIDANCE_BY_CATEGORY } from "@/lib/program/rest-guidance";
 import { formatApproxMinutes, formatPrescription } from "./format-prescription";
+import { isUntimedWarmupSlot, isWarmupSection } from "@/lib/workout-session/warmup-slot";
 import { resolveExerciseChoiceName } from "./resolve-exercise-name";
 
 function QualitativePrescriptionDetails({ prescription }: { prescription: QualitativePrescription }) {
@@ -23,12 +24,12 @@ function QualitativePrescriptionDetails({ prescription }: { prescription: Qualit
 
 export default function PrescribedExerciseRow({
   exercise,
-  sectionName,
+  section,
   exercises,
   isSupersetMember = false,
 }: {
   exercise: PrescribedExercise;
-  sectionName: string;
+  section: WorkoutSection;
   exercises: Record<string, Exercise>;
   /** True when this row renders inside a superset wrapper (see
    * WorkoutSectionCard), which already carries the group's own label line
@@ -37,11 +38,15 @@ export default function PrescribedExerciseRow({
   isSupersetMember?: boolean;
 }) {
   const name = resolveExerciseChoiceName(exercises, exercise.exerciseId, exercise.alternativeExerciseIds);
-  const restGuidance = exercise.restCategory ? REST_GUIDANCE_BY_CATEGORY[exercise.restCategory] : null;
+  const sectionName = section.name;
+  // Owner decision 2026-11-06: warm-ups show no rest line, and timed warm-up
+  // prescriptions show no time (see lib/workout-session/warmup-slot.ts).
+  const restGuidance = exercise.restCategory && !isWarmupSection(section) ? REST_GUIDANCE_BY_CATEGORY[exercise.restCategory] : null;
   // A section like "Dynamic Warm-Up" holding a single same-named qualitative
   // exercise would otherwise print its name twice in a row.
   const nameRepeatsSection = name.toLowerCase() === sectionName.toLowerCase();
-  const showPrescriptionInline = exercise.prescription.type !== "qualitative";
+  const isUntimedWarmup = isUntimedWarmupSlot(section, exercise.prescription, exercises[exercise.exerciseId]);
+  const showPrescriptionInline = exercise.prescription.type !== "qualitative" && !isUntimedWarmup;
 
   return (
     <li className={`flex flex-col gap-1.5 ${isSupersetMember ? "py-2.5" : "py-3.5"}`}>

@@ -2,6 +2,7 @@ import type { Exercise } from "@/lib/program/program-types";
 import { isSlotNotDone, type TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import type { EndedEarlyReason, ExerciseSlotLog } from "@/lib/workout-session/workout-session-types";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
+import { groupSupersetRows } from "@/lib/workout-session/group-superset-rows";
 import AddExercisePicker from "./add-exercise-picker";
 import EndWorkoutEarlyControl from "./end-workout-early-control";
 import SessionProgressBar from "./session-progress-bar";
@@ -11,6 +12,51 @@ const STATUS_LABEL: Record<ExerciseSlotLog["status"], string> = {
   skipped: "Skipped",
   upcoming: "Upcoming",
 };
+
+function OverviewSlotButton({
+  slot,
+  slotLogs,
+  currentSlotKey,
+  exercises,
+  onJump,
+}: {
+  slot: TemplateSlot;
+  slotLogs: Record<string, ExerciseSlotLog>;
+  currentSlotKey: string | null;
+  exercises: Record<string, Exercise>;
+  onJump: (slotKey: string) => void;
+}) {
+  const log = slotLogs[slot.slotKey];
+  const isCurrent = slot.slotKey === currentSlotKey;
+  // A swapped-in exercise, or a decided "A or B" choice, wins the display
+  // name: exercises[chosenExerciseId] is always what's actually being done,
+  // unlike the prescribed choice string, which never changes after a swap
+  // (owner: "an exercise that I swap doesn't read as the new exercise on the
+  // overview page"). Falls back to the prescribed choice string only when
+  // nothing has been chosen yet, or the chosen id is missing from the snapshot.
+  const name =
+    (log?.chosenExerciseId ? exercises[log.chosenExerciseId]?.name : undefined) ??
+    resolveExerciseChoiceName(exercises, slot.exercise.exerciseId, slot.exercise.alternativeExerciseIds);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onJump(slot.slotKey)}
+      className={`flex w-full items-center justify-between gap-3 py-3 text-left transition-colors ${
+        isCurrent ? "text-accent-strong" : "text-ink-secondary hover:text-ink-primary"
+      }`}
+    >
+      <span className="min-w-0 text-sm font-medium">{name}</span>
+      <span
+        className={`shrink-0 text-xs font-medium ${
+          isCurrent ? "text-accent-strong" : log?.status === "completed" ? "text-success" : "text-ink-tertiary"
+        }`}
+      >
+        {isCurrent ? "Current" : STATUS_LABEL[log?.status ?? "upcoming"]}
+      </span>
+    </button>
+  );
+}
 
 /** Overview jump list (PRODUCT_SPEC §6): "linear is the default, not a
  * cage" — one tap away, and tapping any exercise jumps straight to it. */
@@ -92,51 +138,52 @@ export default function WorkoutOverview({
             <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-ink-tertiary">
               {slots[0].section.name}
             </p>
-            <ul className="flex flex-col divide-y divide-line-hairline">
-              {slots.map((slot) => {
-                const log = slotLogs[slot.slotKey];
-                const isCurrent = slot.slotKey === currentSlotKey;
-                // A swapped-in exercise, or a decided "A or B" choice, wins
-                // the display name: exercises[chosenExerciseId] is always
-                // what's actually being done, unlike the prescribed choice
-                // string, which never changes after a swap (owner: "an
-                // exercise that I swap doesn't read as the new exercise on
-                // the overview page"). Falls back to the prescribed choice
-                // string only when nothing has been chosen yet, or the
-                // chosen id is somehow missing from the snapshot.
-                const name =
-                  (log?.chosenExerciseId ? exercises[log.chosenExerciseId]?.name : undefined) ??
-                  resolveExerciseChoiceName(exercises, slot.exercise.exerciseId, slot.exercise.alternativeExerciseIds);
+            <ul className="flex flex-col">
+              {groupSupersetRows(slots).map((row, index, rows) => {
+                // Hairline only between two plain rows; a superset block is
+                // separated by spacing, so borders never double at its edge.
+                const spacing =
+                  index === 0
+                    ? ""
+                    : row.kind === "single" && rows[index - 1].kind === "single"
+                      ? "border-t border-line-hairline"
+                      : "mt-2";
+
+                if (row.kind === "single") {
+                  return (
+                    <li key={row.slot.slotKey} className={spacing}>
+                      <OverviewSlotButton
+                        slot={row.slot}
+                        slotLogs={slotLogs}
+                        currentSlotKey={currentSlotKey}
+                        exercises={exercises}
+                        onJump={onJump}
+                      />
+                    </li>
+                  );
+                }
 
                 return (
-                  <li key={slot.slotKey}>
-                    <button
-                      type="button"
-                      onClick={() => onJump(slot.slotKey)}
-                      className={`flex w-full items-center justify-between gap-3 py-3 text-left transition-colors ${
-                        isCurrent ? "text-accent-strong" : "text-ink-secondary hover:text-ink-primary"
-                      }`}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-sm font-medium">{name}</span>
-                        {slot.exercise.supersetGroup ? (
-                          <span className="rounded-full border border-line-default px-1.5 text-[10px] uppercase tracking-wide text-ink-tertiary">
-                            Superset {slot.exercise.supersetGroup}
-                          </span>
-                        ) : null}
-                      </span>
-                      <span
-                        className={`text-xs font-medium ${
-                          isCurrent
-                            ? "text-accent-strong"
-                            : log?.status === "completed"
-                              ? "text-success"
-                              : "text-ink-tertiary"
-                        }`}
-                      >
-                        {isCurrent ? "Current" : STATUS_LABEL[log?.status ?? "upcoming"]}
-                      </span>
-                    </button>
+                  <li
+                    key={`superset-${row.token}-${row.slots[0].slotKey}`}
+                    className={`${spacing} border-l-2 border-accent/60 pl-3`}
+                  >
+                    <p className="pt-2 font-display text-[10px] font-semibold uppercase tracking-wide text-ink-tertiary">
+                      Superset {row.token}
+                    </p>
+                    <ul className="flex flex-col divide-y divide-line-hairline">
+                      {row.slots.map((slot) => (
+                        <li key={slot.slotKey}>
+                          <OverviewSlotButton
+                            slot={slot}
+                            slotLogs={slotLogs}
+                            currentSlotKey={currentSlotKey}
+                            exercises={exercises}
+                            onJump={onJump}
+                          />
+                        </li>
+                      ))}
+                    </ul>
                   </li>
                 );
               })}

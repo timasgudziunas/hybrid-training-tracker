@@ -146,6 +146,7 @@ export default function ExerciseEntryCard({
   prescription,
   exercise,
   previousSets,
+  lastNote,
   showRir,
   advanceLabel,
   logSetLabel,
@@ -160,6 +161,8 @@ export default function ExerciseEntryCard({
   prescription: Exclude<Prescription, { type: "qualitative" }>;
   exercise: Exercise | undefined;
   previousSets: SetLog[] | undefined;
+  /** Most recent past note for this exercise, shown under "Last time". */
+  lastNote?: string;
   /** Athlete setting (lib/settings/athlete-settings.ts): whether to ask for
    * RIR at all. Owner, 2026-09-04: "I decided to take every exercise to
    * failure" — off hides the input; sets logged before the setting was
@@ -279,7 +282,11 @@ export default function ExerciseEntryCard({
 
   return (
     <div className="flex flex-col gap-5">
-      <PreviousPerformanceSummary previousSets={previousSets} prescriptionType={prescription.type} />
+      <PreviousPerformanceSummary
+        previousSets={previousSets}
+        prescriptionType={prescription.type}
+        lastNote={lastNote}
+      />
 
       {showProgressionSuggestion ? (
         <ProgressionSuggestion

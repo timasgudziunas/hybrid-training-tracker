@@ -138,11 +138,13 @@ function session(): WorkoutSessionRecord {
   const cardioPreset = exercise('cardio-preset', { category: 'cardio', defaultPrescription: CARDIO_10MIN });
 
   check('no preset keeps the original', prescriptionForSwap(REPS_3X8, noPreset), REPS_3X8);
-  check('same type keeps the original (program volume wins)', prescriptionForSwap(REPS_3X8, repsPreset), REPS_3X8);
-  check('different type adopts the preset with the original set count', prescriptionForSwap(REPS_3X8, holdPreset), { ...HOLD_4X20, sets: 3 });
+  check('same type keeps the program range but takes the preset set count', prescriptionForSwap(REPS_3X8, repsPreset), { ...REPS_3X8, sets: 4 });
+  check('same type and same set count keeps the original object', prescriptionForSwap(REPS_3X8, exercise('same-sets', { defaultPrescription: { type: 'repetitions', sets: 3, minReps: 10, maxReps: 15 } })), REPS_3X8);
+  check('different type adopts the preset whole, its set count included', prescriptionForSwap(REPS_3X8, holdPreset), HOLD_4X20);
   check('qualitative preset adopted as is', prescriptionForSwap(REPS_3X8, cardioPreset), CARDIO_10MIN);
   check('qualitative original swapped to reps takes the preset as is', prescriptionForSwap(CARDIO_10MIN, repsPreset), repsPreset.defaultPrescription);
-  check('swapChangesPrescription false for same type', swapChangesPrescription(REPS_3X8, repsPreset), false);
+  check('swapChangesPrescription true for same type with a different set count', swapChangesPrescription(REPS_3X8, repsPreset), true);
+  check('swapChangesPrescription false for same type and set count', swapChangesPrescription(REPS_3X8, exercise('same-sets-2', { defaultPrescription: { type: 'repetitions', sets: 3, minReps: 10, maxReps: 15 } })), false);
   check('swapChangesPrescription true for different type', swapChangesPrescription(REPS_3X8, holdPreset), true);
   check('swapChangesPrescription false without preset', swapChangesPrescription(REPS_3X8, noPreset), false);
 }

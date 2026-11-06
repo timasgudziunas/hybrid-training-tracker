@@ -41,7 +41,13 @@ import type {
 import { DEFAULT_ATHLETE_SETTINGS, type AthleteSettings } from "@/lib/settings/athlete-settings";
 import { fetchAthleteSettings } from "@/app/settings/actions";
 import { fetchActiveProgram, type ProgramRecord } from "@/app/program/actions";
-import { fetchActiveSessionForToday, fetchPreviousPerformance, saveWorkoutSession } from "@/app/workout/actions";
+import {
+  fetchActiveSessionForToday,
+  fetchExerciseNotes,
+  fetchPreviousPerformance,
+  saveWorkoutSession,
+} from "@/app/workout/actions";
+import type { ExerciseNotesByExercise } from "@/lib/workout-session/exercise-notes-log";
 import { fetchSessionSummaries } from "@/app/history/actions";
 import { formatDateLabelShort } from "@/lib/date/format-date-label";
 import SessionTimer from "./session-timer";
@@ -103,6 +109,7 @@ export default function ActiveWorkoutScreen({
   // shown must come from the actual rest template, never a hardcoded name.
   const [restDayDescription, setRestDayDescription] = useState<string | null>(null);
   const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformanceByExercise>({});
+  const [exerciseNotes, setExerciseNotes] = useState<ExerciseNotesByExercise>({});
   // Athlete-level app settings (R10: RIR display toggle). Fetched once in
   // init, in parallel with everything else there, and never blocks the
   // workout on failure — a missing table or a read error just means the
@@ -377,8 +384,13 @@ export default function ActiveWorkoutScreen({
       if (cancelled) return;
       setSession(resolved);
 
-      const prev = await fetchPreviousPerformance(Object.keys(resolved.performance.exercisesSnapshot), resolved.sessionDate);
+      const snapshotIds = Object.keys(resolved.performance.exercisesSnapshot);
+      const notesPromise = fetchExerciseNotes(snapshotIds, resolved.id);
+      const prev = await fetchPreviousPerformance(snapshotIds, resolved.sessionDate);
       if (!cancelled && prev.ok) setPreviousPerformance(prev.data);
+
+      const notes = await notesPromise;
+      if (!cancelled && notes.ok) setExerciseNotes(notes.data);
 
       const settingsResult = await settingsPromise;
       if (!cancelled) setAthleteSettings(settingsResult.ok ? settingsResult.data : DEFAULT_ATHLETE_SETTINGS);
@@ -722,8 +734,15 @@ export default function ActiveWorkoutScreen({
           }
         });
       }
+      if (exerciseNotes[exercise.id] === undefined) {
+        fetchExerciseNotes([exercise.id], prev.id).then((result) => {
+          if (result.ok) {
+            setExerciseNotes((current) => ({ ...current, ...result.data }));
+          }
+        });
+      }
     },
-    [persist, previousPerformance, templateSlots]
+    [persist, previousPerformance, exerciseNotes, templateSlots]
   );
 
   const handleRevertSwap = useCallback(
@@ -781,8 +800,15 @@ export default function ActiveWorkoutScreen({
           }
         });
       }
+      if (exerciseNotes[exercise.id] === undefined) {
+        fetchExerciseNotes([exercise.id], prev.id).then((result) => {
+          if (result.ok) {
+            setExerciseNotes((current) => ({ ...current, ...result.data }));
+          }
+        });
+      }
     },
-    [persist, previousPerformance]
+    [persist, previousPerformance, exerciseNotes]
   );
 
   const handleToggleRecoveryMode = useCallback(() => {
@@ -1118,6 +1144,7 @@ export default function ActiveWorkoutScreen({
             templateSlot={currentTemplateSlot}
             slotLog={currentSlotLog}
             previousPerformance={previousPerformance}
+            exerciseNotes={currentSlotLog.chosenExerciseId ? (exerciseNotes[currentSlotLog.chosenExerciseId] ?? []) : []}
             exercises={exercises}
             showRir={athleteSettings.showRir}
             advanceLabel={advanceLabel}

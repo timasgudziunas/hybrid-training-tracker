@@ -11,6 +11,7 @@
  */
 
 import { getAthleteContext } from "@/lib/auth/athlete-context";
+import { extractExerciseNotes, type ExerciseNotesByExercise } from "@/lib/workout-session/exercise-notes-log";
 import { extractPreviousPerformance } from "@/lib/workout-session/previous-performance";
 import type {
   ExerciseSlotLog,
@@ -241,5 +242,58 @@ export async function fetchPreviousPerformance(
   } catch (err) {
     console.error("[workout/actions] Previous performance lookup threw:", err);
     return { ok: false, reason: "Could not load previous performance." };
+  }
+}
+
+/** Every note the athlete ever wrote on a slot that logged one of
+ * `exerciseIds`, dated by effective session date, newest first (owner
+ * request 2026-11-06). Unlike previous performance there is no scan limit:
+ * the log is the full history. Only finished sessions count (the in-progress
+ * session's own note is edited live and is not part of the log), and sample
+ * sessions are excluded (repo-wide rule). `performance->slots` and
+ * `performance->makeUpForDate` come back as top-level `slots` and
+ * `makeUpForDate` keys (see fetchPreviousPerformance). Empty `exerciseIds`
+ * short-circuits without querying. */
+export async function fetchExerciseNotes(
+  exerciseIds: string[],
+  /** The in-progress session's own id, left out of its own log. Every other
+   * session counts whatever its status: the owner leaves sessions unfinished
+   * often enough that their notes still matter. */
+  excludeSessionId?: string
+): Promise<ActionResult<ExerciseNotesByExercise>> {
+  if (exerciseIds.length === 0) {
+    return { ok: true, data: {} };
+  }
+
+  const context = await getAthleteContext();
+  if (!context.ok) return context;
+  const { supabase } = context.data;
+
+  try {
+    let query = supabase
+      .from(TABLE)
+      .select("session_date, started_at, performance->slots, performance->makeUpForDate")
+      .not("workout_template_id", "like", "sample-%");
+    if (excludeSessionId) query = query.neq("id", excludeSessionId);
+    const { data, error } = await query
+      .order("session_date", { ascending: false })
+      .order("started_at", { ascending: false });
+
+    if (error) {
+      console.error("[workout/actions] Exercise notes lookup failed:", error);
+      return { ok: false, reason: "Could not load exercise notes." };
+    }
+
+    const rows = (
+      (data ?? []) as unknown as Array<{
+        session_date: string;
+        slots: Record<string, ExerciseSlotLog> | null;
+        makeUpForDate: string | null;
+      }>
+    ).map((row) => ({ sessionDate: row.session_date, slots: row.slots, makeUpForDate: row.makeUpForDate }));
+    return { ok: true, data: extractExerciseNotes(rows, exerciseIds) };
+  } catch (err) {
+    console.error("[workout/actions] Exercise notes lookup threw:", err);
+    return { ok: false, reason: "Could not load exercise notes." };
   }
 }

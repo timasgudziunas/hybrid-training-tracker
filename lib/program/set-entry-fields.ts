@@ -11,8 +11,8 @@
  *   - Repetitions fields (resolveRepetitionSetFields), for `repetitions`
  *     prescriptions: weight/reps/RIR, or an exercise/category override.
  *   - Hold fields (resolveHoldSetFields), for `hold` and non-cardio
- *     `duration` prescriptions: seconds by default, or an exercise override
- *     that adds an added-weight field (e.g. Weighted Plank).
+ *     `duration` prescriptions: added weight plus seconds by default (owner
+ *     decision 2026-11-06), or an exercise override.
  *
  * Resolution order (first match wins) for both:
  *   1. an exact exercise-id override (ids are slugified names, so
@@ -126,12 +126,16 @@ export interface HoldSetFieldSpec {
 export const SECONDS_FIELD: HoldSetFieldSpec = { key: 'seconds', label: 'Seconds achieved', unit: 'sec', inputMode: 'numeric' };
 export const ADDED_WEIGHT_FIELD: HoldSetFieldSpec = { key: 'weight', label: 'Added weight (lb)', unit: 'lb', inputMode: 'decimal' };
 
-export const DEFAULT_HOLD_SET_FIELDS: HoldSetFieldSpec[] = [SECONDS_FIELD];
+/** Owner decision 2026-11-06 ("every hold exercise"): every hold/duration
+ * set offers an optional added-weight input alongside seconds, since a
+ * hollow-body hold, side plank, dead hang or wall sit can all be loaded.
+ * Left blank it logs nothing, exactly as before. */
+export const DEFAULT_HOLD_SET_FIELDS: HoldSetFieldSpec[] = [ADDED_WEIGHT_FIELD, SECONDS_FIELD];
 
-/** Per-exercise overrides, keyed by exercise id (slugified name). */
-export const HOLD_SET_FIELDS_BY_EXERCISE_ID: Record<string, HoldSetFieldSpec[]> = {
-  'weighted-plank': [ADDED_WEIGHT_FIELD, SECONDS_FIELD],
-};
+/** Per-exercise overrides, keyed by exercise id (slugified name). Empty
+ * since the default gained the weight field; kept so a seconds-only
+ * exception stays a one-line entry. */
+export const HOLD_SET_FIELDS_BY_EXERCISE_ID: Record<string, HoldSetFieldSpec[]> = {};
 
 export function resolveHoldSetFields(exercise: Exercise | undefined): HoldSetFieldSpec[] {
   if (!exercise) return DEFAULT_HOLD_SET_FIELDS;

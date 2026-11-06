@@ -11,9 +11,12 @@ import { formatLoggedSet } from "@/lib/workout-session/format-logged-set";
 export default function PreviousPerformanceSummary({
   previousSets,
   prescriptionType,
+  lastNote,
 }: {
   previousSets: SetLog[] | undefined;
   prescriptionType: Prescription["type"];
+  /** The most recent note written on this exercise in a past session. */
+  lastNote?: string;
 }) {
   if (prescriptionType === "qualitative" && (!previousSets || previousSets.length === 0)) {
     return null;
@@ -37,6 +40,7 @@ export default function PreviousPerformanceSummary({
           <span key={index}>{line}</span>
         ))}
       </div>
+      {lastNote ? <p className="mt-1 text-xs text-ink-secondary">Note last time: {lastNote}</p> : null}
     </div>
   );
 }

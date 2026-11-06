@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Exercise } from "@/lib/program/program-types";
+import type { ExerciseNoteEntry } from "@/lib/workout-session/exercise-notes-log";
 import { REST_GUIDANCE_BY_CATEGORY } from "@/lib/program/rest-guidance";
 import type { TemplateSlot } from "@/lib/workout-session/flatten-template-slots";
 import type {
@@ -10,13 +11,16 @@ import type {
   SetLog,
 } from "@/lib/workout-session/workout-session-types";
 import { isCardioSlot } from "@/lib/workout-session/cardio-slot";
+import { isUntimedWarmupSlot, isWarmupSection } from "@/lib/workout-session/warmup-slot";
 import { resolveExerciseChoiceName } from "@/app/today/resolve-exercise-name";
 import CardioEntryCard from "./cardio-entry-card";
 import ExerciseChoiceCard from "./exercise-choice-card";
 import ExerciseEntryCard from "./exercise-entry-card";
 import QualitativeEntryCard from "./qualitative-entry-card";
+import UntimedWarmupCard from "./untimed-warmup-card";
 import ExerciseGuidanceDisclosure from "./exercise-guidance-disclosure";
 import ExerciseNoteField from "./exercise-note-field";
+import ExerciseNotesLog from "./exercise-notes-log";
 import ExerciseSwapPicker from "./exercise-swap-picker";
 import PreviousPerformanceSummary from "./previous-performance-summary";
 
@@ -39,6 +43,7 @@ export default function ExerciseSlotView({
   templateSlot,
   slotLog,
   previousPerformance,
+  exerciseNotes,
   exercises,
   showRir,
   advanceLabel,
@@ -64,6 +69,9 @@ export default function ExerciseSlotView({
   templateSlot: TemplateSlot;
   slotLog: ExerciseSlotLog;
   previousPerformance: PreviousPerformanceByExercise;
+  /** Every past note for the slot chosen exercise, newest first (may be
+   * empty). */
+  exerciseNotes: ExerciseNoteEntry[];
   exercises: Record<string, Exercise>;
   /** Athlete setting: show the RIR selector during set entry (see
    * lib/settings/athlete-settings.ts). */
@@ -109,11 +117,18 @@ export default function ExerciseSlotView({
 }) {
   const [swapPanelOpen, setSwapPanelOpen] = useState(false);
   const swapPanelRef = useRef<HTMLDivElement>(null);
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
+  const notesPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!swapPanelOpen) return;
     swapPanelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [swapPanelOpen]);
+
+  useEffect(() => {
+    if (!notesPanelOpen) return;
+    notesPanelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [notesPanelOpen]);
 
   const prescribed = templateSlot.exercise;
   const isSkipped = slotLog.status === "skipped";
@@ -161,6 +176,10 @@ export default function ExerciseSlotView({
     chosenExercise?.name ?? resolveExerciseChoiceName(exercises, prescribed.exerciseId, prescribed.alternativeExerciseIds);
   const restGuidance = prescribed.restCategory ? REST_GUIDANCE_BY_CATEGORY[prescribed.restCategory] : null;
   const prescribedName = exercises[prescribed.exerciseId]?.name ?? prescribed.exerciseId;
+  // Owner decision 2026-11-06: timed warm-ups (Wrist Preparation 1 x 60-90s)
+  // are a single mark-complete tap, never a seconds input, and no warm-up
+  // shows a rest line (lib/workout-session/warmup-slot.ts).
+  const isUntimedWarmup = isUntimedWarmupSlot(templateSlot.section, prescribed.prescription, chosenExercise);
 
   // In a superset, a non-last member gets "no rest, go straight into the
   // partner" guidance instead of the normal rest line; the last member
@@ -168,6 +187,7 @@ export default function ExerciseSlotView({
   // whole pair (or round, for a group of more than two) rather than just
   // this one exercise.
   const restLine = (() => {
+    if (isWarmupSection(templateSlot.section)) return null;
     if (supersetInfo && !supersetInfo.isLastInGroup) {
       return `No rest here. Straight into ${supersetInfo.nextPartnerName ?? "the next exercise"}.`;
     }
@@ -240,6 +260,7 @@ export default function ExerciseSlotView({
           <PreviousPerformanceSummary
             previousSets={previousPerformance[slotLog.chosenExerciseId]}
             prescriptionType={prescribed.prescription.type}
+            lastNote={exerciseNotes[0]?.note}
           />
           <CardioEntryCard
             slotLog={slotLog}
@@ -254,11 +275,14 @@ export default function ExerciseSlotView({
         </div>
       ) : prescribed.prescription.type === "qualitative" ? (
         <QualitativeEntryCard prescription={prescribed.prescription} onComplete={onQualitativeComplete} />
+      ) : isUntimedWarmup ? (
+        <UntimedWarmupCard onComplete={onQualitativeComplete} />
       ) : (
         <ExerciseEntryCard
           slotLog={slotLog}
           prescription={prescribed.prescription}
           previousSets={previousPerformance[slotLog.chosenExerciseId]}
+          lastNote={exerciseNotes[0]?.note}
           exercise={chosenExercise}
           showRir={showRir}
           advanceLabel={advanceLabel}
@@ -290,7 +314,21 @@ export default function ExerciseSlotView({
             </button>
             <button
               type="button"
-              onClick={() => setSwapPanelOpen((prev) => !prev)}
+              disabled={exerciseNotes.length === 0}
+              onClick={() => {
+                setNotesPanelOpen((prev) => !prev);
+                setSwapPanelOpen(false);
+              }}
+              className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary disabled:active:text-ink-tertiary"
+            >
+              {exerciseNotes.length > 0 ? `Notes (${exerciseNotes.length})` : "No past notes"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSwapPanelOpen((prev) => !prev);
+                setNotesPanelOpen(false);
+              }}
               className="text-xs font-medium text-ink-tertiary transition-colors active:text-ink-secondary"
             >
               Swap
@@ -304,6 +342,12 @@ export default function ExerciseSlotView({
             </button>
           </div>
         </div>
+
+        {notesPanelOpen && exerciseNotes.length > 0 ? (
+          <div ref={notesPanelRef}>
+            <ExerciseNotesLog exerciseName={name} entries={exerciseNotes} onClose={() => setNotesPanelOpen(false)} />
+          </div>
+        ) : null}
 
         {swapPanelOpen ? (
           <div ref={swapPanelRef}>

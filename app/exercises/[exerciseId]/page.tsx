@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchActiveProgram } from "@/app/program/actions";
 import { fetchAthleteSettings } from "@/app/settings/actions";
+import { fetchExerciseNotes } from "@/app/workout/actions";
 import { EQUIPMENT_LABELS, MUSCLE_GROUP_LABELS } from "@/lib/program/muscle-group-copy";
 import { formatPrescriptionPreset, loggingFieldLabels } from "@/lib/program/set-entry-fields";
 import { CATEGORY_LABELS } from "../exercise-category-copy";
 import { hasFullGuidance } from "../has-full-guidance";
 import { findExercise } from "./find-exercise";
+import ExerciseNotesHistory from "./exercise-notes-history";
 import ProgressionChainLevels from "./progression-chain-levels";
 
 /**
@@ -42,6 +44,8 @@ export default async function ExerciseDetailPage({
   }
 
   const { exercise, fromProgram } = found;
+  const notesResult = await fetchExerciseNotes([exercise.id]);
+  const noteEntries = notesResult.ok ? (notesResult.data[exercise.id] ?? []) : [];
   const guidanceAvailable = hasFullGuidance(exercise);
 
   return (
@@ -140,6 +144,8 @@ export default async function ExerciseDetailPage({
             Detailed guidance has not been written for this exercise yet.
           </p>
         )}
+
+        <ExerciseNotesHistory entries={noteEntries} />
 
         <div className="flex flex-col gap-2 rounded-2xl border border-line-hairline bg-surface-1 p-6 shadow-card sm:p-8">
           <h2 className="text-[11px] font-medium uppercase tracking-widest text-ink-tertiary">Progression</h2>

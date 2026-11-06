@@ -733,4 +733,58 @@ export const MOBILITY_PREHAB_EXERCISES: CatalogExercise[] = [
       'Rolling directly over a joint instead of the surrounding muscle',
     ],
   },
+
+  // --- Kettlebell warm-up drills ---
+  {
+    id: 'kettlebell-halo',
+    name: 'Kettlebell Halo',
+    category: 'mobility',
+    primaryMuscles: ['shoulders', 'scapular stabilizers'],
+    secondaryMuscles: ['core', 'triceps'],
+    progressionType: 'none',
+    muscleGroup: 'shoulders',
+    equipment: ['kettlebell'],
+    defaultPrescription: { type: 'repetitions', sets: 1, minReps: 5, maxReps: 8, perSide: true },
+    instructions:
+      'Hold a light kettlebell upside down by the horns with both hands at chest height, bell hanging below your hands. Circle it slowly around your head, keeping it close to your face and neck, then bring it back to the start. Complete the reps in one direction, then repeat in the other direction. Stand tall with your ribs down and use a bell light enough that the movement stays smooth.',
+    intendedFeeling:
+      'You should feel your shoulders and upper back loosening through a smooth circle, with your core staying braced so the movement comes from the shoulders and not your lower back.',
+    cues: [
+      'Keep the bell close to your head and neck throughout the circle',
+      'Brace your core and keep your ribs down as the bell passes behind your head',
+      'Move slowly and keep your head and hips still',
+      'Squeeze your glutes to stay tall without leaning back',
+    ],
+    commonMistakes: [
+      'Leaning back or arching the lower back as the bell passes behind the head',
+      'Swinging the bell wide of the body instead of keeping it close',
+      'Using a bell so heavy that the shoulders tense up and the circle turns jerky',
+    ],
+  },
+  {
+    id: 'kettlebell-around-the-world',
+    name: 'Kettlebell Around the World',
+    category: 'mobility',
+    primaryMuscles: ['core', 'obliques'],
+    secondaryMuscles: ['shoulders', 'forearms'],
+    progressionType: 'none',
+    muscleGroup: 'core',
+    equipment: ['kettlebell'],
+    defaultPrescription: { type: 'repetitions', sets: 1, minReps: 6, maxReps: 8, perSide: true },
+    instructions:
+      'Stand tall with feet about shoulder width apart, holding a light kettlebell by the handle in front of your hips. Pass the bell around your waist from hand to hand, behind your back and back to the front, keeping it close to your body. Complete the reps in one direction, then repeat in the other direction. Keep your torso still so only your arms move the bell, and stay with a light bell so each hand transfer is controlled.',
+    intendedFeeling:
+      'You should feel your trunk bracing to stay still while the bell travels around you, with your hands, forearms, and shoulders warming up through the handoffs.',
+    cues: [
+      'Brace your core and keep your torso square and still',
+      'Keep the bell close to your body the whole way around',
+      'Open your grip and make each hand transfer deliberate before releasing',
+      'Keep your knees soft and your feet planted',
+    ],
+    commonMistakes: [
+      'Twisting or leaning the torso to help the bell around instead of keeping it still',
+      'Letting the bell drift away from the body, which pulls the lower back into extension',
+      'Rushing the handoff so the bell is dropped or caught late',
+    ],
+  },
 ];

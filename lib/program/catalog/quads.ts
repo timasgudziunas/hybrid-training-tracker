@@ -527,4 +527,33 @@ export const QUAD_EXERCISES: CatalogExercise[] = [
       'Setting the hold too shallow to load the quads',
     ],
   },
+
+  // --- Single-leg calisthenics ---
+  {
+    id: 'pistol-squat',
+    name: 'Pistol Squat',
+    category: 'calisthenics',
+    primaryMuscles: ['quads', 'glutes'],
+    secondaryMuscles: ['adductors', 'core', 'calves'],
+    progressionType: 'double-progression',
+    muscleGroup: 'quads',
+    equipment: ['bodyweight'],
+    defaultPrescription: { type: 'repetitions', sets: 3, minReps: 3, maxReps: 5, perSide: true },
+    instructions:
+      'Stand on one leg with the other leg held straight out in front of you and arms reaching forward for balance. Sit back and down on the working leg to full depth, keeping the heel flat, then stand back up without letting the free leg touch the floor. To regress it, hold a pole, rings, or a doorframe for hand support, or squat down to a box and stand up from it. Reduce the hand support or lower the box only once every rep is clean, controlled, and pain free.',
+    intendedFeeling:
+      'You should feel your quad and glute on the working leg driving you up from full depth, with your core and ankle staying steady and the movement controlled rather than dropped.',
+    cues: [
+      'Plant your whole foot and keep the heel down throughout',
+      'Reach your arms forward as a counterbalance and sit back and down',
+      'Keep the knee tracking over the middle of the foot',
+      'Lower under control and drive up without bouncing out of the bottom',
+    ],
+    commonMistakes: [
+      'Dropping into the bottom instead of lowering under control',
+      'Letting the heel lift or the knee cave inward',
+      'Removing hand support or lowering the box before the reps are clean',
+    ],
+    substitutions: ['bulgarian-split-squat', 'split-squat'],
+  },
 ];

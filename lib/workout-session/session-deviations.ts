@@ -116,6 +116,9 @@ export function detectSessionDeviations(
 
     const prescribedSets = prescription.sets;
     const completedSets = slotLog.sets.filter((set) => set.completed).length;
+    // A mark-complete slot with zero sets (an untimed warm-up hold, owner
+    // decision 2026-11-06) is done, not a partial.
+    if (slotLog.qualitativeCompleted && completedSets === 0) continue;
     if (completedSets < prescribedSets) {
       deviations.push({
         kind: 'reduced-sets',

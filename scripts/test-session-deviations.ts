@@ -360,6 +360,44 @@ function kinds(deviations: SessionDeviation[]): string[] {
   );
 }
 
+// --- Mark-complete hold slot (untimed warm-up) with zero sets: done, not a partial ---
+{
+  const template: TrainingDayTemplate = {
+    ...makeTemplate(),
+    sections: [
+      ...makeSections(),
+      {
+        id: 'warmup',
+        name: 'Warm-Up',
+        order: 0,
+        type: 'warmup',
+        exercises: [
+          { exerciseId: 'wrist-prep', order: 1, prescription: { type: 'hold', sets: 1, minSeconds: 60, maxSeconds: 90 } },
+        ],
+      },
+    ],
+  };
+  const slots = flattenTemplateSlots(template);
+  const performance = makePerformance({
+    slots: {
+      ...fullyCompletedSlots(),
+      'warmup:1': {
+        slotKey: 'warmup:1',
+        prescribedExerciseId: 'wrist-prep',
+        chosenExerciseId: 'wrist-prep',
+        status: 'completed',
+        qualitativeCompleted: true,
+        sets: [],
+      },
+    },
+    exercisesSnapshot: { ...EXERCISES, 'wrist-prep': exercise('wrist-prep', 'Wrist Preparation') },
+    templateSnapshot: template,
+  });
+  const deviations = detectSessionDeviations(performance, slots);
+  check('mark-complete hold slot with zero sets: zero deviations', deviations.length, 0);
+  check('mark-complete hold slot: finish status completed', resolveFinishStatus(deviations), 'completed');
+}
+
 console.log('');
 console.log(`${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
