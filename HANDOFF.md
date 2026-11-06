@@ -4,7 +4,7 @@
 
 ## Current state (as of 2026-11-06 ~06:30 UTC)
 
-**UNCOMMITTED: the 2026-11-06 feedback batch (19 files changed, 12 new) is built, tested and browser-verified but NOT committed or pushed. Vercel still serves the 2026-09-27 R12 commit `82650b3`.** The owner was asked whether to commit and push; do not commit without that answer. Also still uncommitted from the previous session: `PROGRAM_BRIEF.md` and `scripts/generate-program-brief.ts`.
+**The 2026-11-06 feedback batch is committed and pushed as `c212be8` (owner go-ahead given), together with the previous session's `PROGRAM_BRIEF.md` and `scripts/generate-program-brief.ts`.** Deploy verification is in the Just completed section below; recheck with landmine 6's `gh api` command if in doubt.
 
 - **Active program is Block 4 `ff5e6593` "Three-Day Strength, Calisthenics and Mobility"** (Mon, Tue, Thu; Wed, Fri, Sat, Sun rest), file `programs/block-4-three-day-athletic-strength-and-skills.md`, activated 2026-11-06 05:08 UTC via `activate-program-file.ts`, then PATCHed in place (same row, same created_at) at ~05:40 UTC after two exercise renames (Assisted Pistol Squat to Box became Pistol Squat; Kettlebell Around-the-Body Pass became Kettlebell Around the World). All 34 slots have catalog guidance. Block 3 `045c959d` deactivated, kept as history. The program's own description carries a deload week (Dec 7 to 13, halve sets) and a race week (skip lower-body lifting) that the app does not enforce.
 - **Verification state (this tree):** `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 20 test suites green (new: test-warmup-slot 10, test-exercise-notes-log 5, test-group-superset-rows 7); `validate-program.ts` and the Block 4 file validator pass; `next build` green (foreground only, see landmine 27); headless Edge drive 23/23 against `next start -p 3100` with a throwaway user (Block 4 active since Nov 1, completed Monday Nov 3 with a Wall Handstand Hold note, today Friday Nov 6 making up Thursday). Driver: `drive-feedback-2026-11-06.mjs` plus `seed-feedback.ts` in this session's scratchpad only.
@@ -22,11 +22,11 @@ Owner feedback batch, all owner decisions dated 2026-11-06:
 
 ## In progress / where it stopped
 
-Nothing mid-flight. Waiting on the owner's commit/push decision.
+Nothing mid-flight.
 
 ## Next steps (priority order)
 
-1. **Owner decision: commit and push** the batch (suggested message: `Feedback batch: untimed warm-ups, hold weight field, superset overview block, swap set count from preset, per-exercise notes log, 3 library entries; Block 4 program file; refresh handoff`). Then verify the deploy with landmine 6's `gh api` command and on the phone.
+1. **Owner: confirm the deploy on the phone** (Vercel serves `c212be8` or later; see Just completed).
 2. **Owner: gym verification** on the phone of the five changes above on a real Block 4 day, plus the still-unconfirmed 2026-09-17 and 2026-09-27 items (blank inputs, timer survives leaving, Unskip, swap panel, Undo, superset handoffs, make-up flow).
 3. Optional hygiene from the 2026-09-27 list: backfill row `f793ce6e` with `performance.makeUpForDate = "2026-09-25"`; delete stray active row `52b05e65`; the Nov 4 Wednesday row `a871f121` and Oct 30 Friday row `7970ac5a` are still `active` (unfinished Block 3 sessions; harmless, their notes now show in the log).
 4. Next build block: the in-app program builder (PLAN R10 deferred item), needs a superset control.
