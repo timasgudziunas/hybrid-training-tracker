@@ -4,7 +4,7 @@
 
 ## Current state (as of 2026-11-06 ~06:30 UTC)
 
-**The 2026-11-06 feedback batch is committed and pushed as `c212be8` (owner go-ahead given), together with the previous session's `PROGRAM_BRIEF.md` and `scripts/generate-program-brief.ts`.** Deploy verification is in the Just completed section below; recheck with landmine 6's `gh api` command if in doubt.
+**The 2026-11-06 feedback batch is committed and pushed as `c212be8` (owner go-ahead given), together with the previous session's `PROGRAM_BRIEF.md` and `scripts/generate-program-brief.ts`.** **Deployed and verified live:** the first Vercel build of `c212be8` failed in 23 s with `errorCode ENOENT`, "npm run build exited with 1" (no log reachable, see landmine 31); the retry on `f754f34` built READY in 36 s and is aliased to hybrid-training-tracker.vercel.app (2026-11-06 ~07:00 UTC). The same 23-check headless drive was then run against production with a throwaway user: 23/23.
 
 - **Active program is Block 4 `ff5e6593` "Three-Day Strength, Calisthenics and Mobility"** (Mon, Tue, Thu; Wed, Fri, Sat, Sun rest), file `programs/block-4-three-day-athletic-strength-and-skills.md`, activated 2026-11-06 05:08 UTC via `activate-program-file.ts`, then PATCHed in place (same row, same created_at) at ~05:40 UTC after two exercise renames (Assisted Pistol Squat to Box became Pistol Squat; Kettlebell Around-the-Body Pass became Kettlebell Around the World). All 34 slots have catalog guidance. Block 3 `045c959d` deactivated, kept as history. The program's own description carries a deload week (Dec 7 to 13, halve sets) and a race week (skip lower-body lifting) that the app does not enforce.
 - **Verification state (this tree):** `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; all 20 test suites green (new: test-warmup-slot 10, test-exercise-notes-log 5, test-group-superset-rows 7); `validate-program.ts` and the Block 4 file validator pass; `next build` green (foreground only, see landmine 27); headless Edge drive 23/23 against `next start -p 3100` with a throwaway user (Block 4 active since Nov 1, completed Monday Nov 3 with a Wall Handstand Hold note, today Friday Nov 6 making up Thursday). Driver: `drive-feedback-2026-11-06.mjs` plus `seed-feedback.ts` in this session's scratchpad only.
@@ -26,7 +26,7 @@ Nothing mid-flight.
 
 ## Next steps (priority order)
 
-1. **Owner: confirm the deploy on the phone** (Vercel serves `c212be8` or later; see Just completed).
+1. **Owner: try the batch on the phone** on the next Block 4 day (Vercel serves `f754f34`, verified headlessly against production).
 2. **Owner: gym verification** on the phone of the five changes above on a real Block 4 day, plus the still-unconfirmed 2026-09-17 and 2026-09-27 items (blank inputs, timer survives leaving, Unskip, swap panel, Undo, superset handoffs, make-up flow).
 3. Optional hygiene from the 2026-09-27 list: backfill row `f793ce6e` with `performance.makeUpForDate = "2026-09-25"`; delete stray active row `52b05e65`; the Nov 4 Wednesday row `a871f121` and Oct 30 Friday row `7970ac5a` are still `active` (unfinished Block 3 sessions; harmless, their notes now show in the log).
 4. Next build block: the in-app program builder (PLAN R10 deferred item), needs a superset control.
@@ -95,6 +95,7 @@ Nothing mid-flight.
 28. **(new 2026-11-06)** Headless driver: install `puppeteer-core@24` fresh in the current session's scratchpad (`npm i puppeteer-core@24`); older scratchpads' `node_modules` are pruned and fail on `@puppeteer/browsers`. Keep the browser part an `.mjs` next to that `node_modules` and the Supabase seeding a `.ts` run with `npx tsx --env-file=.env` from the repo root (tsx compiles to CJS, so no top-level await, and `require` of puppeteer-core fails there). Today is served at `/`, not `/today`. Date labels read "Tuesday, November 3, 2026".
 29. **(new 2026-11-06)** Every per-slot view must treat a slot with `qualitativeCompleted: true` and zero sets as done regardless of its prescription type (untimed warm-ups). Anything that assumes a hold/duration slot has sets (progression, stats, deviations) must go through that check first.
 30. **(new 2026-11-06)** Updating the ACTIVE program's content in place (same row, same `created_at`) is the right move when no sessions have been logged against it yet; re-running `activate-program-file.ts` would insert a new row and reset the program's active-since date (make-up candidates, History approximation).
+31. **(new 2026-11-06)** A Vercel build can fail transiently with `errorCode ENOENT` / "npm run build exited with 1" in about 20 s while the same tree builds fine locally and from a clean clone. The Vercel MCP `list_deployment_events` returns 404 for this project with or without team scope (`get_deployment` and `list_deployments` work; team id `team_i8cG3o7fGYsBvbJWyyJ3AhKb`, project `prj_fSTZkzjGFxGIm1CGjIU4AatxjuCU`), so build logs are only reachable in the dashboard. Before hunting a cause: confirm the previous commit's status was `success`, build from a clean clone, then push any small commit to retry; the retry succeeded first time here.
 
 ## Quick health check
 
