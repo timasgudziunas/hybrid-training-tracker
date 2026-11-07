@@ -1,10 +1,10 @@
-# HANDOFF.md — Session Handoff (updated 2026-11-07 ~21:05 UTC, supersedes all 2026-11-06 and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-11-07 ~21:15 UTC, supersedes all 2026-11-06 and earlier versions)
 
 > To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables), then `PLAN.md` (R12 Make-up sessions is the newest completed block). `PRODUCT_SPEC.md` is the product source of truth; `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format; `PROGRAM_BRIEF.md` is the one file the owner pastes to an LLM to get a new block written.
 
-## Current state (as of 2026-11-07 ~21:05 UTC)
+## Current state (as of 2026-11-07 ~21:15 UTC)
 
-**Head is `15cfd87` "Installable iOS home-screen web app" (owner decision 2026-11-07: option 1, Safari Add to Home Screen, over bookmarks, Shortcuts, Web Clip profiles, or a sideloaded native wrapper), pushed.** Its Vercel production build FAILED at 20:46 UTC with the landmine-31 signature (`errorCode ENOENT`, "npm run build exited with 1", 12 s; deployment `dpl_A4oXr3x8oJUA42t28FndbhfMm3dW`). The same tree builds green locally (`next build`, foreground) and `next start -p 3100` served `/manifest.webmanifest` 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, and the apple web app meta tags on `/sign-in` with no session cookie. **Production still serves `6bdbb8f` (previous commit).** This handoff commit is the landmine-31 retry push; verify it before anything else (Quick health check below).
+**Head is `15cfd87` "Installable iOS home-screen web app" (owner decision 2026-11-07: option 1, Safari Add to Home Screen, over bookmarks, Shortcuts, Web Clip profiles, or a sideloaded native wrapper), pushed.** Its Vercel production build FAILED at 20:46 UTC with the landmine-31 signature (`errorCode ENOENT`, "npm run build exited with 1", 12 s; deployment `dpl_A4oXr3x8oJUA42t28FndbhfMm3dW`). The same tree builds green locally (`next build`, foreground) and `next start -p 3100` served `/manifest.webmanifest` 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, and the apple web app meta tags on `/sign-in` with no session cookie. The landmine-31 retry push (`cd433bb`, handoff refresh) built READY and **production verified live at 21:12 UTC**: manifest 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, apple web app meta tags present on `/sign-in`. The phone install (Next steps 2) has not been done yet.
 
 - **Active program is Block 4 `ff5e6593` "Three-Day Strength, Calisthenics and Mobility"** (Mon, Tue, Thu; Wed, Fri, Sat, Sun rest), file `programs/block-4-three-day-athletic-strength-and-skills.md`, activated 2026-11-06, PATCHed in place after two renames. All 34 slots have catalog guidance. Block 3 `045c959d` deactivated, kept as history. The program's description carries a deload week (Dec 7 to 13, halve sets) and a race week (skip lower-body lifting) that the app does not enforce.
 - **Verification state (this tree):** `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; `next build` green (foreground, see landmine 27). Test suites and headless drive were not rerun for `15cfd87` (no logic touched: metadata, CSS padding, matcher exclusions, two generated-image routes). The 2026-11-06 feedback batch (`c212be8`) remains verified on production 23/23.
@@ -21,7 +21,7 @@ iOS home-screen web app support, no new dependencies, Sonnet subagent implemente
 
 ## In progress / where it stopped
 
-Waiting on the Vercel retry build of this handoff commit. Nothing else mid-flight.
+Nothing mid-flight. Owner's phone install is the next action.
 
 ## Next steps (priority order)
 
