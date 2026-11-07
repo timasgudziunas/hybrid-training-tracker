@@ -5,9 +5,10 @@ import { NextResponse, type NextRequest } from "next/server";
 // Every page except the sign-in / sign-up screens and the auth callback
 // requires a signed-in Supabase user. Session cookies are refreshed here on
 // every request so Server Components (which cannot write cookies) always see
-// a live session.
+// a live session. The manifest and icon routes stay public because iOS fetches
+// them at install time and a redirect to sign-in would break the install.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon\.ico|sign-in|sign-up|auth/).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\.ico|manifest\.webmanifest|icon|apple-icon|sign-in|sign-up|auth/).*)"],
 };
 
 export async function proxy(request: NextRequest) {

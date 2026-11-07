@@ -62,6 +62,8 @@
   body {
     background-color: var(--color-surface-0);
     color: var(--color-ink-primary);
+    /* Keeps controls clear of the iPhone home indicator when installed as a standalone web app. */
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   ::selection {

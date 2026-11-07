@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -24,6 +24,14 @@ const bodyFont = IBM_Plex_Sans({
 export const metadata: Metadata = {
   title: "Hybrid Training Tracker",
   description: "Personal athletic training tracker",
+  appleWebApp: { capable: true, title: "Training", statusBarStyle: "black" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
