@@ -1,10 +1,10 @@
-# HANDOFF.md — Session Handoff (updated 2026-11-07 ~21:15 UTC, supersedes all 2026-11-06 and earlier versions)
+# HANDOFF.md — Session Handoff (updated 2026-11-11, supersedes all 2026-11-07 and earlier versions)
 
 > To a fresh Claude session with no memory of prior conversations: read this file first, then `CLAUDE.md` (governing rules, non-negotiables), then `PLAN.md` (R12 Make-up sessions is the newest completed block). `PRODUCT_SPEC.md` is the product source of truth; `TRAINING_SYSTEM.md` is programming rules/philosophy only; `PROGRAM_FORMAT.md` is the owner-facing paste format; `PROGRAM_BRIEF.md` is the one file the owner pastes to an LLM to get a new block written.
 
-## Current state (as of 2026-11-07 ~21:15 UTC)
+## Current state (as of 2026-11-11)
 
-**Head is `15cfd87` "Installable iOS home-screen web app" (owner decision 2026-11-07: option 1, Safari Add to Home Screen, over bookmarks, Shortcuts, Web Clip profiles, or a sideloaded native wrapper), pushed.** Its Vercel production build FAILED at 20:46 UTC with the landmine-31 signature (`errorCode ENOENT`, "npm run build exited with 1", 12 s; deployment `dpl_A4oXr3x8oJUA42t28FndbhfMm3dW`). The same tree builds green locally (`next build`, foreground) and `next start -p 3100` served `/manifest.webmanifest` 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, and the apple web app meta tags on `/sign-in` with no session cookie. The landmine-31 retry push (`cd433bb`, handoff refresh) built READY and **production verified live at 21:12 UTC**: manifest 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, apple web app meta tags present on `/sign-in`. The phone install (Next steps 2) has not been done yet.
+**Head is `15cfd87` "Installable iOS home-screen web app" (owner decision 2026-11-07: option 1, Safari Add to Home Screen, over bookmarks, Shortcuts, Web Clip profiles, or a sideloaded native wrapper), pushed.** Its Vercel production build FAILED at 20:46 UTC with the landmine-31 signature (`errorCode ENOENT`, "npm run build exited with 1", 12 s; deployment `dpl_A4oXr3x8oJUA42t28FndbhfMm3dW`). The same tree builds green locally (`next build`, foreground) and `next start -p 3100` served `/manifest.webmanifest` 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, and the apple web app meta tags on `/sign-in` with no session cookie. The landmine-31 retry push (`cd433bb`, handoff refresh) built READY and **production verified live at 21:12 UTC**: manifest 200 `application/manifest+json`, `/icon` and `/apple-icon` 200 `image/png`, apple web app meta tags present on `/sign-in`. **Owner installed it on the iPhone via Safari Add to Home Screen and reported it working (2026-11-11).**
 
 - **Active program is Block 4 `ff5e6593` "Three-Day Strength, Calisthenics and Mobility"** (Mon, Tue, Thu; Wed, Fri, Sat, Sun rest), file `programs/block-4-three-day-athletic-strength-and-skills.md`, activated 2026-11-06, PATCHed in place after two renames. All 34 slots have catalog guidance. Block 3 `045c959d` deactivated, kept as history. The program's description carries a deload week (Dec 7 to 13, halve sets) and a race week (skip lower-body lifting) that the app does not enforce.
 - **Verification state (this tree):** `npx tsc --noEmit` clean; `npx eslint app lib scripts proxy.ts` clean; `next build` green (foreground, see landmine 27). Test suites and headless drive were not rerun for `15cfd87` (no logic touched: metadata, CSS padding, matcher exclusions, two generated-image routes). The 2026-11-06 feedback batch (`c212be8`) remains verified on production 23/23.
@@ -21,12 +21,12 @@ iOS home-screen web app support, no new dependencies, Sonnet subagent implemente
 
 ## In progress / where it stopped
 
-Nothing mid-flight. Owner's phone install is the next action.
+Nothing mid-flight.
 
 ## Next steps (priority order)
 
 1. **Confirm production serves the new build**: `curl.exe -s -o NUL -w "%{http_code}" https://hybrid-training-tracker.vercel.app/manifest.webmanifest` must be 200 (307 means still the old build or another failed deploy; follow landmine 31). Deploy status: `gh api repos/timasgudziunas/hybrid-training-tracker/commits/<sha>/status`.
-2. **Owner, on the iPhone (Safari only, Chrome will not install standalone):** open https://hybrid-training-tracker.vercel.app, tap Share, "Add to Home Screen", keep the name "Training", tap Add. Open the new icon, sign in once (the installed app has its own cookie jar, separate from Safari). It should open full screen with a black status bar and no browser bars. If the icon is the old favicon or it opens inside Safari, the install happened against the old build: delete the icon and redo after step 1 is 200.
+2. Done 2026-11-11: owner installed the app on the iPhone (Safari, Add to Home Screen) and reports it working. Reinstall only if the icon or standalone mode ever needs to change (landmine 32).
 3. **Owner: gym verification** of the 2026-11-06 batch on the phone on the next Block 4 day, now inside the installed app, plus the still-unconfirmed 2026-09-17 and 2026-09-27 items (blank inputs, timer survives leaving, Unskip, swap panel, Undo, superset handoffs, make-up flow). "Timer survives leaving" matters more in standalone mode, where returning to the app can reload the page.
 4. Optional hygiene from the 2026-09-27 list: backfill row `f793ce6e` with `performance.makeUpForDate = "2026-09-25"`; delete stray active row `52b05e65`; rows `a871f121` (Nov 4) and `7970ac5a` (Oct 30) are still `active` (unfinished Block 3 sessions; harmless).
 5. Next build block: the in-app program builder (PLAN R10 deferred item), needs a superset control.
